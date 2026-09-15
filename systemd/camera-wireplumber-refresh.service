@@ -4,7 +4,9 @@ Description=Refresh WirePlumber once the IPU4 camera driver appears (SP7)
 # the graphical session starts WirePlumber. WirePlumber's libcamera monitor
 # does not create nodes for cameras that appear after it starts (libcamera's
 # hotplug enumeration runs inside the process, but no nodes materialize), so
-# restart it once /dev/media0 shows up. Install as a *user* unit:
+# restart it once /dev/media0 shows up. Restart the camera portals at the
+# same time so they do not retain a pre-driver "no camera" state. Install as
+# a *user* unit:
 #   cp camera-wireplumber-refresh.service ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable camera-wireplumber-refresh.service
@@ -13,9 +15,10 @@ After=wireplumber.service
 [Service]
 Type=oneshot
 # Wait up to 3 minutes for the driver; give node creation a moment to
-# settle, then bounce wireplumber (try-restart: only if it is running).
+# settle, then bounce WirePlumber and the camera portals (try-restart: only
+# if each unit is running).
 # If the driver never loads, exit quietly.
-ExecStart=/bin/bash -c 'for i in $(seq 1 180); do if [ -e /dev/media0 ]; then sleep 3; exec systemctl --user try-restart wireplumber.service; fi; sleep 1; done; exit 0'
+ExecStart=/bin/bash -c 'for i in $(seq 1 180); do if [ -e /dev/media0 ]; then sleep 3; exec systemctl --user try-restart wireplumber.service xdg-desktop-portal.service xdg-desktop-portal-gnome.service; fi; sleep 1; done; exit 0'
 
 [Install]
 WantedBy=default.target
