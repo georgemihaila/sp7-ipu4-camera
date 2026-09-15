@@ -157,6 +157,7 @@ struct ov5693_device {
 
 	struct v4l2_subdev sd;
 	struct media_pad pad;
+	bool streaming;
 
 	struct ov5693_v4l2_ctrls {
 		struct v4l2_ctrl_handler handler;
@@ -229,8 +230,8 @@ static void ov5693_log_power_state(struct ov5693_device *ov5693,
 	int dovdd = regulator_is_enabled(ov5693->supplies[1].consumer);
 	int dvdd = regulator_is_enabled(ov5693->supplies[2].consumer);
 
-	dev_info(ov5693->dev,
-		"trace power %s: xvclk=%luHz reset=%d powerdown=%d "
+	dev_dbg(ov5693->dev,
+		"power %s: xvclk=%luHz reset=%d powerdown=%d "
 		"avdd=%d dovdd=%d dvdd=%d runtime=%s\n",
 		tag, clk_get_rate(ov5693->xvclk), reset, powerdown,
 		avdd, dovdd, dvdd,
@@ -256,14 +257,14 @@ static void ov5693_log_sensor_regs(struct ov5693_device *ov5693,
 			val[i] = ~0ULL;
 	}
 
-	dev_info(ov5693->dev,
-		"trace sensor %s: 0100=%02llx 0103=%02llx id=%04llx%02llx "
+	dev_dbg(ov5693->dev,
+		"sensor %s: 0100=%02llx 0103=%02llx id=%04llx%02llx "
 		"3016=%02llx 3017=%02llx 3018=%02llx 3022=%02llx "
 		"3098=%02llx 3099=%02llx 30a0=%02llx 30b4=%02llx\n",
 		tag, val[0], val[1], val[2], val[3], val[4], val[5], val[6],
 		val[7], val[8], val[9], val[10], val[11]);
-	dev_info(ov5693->dev,
-		"trace sensor %s: 3503=%02llx 350b=%02llx "
+	dev_dbg(ov5693->dev,
+		"sensor %s: 3503=%02llx 350b=%02llx "
 		"out=%02llx%02llx x %02llx%02llx "
 		"hts=%02llx%02llx vts=%02llx%02llx 481f=%02llx 4837=%02llx\n",
 		tag, val[12], val[13], val[14], val[15], val[16], val[17],
@@ -631,9 +632,9 @@ static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 						    ctrls.handler);
 
 	switch (ctrl->id) {
-	case V4L2_CID_EXPOSURE_ABSOLUTE:
+	case V4L2_CID_EXPOSURE:
 		return ov5693_get_exposure(ov5693, &ctrl->val);
-	case V4L2_CID_AUTOGAIN:
+	case V4L2_CID_ANALOGUE_GAIN:
 		return ov5693_get_gain(ov5693, &ctrl->val);
 	default:
 		return -EINVAL;
@@ -729,7 +730,7 @@ static int ov5693_sensor_init(struct ov5693_device *ov5693)
 {
 	int ret;
 
-	dev_info(ov5693->dev, "trace sensor_init: start\n");
+	dev_dbg(ov5693->dev, "sensor_init: start\n");
 	ret = ov5693_sw_reset(ov5693);
 	if (ret)
 		return dev_err_probe(ov5693->dev, ret,
@@ -779,8 +780,8 @@ static int ov5693_sensor_powerup(struct ov5693_device *ov5693)
 	int ret;
 	unsigned long xvclk_rate = clk_get_rate(ov5693->xvclk);
 
-	dev_info(ov5693->dev,
-		"trace powerup: begin xvclk=%luHz reset-gpio=%d powerdown-gpio=%d\n",
+	dev_dbg(ov5693->dev,
+		"powerup: begin xvclk=%luHz reset-gpio=%d powerdown-gpio=%d\n",
 		xvclk_rate, ov5693->reset ? 1 : 0, ov5693->powerdown ? 1 : 0);
 	ov5693_log_power_state(ov5693, "before-powerup");
 	gpiod_set_value_cansleep(ov5693->reset, 1);
@@ -808,7 +809,7 @@ static int ov5693_sensor_powerup(struct ov5693_device *ov5693)
 	usleep_range(5000, 7500);
 
 	ov5693_log_power_state(ov5693, "after-settle");
-	dev_info(ov5693->dev, "trace powerup: done\n");
+	dev_dbg(ov5693->dev, "powerup: done\n");
 	return 0;
 
 fail_power:
@@ -924,8 +925,16 @@ static int ov5693_get_fmt(struct v4l2_subdev *sd,
 			  struct v4l2_subdev_format *format)
 {
 	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
+	struct v4l2_mbus_framefmt *fmt;
 
-	format->format = ov5693->mode.format;
+	fmt = __ov5693_get_pad_format(ov5693, state, format->pad,
+				      format->which);
+	if (!fmt)
+		return -EINVAL;
+
+	mutex_lock(&ov5693->lock);
+	format->format = *fmt;
+	mutex_unlock(&ov5693->lock);
 
 	return 0;
 }
@@ -941,7 +950,12 @@ static int ov5693_set_fmt(struct v4l2_subdev *sd,
 	unsigned int hblank;
 	int exposure_max;
 
+	if (format->pad != 0)
+		return -EINVAL;
+
 	crop = __ov5693_get_pad_crop(ov5693, state, format->pad, format->which);
+	if (!crop)
+		return -EINVAL;
 
 	/*
 	 * Surface Pro 7 (IPU4) quirk: 2x2-binned modes never achieve D-PHY
@@ -955,6 +969,8 @@ static int ov5693_set_fmt(struct v4l2_subdev *sd,
 
 	fmt = __ov5693_get_pad_format(ov5693, state, format->pad,
 				      format->which);
+	if (!fmt)
+		return -EINVAL;
 
 	fmt->width = crop->width / hratio;
 	fmt->height = crop->height / vratio;
@@ -966,6 +982,10 @@ static int ov5693_set_fmt(struct v4l2_subdev *sd,
 		return 0;
 
 	mutex_lock(&ov5693->lock);
+	if (ov5693->streaming) {
+		mutex_unlock(&ov5693->lock);
+		return -EBUSY;
+	}
 
 	ov5693->mode.binning_x = hratio > 1;
 	ov5693->mode.inc_x_odd = hratio > 1 ? 3 : 1;
@@ -1040,7 +1060,8 @@ static int ov5693_set_selection(struct v4l2_subdev *sd,
 
 	if (sel->target != V4L2_SEL_TGT_CROP)
 		return -EINVAL;
-
+	if (sel->pad != 0)
+		return -EINVAL;
 	/*
 	 * Clamp the boundaries of the crop rectangle to the size of the sensor
 	 * pixel array. Align to multiples of 2 to ensure Bayer pattern isn't
@@ -1062,6 +1083,15 @@ static int ov5693_set_selection(struct v4l2_subdev *sd,
 			    OV5693_NATIVE_HEIGHT - rect.top);
 
 	__crop = __ov5693_get_pad_crop(ov5693, state, sel->pad, sel->which);
+	if (!__crop)
+		return -EINVAL;
+
+	if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE)
+		mutex_lock(&ov5693->lock);
+	if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE && ov5693->streaming) {
+		mutex_unlock(&ov5693->lock);
+		return -EBUSY;
+	}
 
 	if (rect.width != __crop->width || rect.height != __crop->height) {
 		/*
@@ -1076,6 +1106,8 @@ static int ov5693_set_selection(struct v4l2_subdev *sd,
 
 	*__crop = rect;
 	sel->r = rect;
+	if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE)
+		mutex_unlock(&ov5693->lock);
 
 	return 0;
 }
@@ -1109,16 +1141,20 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 		ret = ov5693_enable_streaming(ov5693, true);
 		dev_dbg(ov5693->dev, "s_stream: stream-on register write ret=%d\n",
 			ret);
-		if (!ret)
+		if (!ret) {
+			ov5693->streaming = true;
 			ov5693_log_hw_state(ov5693, "s_stream stream-on");
+		}
 		mutex_unlock(&ov5693->lock);
 	} else {
 		mutex_lock(&ov5693->lock);
 		ret = ov5693_enable_streaming(ov5693, false);
 		dev_dbg(ov5693->dev, "s_stream: stream-off register write ret=%d\n",
 			ret);
-		if (!ret)
+		if (!ret) {
+			ov5693->streaming = false;
 			ov5693_log_hw_state(ov5693, "s_stream stream-off");
+		}
 		mutex_unlock(&ov5693->lock);
 	}
 	if (ret)
@@ -1142,9 +1178,8 @@ static int ov5693_get_frame_interval(struct v4l2_subdev *sd,
 				     struct v4l2_subdev_frame_interval *interval)
 {
 	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
-	unsigned int framesize = OV5693_FIXED_PPL * (ov5693->mode.format.height +
-				 ov5693->ctrls.vblank->val);
-	unsigned int fps = DIV_ROUND_CLOSEST(OV5693_PIXEL_RATE, framesize);
+	unsigned int framesize;
+	unsigned int fps;
 
 	/*
 	 * FIXME: Implement support for V4L2_SUBDEV_FORMAT_TRY, using the V4L2
@@ -1153,9 +1188,82 @@ static int ov5693_get_frame_interval(struct v4l2_subdev *sd,
 	if (interval->which != V4L2_SUBDEV_FORMAT_ACTIVE)
 		return -EINVAL;
 
-	interval->interval.numerator = 1;
-	interval->interval.denominator = fps;
+	if (interval->pad != 0)
+		return -EINVAL;
 
+	mutex_lock(&ov5693->lock);
+	framesize = OV5693_FIXED_PPL * (ov5693->mode.format.height +
+					 ov5693->ctrls.vblank->val);
+	fps = DIV_ROUND_CLOSEST(OV5693_PIXEL_RATE, framesize);
+	mutex_unlock(&ov5693->lock);
+
+	interval->interval.numerator = 1;
+	interval->interval.denominator = max(fps, 1U);
+
+	return 0;
+}
+
+static int ov5693_set_frame_interval(struct v4l2_subdev *sd,
+				     struct v4l2_subdev_state *state,
+				     struct v4l2_subdev_frame_interval *interval)
+{
+	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
+	u64 vts;
+	u32 vblank;
+	u32 framesize;
+	u32 fps;
+	int ret;
+
+	if (interval->which != V4L2_SUBDEV_FORMAT_ACTIVE || interval->pad != 0 ||
+		!interval->interval.numerator || !interval->interval.denominator)
+		return -EINVAL;
+
+	/* VTS = pixel_rate * requested_interval / (HTS * height). */
+	mutex_lock(&ov5693->lock);
+	if (ov5693->streaming) {
+		ret = -EBUSY;
+		goto out_unlock;
+	}
+	vts = div_u64((u64)OV5693_PIXEL_RATE * interval->interval.numerator,
+		      (u64)OV5693_FIXED_PPL * interval->interval.denominator);
+	vts = clamp_t(u64, vts, ov5693->mode.format.height +
+		      OV5693_TIMING_MIN_VTS, OV5693_TIMING_MAX_VTS);
+	vblank = vts - ov5693->mode.format.height;
+	ret = __v4l2_ctrl_modify_range(ov5693->ctrls.vblank,
+					OV5693_TIMING_MIN_VTS,
+					OV5693_TIMING_MAX_VTS - ov5693->mode.format.height,
+					1, vblank);
+	if (!ret)
+		ret = __v4l2_ctrl_s_ctrl(ov5693->ctrls.vblank, vblank);
+	if (!ret) {
+		framesize = OV5693_FIXED_PPL *
+			(ov5693->mode.format.height + ov5693->ctrls.vblank->val);
+		fps = DIV_ROUND_CLOSEST(OV5693_PIXEL_RATE, framesize);
+		interval->interval.numerator = 1;
+		interval->interval.denominator = max(fps, 1U);
+	}
+out_unlock:
+	mutex_unlock(&ov5693->lock);
+	return ret;
+}
+
+static int ov5693_enum_frame_interval(struct v4l2_subdev *sd,
+				      struct v4l2_subdev_state *state,
+				      struct v4l2_subdev_frame_interval_enum *fie)
+{
+	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
+	u32 fps;
+
+	if (fie->pad != 0 || fie->index != 0 ||
+		fie->code != MEDIA_BUS_FMT_SBGGR10_1X10 ||
+		fie->width != ov5693->mode.format.width ||
+		fie->height != ov5693->mode.format.height)
+		return -EINVAL;
+
+	fps = DIV_ROUND_CLOSEST(OV5693_PIXEL_RATE,
+		OV5693_FIXED_PPL * ov5693->mode.format.height);
+	fie->interval.numerator = 1;
+	fie->interval.denominator = max(fps, 1U);
 	return 0;
 }
 
@@ -1201,11 +1309,13 @@ static const struct v4l2_subdev_video_ops ov5693_video_ops = {
 static const struct v4l2_subdev_pad_ops ov5693_pad_ops = {
 	.enum_mbus_code = ov5693_enum_mbus_code,
 	.enum_frame_size = ov5693_enum_frame_size,
+	.enum_frame_interval = ov5693_enum_frame_interval,
 	.get_fmt = ov5693_get_fmt,
 	.set_fmt = ov5693_set_fmt,
 	.get_selection = ov5693_get_selection,
 	.set_selection = ov5693_set_selection,
 	.get_frame_interval = ov5693_get_frame_interval,
+	.set_frame_interval = ov5693_set_frame_interval,
 };
 
 static const struct v4l2_subdev_ops ov5693_ops = {

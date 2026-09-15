@@ -53,10 +53,11 @@ static void ipu_isys_log_csi2_state(struct device *dev,
 		return;
 
 	dev_dbg(dev,
-		"%s: csi2 index=%u source=%u stream_handle=%d vc=%u stream_id=%u stream_count=%u remote_streams=%u receiver_errors=0x%x in_frame={%u,%u,%u,%u} wait_for_sync={%u,%u,%u,%u}\n",
+		"%s: csi2 index=%u source=%u stream_handle=%d vc=%u stream_id=%u stream_count=%u remote_streams=%u receiver_errors=0x%x last_receiver_errors=0x%x fatal_receiver_errors=0x%x in_frame={%u,%u,%u,%u} wait_for_sync={%u,%u,%u,%u}\n",
 		tag, csi2->index, ip->source, ip->stream_handle, ip->vc,
 		ip->stream_id, csi2->stream_count, csi2->remote_streams,
-		csi2->receiver_errors, csi2->in_frame[0], csi2->in_frame[1],
+		csi2->receiver_errors, csi2->last_receiver_errors,
+		csi2->fatal_receiver_errors, csi2->in_frame[0], csi2->in_frame[1],
 		csi2->in_frame[2], csi2->in_frame[3], csi2->wait_for_sync[0],
 		csi2->wait_for_sync[1], csi2->wait_for_sync[2],
 		csi2->wait_for_sync[3]);
@@ -2228,7 +2229,12 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 
 		if (ip->csi2 &&
 		    ip->csi2->remote_streams == ip->csi2->stream_count) {
-			ipu_isys_csi2_error(ip->csi2);
+			rval = ipu_isys_csi2_error(ip->csi2);
+			if (rval) {
+				dev_err(dev,
+					"fatal CSI-2 receiver error before sensor start\n");
+				goto out_media_entity_stop_streaming_firmware;
+			}
 			dev_dbg(dev,
 				"stream on ext: calling s_stream(1) for %s (remote_streams=%u stream_count=%u)\n",
 				ip->external->entity->name,
@@ -2246,12 +2252,15 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				ip->csi2->remote_streams, ip->csi2->stream_count,
 				ip->source, ip->vc, ip->stream_id);
 		}
+		if (!rval && ip->csi2) {
+			rval = ipu_isys_csi2_error(ip->csi2);
+			if (!rval && ip->csi2->fatal_receiver_errors)
+				rval = -EIO;
+		}
 		if (!rval) {
 			dev_dbg(dev,
 				"stream on ext: s_stream(1) succeeded for %s\n",
 				ip->external->entity->name);
-			if (ip->csi2)
-				ipu_isys_csi2_error(ip->csi2);
 		} else {
 			dev_err(dev,
 				"stream on ext: s_stream(1) failed for %s: %d\n",

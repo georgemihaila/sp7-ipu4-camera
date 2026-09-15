@@ -361,7 +361,7 @@ int ipu_isys_csi2_be_soc_init(struct ipu_isys_csi2_be_soc *csi2_be_soc,
 					   &csi2_be_soc->asd.sd.entity,
 					   CSI2_BE_SOC_PAD_SOURCE(i),
 					   MEDIA_PAD_FL_SINK,
-					   MEDIA_LNK_FL_DYNAMIC);
+					   0);
 		if (rval) {
 			dev_info(&isys->adev->dev, "can't init video node\n");
 			goto fail;

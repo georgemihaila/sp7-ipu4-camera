@@ -38,34 +38,39 @@ static int bus_pm_runtime_suspend(struct device *dev)
 	struct ipu_bus_device *adev = to_ipu_bus_device(dev);
 	int rval;
 
+	/* Serialize the power-island transition with all resume/recovery users. */
+	mutex_lock(&adev->resume_lock);
+
 	if (!adev->ctrl) {
 		dev_dbg(dev, "has no buttress control info, bailing out\n");
+		mutex_unlock(&adev->resume_lock);
 		return 0;
 	}
 
 	rval = bus_for_each_dev(&ipu_bus, NULL, dev, bus_pm_suspend_child_dev);
 	if (rval) {
 		dev_err(dev, "failed to suspend child device\n");
+		mutex_unlock(&adev->resume_lock);
 		return rval;
 	}
 
 	rval = pm_generic_runtime_suspend(dev);
 	if (rval)
-		return rval;
+		goto out_unlock;
 
 	rval = ipu_buttress_power(dev, adev->ctrl, false);
 	dev_dbg(dev, "%s: buttress power down %d\n", __func__, rval);
 	if (!rval)
-		return 0;
+		goto out_unlock;
 
-	dev_err(dev, "power down failed!\n");
+	/* Keep the original power error visible to the caller. */
+	if (pm_generic_runtime_resume(dev))
+		dev_err(dev, "power-down rollback failed\n");
+	rval = -EIO;
 
-	/* Powering down failed, attempt to resume device now */
-	rval = pm_generic_runtime_resume(dev);
-	if (!rval)
-		return -EBUSY;
-
-	return -EIO;
+out_unlock:
+	mutex_unlock(&adev->resume_lock);
+	return rval;
 }
 
 static int bus_pm_resume_child_dev(struct device *dev, void *p)
@@ -91,15 +96,18 @@ static int bus_pm_runtime_resume(struct device *dev)
 	struct ipu_bus_device *adev = to_ipu_bus_device(dev);
 	int rval;
 
+	mutex_lock(&adev->resume_lock);
+
 	if (!adev->ctrl) {
 		dev_dbg(dev, "has no buttress control info, bailing out\n");
+		mutex_unlock(&adev->resume_lock);
 		return 0;
 	}
 
 	rval = ipu_buttress_power(dev, adev->ctrl, true);
 	dev_dbg(dev, "%s: buttress power up %d\n", __func__, rval);
 	if (rval)
-		return rval;
+		goto out_err;
 
 	rval = pm_generic_runtime_resume(dev);
 	dev_dbg(dev, "%s: resume %d\n", __func__, rval);
@@ -122,14 +130,14 @@ static int bus_pm_runtime_resume(struct device *dev)
 		rval = ipu_buttress_power(dev, adev->ctrl, false);
 		dev_dbg(dev, "%s: buttress power down %d\n", __func__, rval);
 		if (rval)
-			return rval;
+			goto out_err;
 
 		usleep_range(1000, 1100);
 
 		rval = ipu_buttress_power(dev, adev->ctrl, true);
 		dev_dbg(dev, "%s: buttress power up %d\n", __func__, rval);
 		if (rval)
-			return rval;
+			goto out_err;
 
 		rval = pm_generic_runtime_resume(dev);
 		dev_dbg(dev, "%s: re-resume %d\n", __func__, rval);
@@ -145,13 +153,15 @@ static int bus_pm_runtime_resume(struct device *dev)
 		}
 	}
 
+	mutex_unlock(&adev->resume_lock);
 	return 0;
 
 out_err:
 	if (adev->ctrl)
 		ipu_buttress_power(dev, adev->ctrl, false);
+	mutex_unlock(&adev->resume_lock);
 
-	return -EBUSY;
+	return rval ? rval : -EIO;
 }
 
 static const struct dev_pm_ops ipu_bus_pm_ops = {

@@ -20,35 +20,77 @@ i2c probe and is ignored.
 | Path | What |
 |------|------|
 | `linux-6.19.8/drivers/media/pci/intel/` | the driver (patched subtree of a vanilla 6.19.8 tree; only this subtree is tracked) |
-| `load-ipu4.sh` | load the module stack after boot (modules are blacklisted; one load per boot) |
+| `load-ipu4.sh` | manual diagnostic/fallback load (not required for production boot) |
 | `test-capture.sh front\|rear` | media-ctl pipeline setup + 3-frame capture |
 | `validate-retry.sh` | full validation suite: TPG + rear sanity, then front x6 |
 | `autotest/RESULT.md` | final validation results + root-cause write-up |
-| `autotest.sh` | boot-time autonomous test harness (systemd service, optional) |
-| `front-diag.sh`, `phy-sweep.sh`, `settle-sweep.sh`, `run-all-tests.sh` | diagnostics used during bring-up |
+| `autotest.sh` | archived autonomous bring-up harness (not an install/runtime requirement) |
+| `tests/camera-suite.sh` | documented Task 11 entry point (`--static` by default; `--live` opt-in) |
+| `run-all-tests.sh` | historical root diagnostic battery (not the production test entry point) |
+| `scripts/build-modules.sh` | external-KDIR build of the IPU module subtree |
+| `scripts/install-modules.sh` / `scripts/uninstall-modules.sh` | explicit module install/rollback helpers; no service management |
+| `docs/external-kernel-integration.md` | overlay layout, build variables, and required kernel-tree integration |
+| `docs/upstream-readiness.md` | validation evidence, license/firmware audit, and remaining upstream work |
 
-## Building
+## Building, installing, and rollback
 
-Unpack a vanilla `linux-6.19.8` tree here (only
-`drivers/media/pci/intel/` from this repo overlays it), have the
-distro kernel's headers/build tree installed, then:
+The `linux-6.19.8/` directory is an overlay-only kernel fragment, not a
+complete kernel tree. Build the IPU module subtree against an explicit,
+prepared external kernel build tree:
 
 ```sh
-cd linux-6.19.8
-make M=drivers/media/pci/intel \
-     srcpath=$PWD/drivers/media/pci/intel \
-     KBUILD_MODPOST_WARN=1 modules -j8
-sudo cp drivers/media/pci/intel/ipu4/*.ko \
-     /lib/modules/$(uname -r)/updates/
-sudo depmod -a
+KDIR=/lib/modules/$(uname -r)/build ./scripts/build-modules.sh -j8
 ```
 
-Firmware: `ipu4p_cpd.bin` (ipu4-20191030, Microsoft-signed) goes in
-`/usr/lib/firmware/`. It ships in the ipu4-next repo's assets and is
-not redistributed here.
+This builds the parent, ISYS, PSYS, and CSS-library modules. The OV5693 sensor
+source needs the kernel-tree integration described in
+`docs/external-kernel-integration.md`; it is not silently omitted from the
+requirements. A distro's matching kernel headers/build tree, media/V4L2/I2C
+configuration, compiler, and module-signing policy are prerequisites.
 
-`/etc/modprobe.d/ipu4.conf` should blacklist the modules and set
-`intel_ipu4p fw_version_check=0`; load manually with `load-ipu4.sh`.
+The required CPD is `ipu4p_cpd.bin` (ipu4-20191030, Microsoft-signed). It is
+not redistributed here; obtain it from an authorized firmware source. Install
+the built modules, firmware, and module dependency index with:
+
+```sh
+FIRMWARE=/path/to/ipu4p_cpd.bin sudo -E ./scripts/install-modules.sh
+```
+
+The helper installs every built IPU `.ko` into
+`/lib/modules/$(uname -r)/updates/extra/`, installs firmware into
+`/lib/firmware/ipu4p_cpd.bin`, and runs `depmod -a`. It does not load modules,
+write systemd/udev files, or rebuild an initramfs. If the target uses an
+initramfs, rebuild it using that distribution's normal administrative tool.
+The standard PCI modalias and module soft-dependencies then provide discovery;
+the exact alias, firmware name, GPL metadata, and softdeps are described in
+`docs/upstream-readiness.md` and can be checked with `modinfo`.
+
+To roll back the repository-installed modules without unloading a live driver:
+
+```sh
+sudo ./scripts/uninstall-modules.sh
+```
+
+It removes only the exact files in the `updates/extra` directory and runs
+`depmod`; it deliberately leaves firmware in place. Remove
+`/lib/firmware/ipu4p_cpd.bin` separately only if it is not shared, then rebuild
+the initramfs if applicable. Reboot before attempting a new module load: this
+tree does not support production module reload.
+
+Do not blacklist the IPU4P or camera modules. The parent driver advertises the
+Intel PCI `8086:8a19` alias; the child drivers intentionally do not advertise
+that PCI alias because they bind to the private IPU bus. The parent's module
+soft-dependencies pull in
+`ipu-bridge`, the IPU4P CSS libraries, and the IPU4P ISYS/PSYS modules. Thus
+the normal production path is udev's PCI modalias event followed by modprobe;
+no loader service, timer, probe-storm delay, or WirePlumber/portal restart is
+required. If the firmware is included in an initramfs on the target distro,
+rebuild that initramfs after installing it.
+
+The repository's `modprobe.d/ipu4p-sp7-camera.conf` is intentionally limited
+to explanatory comments: the Surface Pro 7 compatibility behavior is built
+into the driver and strict firmware/CSS validation remains the default.
+For a manual fallback or diagnostic check, run `sudo ./load-ipu4.sh`.
 Module reload does not work — one load per boot, reboot to iterate.
 
 ## Capturing
@@ -61,23 +103,10 @@ sudo ./test-capture.sh rear    # -> captures/rear.raw,  3x 3264x2448 RAW10
 
 The capture script writes to `captures/` by default. Override it with
 `OUTPUT_DIR=/path/to/output`; `CAPTURE_TIMEOUT=20` is useful for bounded
-diagnostic attempts. The loader passes `fw_version_check=0` explicitly because
-the SP7 firmware is the signed 2019 CPD while the open CSS library identifies
-itself as the older 2018 release.
-
-## Initialization trace
-
-The instrumented drivers read back the OV5693 clock, regulator, GPIO and
-sensor-register state, along with IPU4P PHY and CSI receiver registers. After
-loading the instrumented modules, run:
-
-```sh
-./trace-capture.sh
-```
-
-It saves the rear/front capture results and kernel trace under
-`reports/init-trace-*`. The trace reports effective logical state; ACPI still
-provides the physical GPIO and regulator wiring.
+diagnostic attempts. Firmware/CSS validation remains strict except for the
+explicit built-in compatibility quirk matching the Surface Pro 7 DMI identity,
+IPU4P PCI ID, signed `0x20191030` CPD, and `0x20181222` CSS release. That rule
+emits a warning; generic systems and other mismatches still fail closed.
 
 Frames at default exposure are near-black; raise
 `exposure`/`analogue_gain` on the sensor subdev for visible content.
@@ -109,10 +138,7 @@ Beware: a logged-in desktop session's wireplumber grabs every
    totally silent without this.
 7. Stream-start verification with sensor bounce + buffer parking (see
    below) — makes the front camera's marginal D-PHY link reliable.
-8. Diagnostics: runtime-writable module params `csi2_fw_src`,
-   `csi2_csettle`/`csi2_dsettle`, `phy_bb_extra`/`phy_afe_extra`/
-   `phy_jsl_bits`.
-9. Fix `ipu_isys_buffer_list_queue()` double-booking buffers when called
+8. Fix `ipu_isys_buffer_list_queue()` double-booking buffers when called
    with `INCOMING|SET_STATE` — a buffer completed to vb2 stayed linked on
    the driver's incoming list, so the app's requeue double-added the list
    node → kernel `BUG at lib/list_debug.c:32` on the next failed stream
@@ -136,8 +162,10 @@ Beware: a logged-in desktop session's wireplumber grabs every
     (ISA/ISL) capture interleaves the fabric's dual-line processing into
     the buffer as rate-matched 64-byte bursts. Only the CSI2 BE SOC path
     (`RAW_SOC` pin) writes pixel-perfect line-addressed raster frames.
-    `enable-link.py` exists because the BE SOC links are DYNAMIC and
-    media-ctl drops that flag on MEDIA_IOC_SETUP_LINK (kernel EINVAL).
+    The BE SOC links are ordinary mutable media-controller links, so
+    standard media-ctl/libcamera graph setup can select this route without
+    a private link-enabling helper. The helper remains available for
+    historical diagnostics.
 13. Recover a timed-out ISYS firmware release by forcing the existing IPU bus
     runtime-PM power-off/power-on sequence before the next video-node open;
     this clears the stale `reset_needed` state without requiring a reboot. A
@@ -175,21 +203,44 @@ bounce at all, the rest typically 1-6.
 
 ## libcamera / PipeWire integration
 
-The media device registers as `intel-ipu6`, which libcamera's simple
-pipeline already supports with the software ISP. `libcamera/` holds a
-one-patch rebuild of Fedora's libcamera 0.5.2 srpm (adds an
-`intel-ipu4-isys` table entry and relaxes a fourcc check) plus
-`rebuild-libcamera.sh`. `wireplumber/50-sp7-ipu4.conf` hides the ~55 raw
-V4L2 nodes so apps only see the two libcamera camera nodes.
+The repository does not contain a libcamera source tree, pipeline handler, or
+IPA. `libcamera/` holds only a downstream patch and a rebuild helper for an
+external Fedora libcamera 0.5.2 source package; it is not a completed
+integration. `wireplumber/50-sp7-ipu4.conf` is likewise only session policy
+for hiding raw V4L2 nodes. See `docs/task8-camera-contract.md` for the exact
+kernel capability contract and the external integration checklist.
 
-Two session-level pieces in `systemd/`:
+The driver is expected to appear before normal camera enumeration through its
+PCI modalias. No repository systemd loader or user-session refresh unit is
+needed; applications should discover the camera through the normal libcamera,
+PipeWire, and portal paths after installation.
 
-- `camera-ipu4-load.timer`/`.service` (system): load the driver stack
-  60 s after boot (CSE settle time).
-- `camera-wireplumber-refresh.service` (user): restart WirePlumber once
-  `/dev/media0` appears — its libcamera monitor does not create nodes
-  for cameras that show up after it starts, and it starts at login,
-  well before the driver loads.
+Task 8's hardware-independent contract check is `tests/task8-camera-static.sh`.
+It verifies the in-tree OV5693 format/timing/serialization claims and makes
+the absent OV8865/libcamera/IPA components explicit; it does not replace
+runtime V4L2 or libcamera validation on the target system.
+`tests/task9-csi2-static.sh` and `tests/task10-production-static.sh` cover the
+CSI-2 error paths and production-path knob/logging audit respectively.
+
+## Validation suite
+
+Run the reproducible, hardware-independent checks with:
+
+```sh
+./tests/camera-suite.sh                 # static checks: PASS/FAIL
+./tests/camera-suite.sh --all            # static plus live checks
+./tests/camera-suite.sh --live           # loaded hardware only
+./tests/camera-suite.sh --live --pm-safe # additionally read runtime-PM state
+```
+
+Live mode discovers a readable media controller, sensor sub-device, CSI
+endpoint, controls, formats, and frame interval using `media-ctl`/`v4l2-ctl`.
+It performs bounded one-frame start/stop cycles for each discovered front/rear
+sensor and verifies nonzero output. Missing hardware, tools, permissions, or
+firmware are reported as `SKIP`; a failed stage is `FAIL` with a temporary log
+directory path. The suite never reboots, unloads/reloads modules, writes
+services, consumes dmesg, or changes runtime-PM state implicitly. Suspend is
+not attempted; `--pm-safe` only reads power-control files.
 
 ## License
 

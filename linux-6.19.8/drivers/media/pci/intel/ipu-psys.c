@@ -1558,12 +1558,6 @@ static void __exit ipu_psys_exit(void)
 	unregister_chrdev_region(ipu_psys_dev_t, IPU_PSYS_NUM_DEVICES);
 }
 
-static const struct pci_device_id ipu_pci_tbl[] = {
-	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, IPU_PCI_ID)},
-	{0,}
-};
-MODULE_DEVICE_TABLE(pci, ipu_pci_tbl);
-
 module_init(ipu_psys_init);
 module_exit(ipu_psys_exit);
 

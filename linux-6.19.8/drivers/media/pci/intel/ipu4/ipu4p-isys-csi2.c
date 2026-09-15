@@ -5,6 +5,7 @@
 #include "ipu-buttress.h"
 #include "ipu-isys.h"
 #include "ipu-isys-csi2.h"
+#include "ipu-platform.h"
 #include "ipu-platform-buttress-regs.h"
 #include "ipu-platform-isys-csi2-reg.h"
 #include "ipu-platform-regs.h"
@@ -14,25 +15,53 @@
 #define CSI2_UPDATE_TIME_TRY_NUM   3
 #define CSI2_UPDATE_TIME_MAX_DIFF  20
 
-static bool windows_bscan_late;
-module_param_named(windows_bscan_late, windows_bscan_late, bool, 0644);
-MODULE_PARM_DESC(windows_bscan_late,
-		 "Rewrite CSI_BSCAN_EXCLUDE after lane setup, matching Windows source-7 ordering");
-
-static bool windows_source7_mipi_timing;
-module_param_named(windows_source7_mipi_timing, windows_source7_mipi_timing,
-		   bool, 0644);
-MODULE_PARM_DESC(windows_source7_mipi_timing,
-		 "Use the literal Windows source-7 ConfigMipiClk timing slots");
-
 static int ipu4p_csi2_ev_correction_params(struct ipu_isys_csi2
-					   *csi2, unsigned int lanes)
+						   *csi2, unsigned int lanes)
 {
 	/*
 	 * TBD: add implementation for ipu4p
 	 * probably re-use ipu4 implementation
 	 */
 	return 0;
+}
+
+/* IPU4P's compact receiver index is not its firmware source number. */
+static bool ipu4p_csi2_apply_source7_mipi_timing(struct ipu_isys_csi2 *csi2)
+{
+	const struct ipu4p_isys_quirks *quirks;
+	const struct ipu4p_mipi_receiver_timing *mipi_timing;
+	unsigned int i;
+
+	quirks = ipu4p_isys_get_quirks(&csi2->isys->adev->dev);
+	if (!quirks || csi2->index != quirks->front_csi_index ||
+	    csi2->asd.source != IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 +
+	    quirks->front_source || csi2->nlanes != quirks->front_lanes)
+		return false;
+	mipi_timing = &quirks->front_mipi_timing;
+
+	/*
+	 * On the Surface Pro 7 IPU4P front path (OV5693, CSI-2 index 2),
+	 * Linux-calculated timing produces receiver_errors=0x683 and zero
+	 * frames. Windows ConfigMipiClk instead uses the rate record above:
+	 * its 350 MHz input produces the clock/first-data and data receiver
+	 * counter values used below.
+	 * Keep this quirk local to the IPU4P source-7 implementation; all
+	 * other sources retain the generic calculated timing below.
+	 */
+	writel(0, csi2->base + 0x30);
+	writel(mipi_timing->clock_first_data_ticks, csi2->base + 0x34);
+	for (i = 0; i < 8; i++) {
+		writel(0, csi2->base + 0x38 + i * 8);
+		writel(mipi_timing->data_ticks, csi2->base + 0x3c + i * 8);
+	}
+
+	dev_dbg(&csi2->isys->adev->dev,
+		"source-7 MIPI timing quirk applied: rate=%u Hz "
+		"clock/first-data=%u ticks data=%u ticks\n",
+		mipi_timing->receiver_frequency_hz,
+		mipi_timing->clock_first_data_ticks, mipi_timing->data_ticks);
+
+	return true;
 }
 
 
@@ -51,14 +80,16 @@ static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 	u32 dtermen1 = readl(csi2->base + CSI2_REG_CSI_RX_DLY_CNT_TERMEN_DLANE(1));
 	u32 dsettle1 = readl(csi2->base + CSI2_REG_CSI_RX_DLY_CNT_SETTLE_DLANE(1));
 
-	dev_info(&csi2->isys->adev->dev,
-		"trace csi %u %s: rx enable=0x%x lanes=%u config=0x%x "
+	dev_dbg(&csi2->isys->adev->dev,
+		"csi %u %s: rx enable=0x%x lanes=%u config=0x%x "
 		"status=0x%x hs=0x%x lp=0x%x "
 		"ctermen=%u csettle=%u d0termen=%u d0settle=%u "
-		"d1termen=%u d1settle=%u receiver_errors=0x%x\n",
+		"d1termen=%u d1settle=%u receiver_errors=0x%x "
+		"last_receiver_errors=0x%x fatal_receiver_errors=0x%x\n",
 		csi2->index, tag, enable, lanes, config, status, hs, lp,
 		ctermen, csettle, dtermen0, dsettle0, dtermen1, dsettle1,
-		csi2->receiver_errors);
+		csi2->receiver_errors, csi2->last_receiver_errors,
+		csi2->fatal_receiver_errors);
 }
 
 static void ipu4p_isys_register_errors(struct ipu_isys_csi2 *csi2)
@@ -79,7 +110,7 @@ static void ipu4p_isys_register_errors(struct ipu_isys_csi2 *csi2)
 	csi2->receiver_errors |= status;
 }
 
-void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
+int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 {
 	/*
 	 * Strings corresponding to CSI-2 receiver errors are here.
@@ -115,6 +146,14 @@ void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 	ipu4p_csi2_log_rx_state(csi2, "error snapshot");
 	status = csi2->receiver_errors;
 	csi2->receiver_errors = 0;
+	csi2->last_receiver_errors = status;
+	csi2->fatal_receiver_errors |= status & IPU_ISYS_CSI2_FATAL_ERRORS;
+	if (status)
+		dev_err_ratelimited(&csi2->isys->adev->dev,
+				    "csi2-%i receiver error status 0x%x%s\n",
+				    csi2->index, status,
+				    status & IPU_ISYS_CSI2_FATAL_ERRORS ?
+				    " (fatal)" : "");
 
 	for (i = 0; i < ARRAY_SIZE(errors); i++) {
 		if (status & BIT(i)) {
@@ -129,6 +168,25 @@ void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 						    errors[i].error_string);
 		}
 	}
+
+	return (status & IPU_ISYS_CSI2_FATAL_ERRORS) ? -EIO : 0;
+}
+
+void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2)
+{
+	void __iomem *isys_base = csi2->isys->pdata->base;
+	u32 status;
+
+	status = readl(isys_base +
+		       IPU_REG_ISYS_CSI_IRQ_CTRL_BASE(csi2->index) + 0x8);
+	writel(status, isys_base +
+	       IPU_REG_ISYS_CSI_IRQ_CTRL_BASE(csi2->index) + 0xc);
+	status = readl(isys_base +
+		       IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(csi2->index) + 0x8);
+	writel(status, isys_base +
+	       IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(csi2->index) + 0xc);
+	csi2->receiver_errors = 0;
+	csi2->fatal_receiver_errors = 0;
 }
 
 int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
@@ -166,6 +224,7 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 		    (0, isys_base +
 		     IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(csi2->index) + 0x10);
 		ipu4p_csi2_log_rx_state(csi2, "set_stream disable done");
+		ipu_isys_csi2_reset_errors(csi2);
 		return 0;
 	}
 
@@ -176,30 +235,7 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 	writel(timing.csettle,
 		   csi2->base + CSI2_REG_CSI_RX_DLY_CNT_SETTLE_CLANE);
 
-	if (windows_source7_mipi_timing && csi2->asd.source == 7) {
-		/*
-		 * Windows CCsiRx::ConfigMipiClk receives 350000000 for source 7.
-		 * Its <1 GHz path computes 1155 for the alternate clock/first-data
-		 * timing value and 1269 for the remaining data timing value, then
-		 * writes the eight source-7 timing pairs at 0x38..0x7c.
-		 */
-		const u32 windows_clk_timing = 1155;
-		const u32 windows_data_timing = 1269;
-
-		writel(0, csi2->base + 0x30);
-		writel(windows_clk_timing, csi2->base + 0x34);
-		for (i = 0; i < 8; i++) {
-			writel(0, csi2->base + 0x38 + i * 8);
-			writel(windows_data_timing, csi2->base + 0x3c + i * 8);
-		}
-		dev_info(&csi2->isys->adev->dev,
-			 "trace csi %u literal Windows source-7 timing: "
-			 "30=%u 34=%u 38=%u 3c=%u 78=%u 7c=%u\n",
-			 csi2->index, readl(csi2->base + 0x30),
-			 readl(csi2->base + 0x34), readl(csi2->base + 0x38),
-			 readl(csi2->base + 0x3c), readl(csi2->base + 0x78),
-			 readl(csi2->base + 0x7c));
-	} else {
+	if (!ipu4p_csi2_apply_source7_mipi_timing(csi2)) {
 		for (i = 0; i < nlanes; i++) {
 			writel
 			    (timing.dtermen,
@@ -216,23 +252,6 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 	 * combo receiver sees the same configuration sequence.
 	 */
 	writel(nlanes, csi2->base + CSI2_REG_CSI_RX_NOF_ENABLED_LANES);
-
-	/* Windows CCsiRx::ConfigSkewCaliTimer does this between lane setup and
-	 * receiver configuration.  The global setup path already writes the
-	 * same value; this opt-in replay isolates ordering as an experiment.
-	 */
-	if (windows_bscan_late) {
-		u32 before = readl(isys->adev->isp->base +
-				   BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
-		u32 after = (0x100 << 1) | (0x100 << 10) | (0x100 << 19);
-
-		writel(after, isys->adev->isp->base +
-		       BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
-		dev_info(&isys->adev->dev,
-			 "trace csi %u late BSCAN: before=0x%x after=0x%x\n",
-			 csi2->index, before,
-			 readl(isys->adev->isp->base + BUTTRESS_REG_CSI_BSCAN_EXCLUDE));
-	}
 
 	val = readl(csi2->base + CSI2_REG_CSI_RX_CONFIG);
 	val |= CSI2_CSI_RX_CONFIG_DISABLE_BYTE_CLK_GATING |
@@ -275,8 +294,8 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 		   IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(csi2->index) + 0x10);
 
 	ipu4p_csi2_log_rx_state(csi2, "set_stream enable done");
-	dev_info(&csi2->isys->adev->dev,
-		 "trace csi %u stream enabled: lanes=%u timing ctermen=%u "
+	dev_dbg(&csi2->isys->adev->dev,
+		 "csi %u stream enabled: lanes=%u timing ctermen=%u "
 		 "csettle=%u dtermen=%u dsettle=%u source=%u\n",
 		 csi2->index, nlanes, timing.ctermen, timing.csettle,
 		 timing.dtermen, timing.dsettle, csi2->asd.source);

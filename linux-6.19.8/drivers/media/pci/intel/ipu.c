@@ -640,8 +640,10 @@ static int ipu_resume(struct device *dev)
 	ipu_buttress_restore(isp);
 
 	rval = ipu_buttress_ipc_reset(isp, &b->cse);
-	if (rval)
+	if (rval) {
 		dev_err(&isp->pdev->dev, "IPC reset protocol failed!\n");
+		return rval;
+	}
 
 	return 0;
 }
@@ -658,11 +660,13 @@ static int ipu_runtime_resume(struct device *dev)
 	if (isp->ipc_reinit) {
 		struct ipu_buttress *b = &isp->buttress;
 
-		isp->ipc_reinit = false;
 		rval = ipu_buttress_ipc_reset(isp, &b->cse);
-		if (rval)
+		if (rval) {
 			dev_err(&isp->pdev->dev,
 				"IPC reset protocol failed!\n");
+			return rval;
+		}
+		isp->ipc_reinit = false;
 	}
 
 	return 0;
@@ -701,6 +705,18 @@ static struct pci_driver ipu_pci_driver = {
 		   },
 	.err_handler = &pci_err_handlers,
 };
+
+#ifdef CONFIG_VIDEO_INTEL_IPU4P
+/*
+ * The PCI alias starts the parent driver.  The ISYS and PSYS devices are
+ * created on the private IPU bus, so pull in their drivers and CSS libraries
+ * through the normal module dependency path as part of that same request.
+ */
+MODULE_SOFTDEP("pre: ipu-bridge intel_ipu4p_isys_csslib intel_ipu4p_psys_csslib "
+	       "post: intel_ipu4p_isys intel_ipu4p_psys");
+#endif
+
+MODULE_FIRMWARE(IPU_CPD_FIRMWARE_NAME);
 
 static int __init ipu_init(void)
 {

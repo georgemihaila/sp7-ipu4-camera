@@ -1,5 +1,7 @@
 #!/bin/bash
-# Autonomous IPU4 camera test cycle — run at boot by camera-autotest.service.
+# ARCHIVED EXPERIMENTAL TOOL. Not part of the install or production path.
+# It was used for a local autonomous bring-up cycle and is intentionally not
+# referenced by any retained systemd unit. Do not enable it as a service.
 #
 # Each boot: run the validation suite, then resume the Claude Code session
 # headlessly so it can analyze results, fix, rebuild, and reboot for the
@@ -7,11 +9,10 @@
 # Claude session decides to reboot, so a failure here leaves the machine up.
 #
 # Kill switches:
-#   sudo touch /home/user/camera/autotest/DONE          (skip all future cycles)
-#   sudo systemctl disable camera-autotest.service      (remove from boot)
+#   sudo touch ./autotest/DONE          (skip all future cycles)
 # Hard cap: MAX_BOOTS cycles, then the service disables itself.
 
-CAM=/home/user/camera
+CAM=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 AT=$CAM/autotest
 MAX_BOOTS=8
 
@@ -24,7 +25,6 @@ echo "$n" > "$AT/count"
 
 if [ "$n" -gt "$MAX_BOOTS" ]; then
     echo "max boots ($MAX_BOOTS) reached" > "$AT/DONE"
-    systemctl disable camera-autotest.service
     exit 0
 fi
 
@@ -50,6 +50,10 @@ cp -r "$CAM/logs" "$BOOTDIR/logs"
 nm-online -q -t 180
 sleep 5
 
-runuser -l user -c "cd /home/user/camera && /home/user/.local/bin/claude --continue --dangerously-skip-permissions -p 'AUTONOMOUS REBOOT CYCLE boot $n of $MAX_BOOTS (no human present; camera-autotest.service ran validate-retry.sh at boot). Results: /home/user/camera/logs/validate.out, per-try dmesg in /home/user/camera/logs/, boot record in /home/user/camera/autotest/boot-$n/. Analyze the results. If FRONT SUCCESS RATE >= 5/6: do real-image validation (exposure=1900 analogue_gain=127 on the ov5693 subdev, capture front, verify non-flat pixel content), write a full summary to /home/user/camera/autotest/RESULT.md, touch /home/user/camera/autotest/DONE, sudo systemctl disable camera-autotest.service, and update your memory file — do NOT reboot again. Otherwise: diagnose from the logs (dyndbg on the live module works within this boot), fix the driver, rebuild and install the module, update your memory file, then sudo systemctl reboot for the next cycle. If you conclude the approach cannot work or you are out of ideas, write findings to RESULT.md, touch DONE, disable the service, and stop instead of burning cycles.'" > "$BOOTDIR/claude.out" 2>&1
+if command -v claude >/dev/null 2>&1; then
+    claude --continue --dangerously-skip-permissions -p "ARCHIVED IPU4 bring-up cycle $n of $MAX_BOOTS. Results: $CAM/logs/validate.out; boot record: $BOOTDIR. Analyze and record findings in $AT/RESULT.md. Do not reboot, install services, or change runtime system configuration." > "$BOOTDIR/claude.out" 2>&1
+else
+    echo 'claude not found; leaving validation results for manual review' > "$BOOTDIR/claude.out"
+fi
 echo "claude exit: $?"
 date

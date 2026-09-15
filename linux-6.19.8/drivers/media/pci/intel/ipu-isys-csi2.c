@@ -15,6 +15,7 @@
 #include "ipu-isys.h"
 #include "ipu-isys-subdev.h"
 #include "ipu-isys-video.h"
+#include "ipu-platform.h"
 #include "ipu-platform-regs.h"
 
 #define CREATE_TRACE_POINTS
@@ -22,31 +23,9 @@
 #define IPU_EOF_SEQID_TRACE
 #include "ipu-trace-event.h"
 
-/*
- * The IPU4P fw stream source ids for the CSI-2 receivers are not
- * contiguous and the builtin mapping (see ipu_isys_csi2_init) is a
- * best guess for this hardware. Allow overriding it at runtime
- * (consulted at every stream start) so alternative mappings can be
- * tested without reloading the module:
- *   echo -1,-1,6 > /sys/module/intel_ipu4p_isys/parameters/csi2_fw_src
- */
-static int csi2_fw_src[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-module_param_array(csi2_fw_src, int, NULL, 0644);
-MODULE_PARM_DESC(csi2_fw_src,
-		 "Override ISYS fw stream source per CSI-2 index (-1 = builtin mapping)");
-
 unsigned int ipu_isys_csi2_get_fw_source(struct v4l2_subdev *sd)
 {
 	struct ipu_isys_csi2 *csi2 = to_ipu_isys_csi2(sd);
-
-	if (csi2->index < ARRAY_SIZE(csi2_fw_src) &&
-	    csi2_fw_src[csi2->index] >= 0) {
-		dev_info(&csi2->isys->adev->dev,
-			 "csi2-%u: fw source overridden to %d\n",
-			 csi2->index, csi2_fw_src[csi2->index]);
-		return IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 +
-			csi2_fw_src[csi2->index];
-	}
 
 	return csi2->asd.source;
 }
@@ -283,25 +262,6 @@ static struct ipu_isys_pixelformat csi2_meta_pfmts[] = {
 
 #define DIV_SHIFT	8
 
-/*
- * The calculation below uses the spec-minimum A/B coefficients. On
- * Surface Pro 7 the front ov5693 (419.2 MHz, x2) misses the initial
- * SOT sync on roughly half the stream starts with the minimum values
- * (one missed sync = non-recoverable, the whole stream storms with
- * irq_ctrl0 status 0x400), while the rear ov8865 at 360 MHz x4 is
- * stable. Allow overriding the settle counts at runtime to place them
- * mid-window, e.g.:
- *   echo 880 > /sys/module/intel_ipu4p_isys/parameters/csi2_dsettle
- * Consulted at every stream start; -1 = use the calculated minimum.
- */
-static int csi2_csettle = -1;
-module_param(csi2_csettle, int, 0644);
-MODULE_PARM_DESC(csi2_csettle, "Override clock-lane settle count (-1 = calc)");
-
-static int csi2_dsettle = -1;
-module_param(csi2_dsettle, int, 0644);
-MODULE_PARM_DESC(csi2_dsettle, "Override data-lane settle count (-1 = calc)");
-
 static uint32_t calc_timing(s32 a, int32_t b, int64_t link_freq, int32_t accinv)
 {
 	return accinv * a + (accinv * b * (500000000 >> DIV_SHIFT)
@@ -334,22 +294,11 @@ ipu_isys_csi2_calc_timing(struct ipu_isys_csi2 *csi2,
 	timing->dsettle = calc_timing(CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_A,
 				      CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_B,
 				      link_freq, accinv);
-	dev_info(&csi2->isys->adev->dev,
-		 "trace csi %u timing: link_freq=%lld accinv=%u "
-		 "calculated ctermen=%u csettle=%u dtermen=%u dsettle=%u\n",
+	dev_dbg(&csi2->isys->adev->dev,
+		"csi %u timing: link_freq=%lld accinv=%u "
+		"ctermen=%u csettle=%u dtermen=%u dsettle=%u\n",
 		 csi2->index, link_freq, accinv, timing->ctermen,
 		 timing->csettle, timing->dtermen, timing->dsettle);
-
-	if (csi2_csettle >= 0) {
-		dev_info(&csi2->isys->adev->dev, "csettle override %u -> %d\n",
-			 timing->csettle, csi2_csettle);
-		timing->csettle = csi2_csettle;
-	}
-	if (csi2_dsettle >= 0) {
-		dev_info(&csi2->isys->adev->dev, "dsettle override %u -> %d\n",
-			 timing->dsettle, csi2_dsettle);
-		timing->dsettle = csi2_dsettle;
-	}
 
 	return 0;
 }
@@ -382,8 +331,8 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 		"csi2 set_stream(%d): stream_count=%u remote_streams=%u src=%u ext=%s\n",
 		enable, csi2->stream_count, csi2->remote_streams,
 		csi2->asd.source, ext_sd ? ext_sd->name : "<none>");
-	dev_info(&csi2->isys->adev->dev,
-		 "trace csi2-%u set_stream=%d: stream_count=%u remote_streams=%u "
+	dev_dbg(&csi2->isys->adev->dev,
+		 "csi2-%u set_stream=%d: stream_count=%u remote_streams=%u "
 		 "source=%u external=%s\n",
 		 csi2->index, enable, csi2->stream_count, csi2->remote_streams,
 		 csi2->asd.source, ext_sd ? ext_sd->name : "<none>");
@@ -407,6 +356,9 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 		return 0;
 	}
 
+	/* Start a new receiver lifetime with stale IRQ and error state cleared. */
+	ipu_isys_csi2_reset_errors(csi2);
+
 	rval = v4l2_g_ctrl(ext_sd->ctrl_handler, &c);
 	if (cfg)
 		dev_dbg(&csi2->isys->adev->dev,
@@ -423,7 +375,9 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 	if (rval)
 		return rval;
 
-	ipu_isys_csi2_set_stream(sd, timing, nlanes, enable);
+	rval = ipu_isys_csi2_set_stream(sd, timing, nlanes, enable);
+	if (rval)
+		return rval;
 	csi2->stream_count++;
 
 	dev_dbg(&csi2->isys->adev->dev,
@@ -785,10 +739,10 @@ int ipu_isys_csi2_init(struct ipu_isys_csi2 *csi2,
 	csi2->asd.pad[CSI2_PAD_META].flags = MEDIA_PAD_FL_SOURCE;
 	src = index;
 #ifdef CONFIG_VIDEO_INTEL_IPU4P
-	src = index ? (index + 5) : (index + 3);
+	src = ipu4p_csi2_fw_source_for_index(index);
 #endif
 	csi2->asd.source = IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + src;
-	dev_info(&isys->adev->dev, "CSI-2 %u: default fw source %d\n",
+	dev_dbg(&isys->adev->dev, "CSI-2 %u: fw source %d\n",
 		 index, src);
 	csi2_supported_codes[CSI2_PAD_SINK] = csi2_supported_codes_pad_sink;
 

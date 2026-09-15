@@ -37,13 +37,14 @@ disturbed.
 
 ## Where everything lives
 
-- Driver tree: `/home/user/camera/linux-6.19.8/drivers/media/pci/intel`
+- Driver tree: `linux-6.19.8/drivers/media/pci/intel` (relative to repository root)
   (ruslanbay/ipu4-next 56-patch set + local fixes)
 - Installed modules: `/lib/modules/6.19.8-3.surface.fc43.x86_64/updates/`
-- Load: `sudo /home/user/camera/load-ipu4.sh` (modules blacklisted in
-  `/etc/modprobe.d/ipu4.conf`; one load per boot — reload is broken)
-- Capture: `sudo /home/user/camera/test-capture.sh front|rear`
-- Full suite: `sudo /home/user/camera/validate-retry.sh`
+- Load: normal PCI modalias/modprobe path after module installation and
+  `depmod`; `load-ipu4.sh` is only a manual diagnostic fallback (one load per
+  boot — reload is broken)
+- Capture: `sudo ./test-capture.sh front|rear`
+- Full suite: `sudo ./validate-retry.sh`
 - Caution: a logged-in graphical session's wireplumber grabs the video
   nodes and wrecks captures; validate-retry.sh masks it for the run.
 
@@ -60,10 +61,23 @@ disturbed.
    never configured (front totally silent without it)
 7. Stream-start verification with sensor bounce + buffer parking (this
    fix; items 1–3 of the section above)
-8. Runtime params: `csi2_fw_src`, `csi2_csettle`/`csi2_dsettle`,
-   `phy_bb_extra`/`phy_afe_extra`/`phy_jsl_bits` (diagnostics)
+8. Remove bring-up-only CSI-2/PHY runtime overrides; validated SP7 values are
+   now selected from built-in platform data and generic timing calculations.
 
 ## Next steps
+
+## Reproducible validation entry point
+
+Task 11's maintained test entry point is `tests/camera-suite.sh`. It runs the
+hardware-independent Task 8–11 checks by default and reports `PASS`, `FAIL`,
+or `SKIP` with bounded command timeouts. Use `--live` to inspect currently
+loaded hardware; it discovers media nodes and sensor sub-devices dynamically,
+checks controls/formats/frame intervals, and—when run with sufficient device
+permissions—performs bounded front/rear stream start/stop and nonzero-frame
+checks. `--pm-safe` only reads runtime-PM state. The suite does not reboot,
+unload/reload modules, consume dmesg, modify services, or change PM state by
+default. The older `validate-retry.sh` and `run-all-tests.sh` remain historical
+diagnostic scripts and are not the maintained CI/live entry point.
 
 - libcamera integration: repo carries patches for libcamera v0.7.0;
   Fedora 43 ships 0.5.2 — needs ABI-compatible build or parallel

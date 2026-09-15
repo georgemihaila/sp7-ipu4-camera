@@ -255,7 +255,7 @@ static void ipu_isys_register_errors(struct ipu_isys_csi2 *csi2)
 	csi2->receiver_errors |= status;
 }
 
-void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
+int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 {
 	/*
 	 * Strings corresponding to CSI-2 receiver errors are here.
@@ -290,6 +290,14 @@ void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 	ipu_isys_register_errors(csi2);
 	status = csi2->receiver_errors;
 	csi2->receiver_errors = 0;
+	csi2->last_receiver_errors = status;
+	csi2->fatal_receiver_errors |= status & IPU_ISYS_CSI2_FATAL_ERRORS;
+	if (status)
+		dev_err_ratelimited(&csi2->isys->adev->dev,
+				    "csi2-%i receiver error status 0x%x%s\n",
+				    csi2->index, status,
+				    status & IPU_ISYS_CSI2_FATAL_ERRORS ?
+				    " (fatal)" : "");
 
 	for (i = 0; i < ARRAY_SIZE(errors); i++) {
 		if (!(status & BIT(i)))
@@ -305,6 +313,17 @@ void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 					    csi2->index,
 					    errors[i].error_string);
 	}
+
+	return (status & IPU_ISYS_CSI2_FATAL_ERRORS) ? -EIO : 0;
+}
+
+void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2)
+{
+	u32 status = readl(csi2->base + CSI2_REG_CSIRX_IRQ_STATUS);
+
+	writel(status, csi2->base + CSI2_REG_CSIRX_IRQ_CLEAR);
+	csi2->receiver_errors = 0;
+	csi2->fatal_receiver_errors = 0;
 }
 
 static u64 tunit_time_to_us(struct ipu_isys *isys, u64 time)
@@ -478,6 +497,7 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 		writel(0, csi2->base + CSI2_REG_CSI2PART_IRQ_ENABLE);
 		if (ip->interlaced)
 			ipu_isys_csi2_configure_tunit(csi2, 0);
+		ipu_isys_csi2_reset_errors(csi2);
 		return 0;
 	}
 

@@ -1,9 +1,0 @@
-[Unit]
-Description=Load IPU4 camera modules 60s after boot (CSE settle time)
-
-[Timer]
-OnBootSec=60
-AccuracySec=5
-
-[Install]
-WantedBy=timers.target

@@ -4,6 +4,8 @@
 #ifndef IPU_PLATFORM_H
 #define IPU_PLATFORM_H
 
+#include <linux/device.h>
+
 #define IPU_NAME			"intel-ipu4"
 #define IPU_ISYS_NUM_STREAMS            8       /* Max 8 */
 
@@ -42,6 +44,40 @@ extern const struct ipu_isys_internal_pdata isys_ipdata;
 extern const struct ipu_psys_internal_pdata psys_ipdata;
 extern const struct ipu_buttress_ctrl isys_buttress_ctrl;
 extern const struct ipu_buttress_ctrl psys_buttress_ctrl;
+
+#ifdef CONFIG_VIDEO_INTEL_IPU4P
+/*
+ * The MIPI timing registers contain receiver counter ticks, not Hz.  Keep
+ * the Windows ConfigMipiClk input rate alongside its validated output so a
+ * board quirk cannot silently apply stale values to another rate.  The
+ * values are already the final integer results of Windows' arithmetic and
+ * rounding; Linux writes these receiver ticks verbatim.
+ */
+struct ipu4p_mipi_receiver_timing {
+	unsigned int receiver_frequency_hz;
+	unsigned int clock_first_data_ticks;
+	unsigned int data_ticks;
+};
+
+struct ipu4p_isys_quirks {
+	const char *name;
+	unsigned int front_csi_index;
+	unsigned int front_source;
+	unsigned int front_lanes;
+	unsigned int front_phy_bb;
+	unsigned int front_phy_afe;
+	struct ipu4p_mipi_receiver_timing front_mipi_timing;
+};
+
+static inline unsigned int
+ipu4p_csi2_fw_source_for_index(unsigned int index)
+{
+	return index ? index + 5 : index + 3;
+}
+
+const struct ipu4p_isys_quirks *
+ipu4p_isys_get_quirks(const struct device *dev);
+#endif
 
 /* definitions in ipu4-isys.c */
 extern struct ipu_trace_block isys_trace_blocks[];

@@ -2,7 +2,9 @@
 // Copyright (C) 2015 - 2018 Intel Corporation
 
 #include <linux/dma-mapping.h>
+#include <linux/dmi.h>
 #include <linux/module.h>
+#include <linux/pci.h>
 
 #include "ipu.h"
 #include "ipu-cpd.h"
@@ -46,9 +48,24 @@
 #define ipu_cpd_get_metadata(cpd) ipu_cpd_get_entry(cpd, CPD_METADATA_IDX)
 #define ipu_cpd_get_moduledata(cpd) ipu_cpd_get_entry(cpd, CPD_MODULEDATA_IDX)
 
-static bool fw_version_check = true;
-module_param(fw_version_check, bool, 0444);
-MODULE_PARM_DESC(fw_version_check, "enable/disable checking firmware version");
+#define IPU4P_PCI_DEVICE_ID		0x8a19
+#define SP7_IPU4P_FW_PKG_DATE		0x20191030
+
+/*
+ * The signed CPD shipped in Surface Pro 7 systems identifies the 2019
+ * firmware package, while the only available IPU4P CSS library identifies
+ * the 2018 package.  This is a known-good, board-specific pairing; it is not
+ * evidence that arbitrary firmware/CSS combinations are compatible.
+ */
+static bool ipu_cpd_known_sp7_version_mismatch(struct ipu_device *isp,
+						       u32 fw_pkg_date)
+{
+	return isp->pdev->device == IPU4P_PCI_DEVICE_ID &&
+	       dmi_match(DMI_SYS_VENDOR, "Microsoft Corporation") &&
+	       dmi_match(DMI_PRODUCT_NAME, "Surface Pro 7") &&
+	       fw_pkg_date == SP7_IPU4P_FW_PKG_DATE &&
+	       IA_CSS_FW_PKG_RELEASE == 0x20181222;
+}
 
 static const struct ipu_cpd_metadata_cmpnt *
 ipu_cpd_metadata_get_cmpnt(struct ipu_device *isp,
@@ -333,12 +350,19 @@ static int ipu_cpd_validate_moduledata(struct ipu_device *isp,
 		return -EINVAL;
 	}
 
-	if (fw_version_check && mod_hdr->fw_pkg_date != IA_CSS_FW_PKG_RELEASE) {
+	if (mod_hdr->fw_pkg_date != IA_CSS_FW_PKG_RELEASE &&
+	    !ipu_cpd_known_sp7_version_mismatch(isp, mod_hdr->fw_pkg_date)) {
 		dev_err(&isp->pdev->dev,
 			"Moduledata and library version mismatch (%x != %x)\n",
 			mod_hdr->fw_pkg_date, IA_CSS_FW_PKG_RELEASE);
 		return -EINVAL;
 	}
+
+	if (mod_hdr->fw_pkg_date != IA_CSS_FW_PKG_RELEASE)
+		dev_warn(&isp->pdev->dev,
+			 "Applying Surface Pro 7 IPU4P firmware/CSS compatibility "
+			 "quirk for signed package %x and CSS %x\n",
+			 mod_hdr->fw_pkg_date, IA_CSS_FW_PKG_RELEASE);
 
 	dev_warn(&isp->pdev->dev,
 		 "Moduledata version: %x, library version: %x\n",

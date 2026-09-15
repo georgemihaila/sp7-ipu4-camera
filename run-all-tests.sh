@@ -1,8 +1,9 @@
 #!/bin/bash
-# One-shot IPU4 diagnostic battery. Run as root right after a clean boot:
-#   sudo /home/user/camera/run-all-tests.sh
-# Logs land in /home/user/camera/logs/
-LOGDIR=/home/user/camera/logs
+# One-shot IPU4 diagnostic battery. This is historical bring-up tooling, not
+# the production test entry point. Run from any checkout after a clean boot:
+#   sudo ./run-all-tests.sh
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+LOGDIR=${LOGDIR:-"$ROOT/logs-run-all-tests"}
 mkdir -p "$LOGDIR"
 M="media-ctl -d /dev/media0"
 
@@ -11,8 +12,8 @@ snap()  { dmesg -c > "$LOGDIR/$1.dmesg" 2>/dev/null; }
 
 # Reset the isys power island via mmu0 (holds the buttress ctrl).
 # Clears reset_needed after a failed stream so the next test is valid.
-# mmu1 is pinned 'on' by load-ipu4.sh (psys handshake-timeout guard);
-# it must be 'auto' for mmu0 to suspend, then re-pinned afterwards.
+# The cycle is an explicit diagnostic power-cycle; production loading leaves
+# runtime PM in its normal automatic mode.
 cycle_island() {
     echo auto > /sys/bus/intel-ipu4-bus/devices/intel-ipu4-mmu1/power/control
     echo on   > /sys/bus/intel-ipu4-bus/devices/intel-ipu4-mmu0/power/control
@@ -24,7 +25,7 @@ cycle_island() {
 }
 
 phase "LOAD"
-/home/user/camera/load-ipu4.sh || exit 1
+"$ROOT/load-ipu4.sh" || exit 1
 echo 'module intel_ipu4p_isys +p' > /sys/kernel/debug/dynamic_debug/control
 echo 'module ov5693 +p'  > /sys/kernel/debug/dynamic_debug/control
 echo 'module ov8865 +p'  > /sys/kernel/debug/dynamic_debug/control

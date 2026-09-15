@@ -1,9 +1,0 @@
-[Unit]
-Description=Load Intel IPU4 camera driver stack (Surface Pro 7)
-ConditionPathExists=/home/george/repos/sp7-ipu4-camera/load-ipu4.sh
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-# via /bin/bash: SELinux denies init_t direct exec of user_home_t scripts
-ExecStart=/bin/bash /home/george/repos/sp7-ipu4-camera/load-ipu4.sh

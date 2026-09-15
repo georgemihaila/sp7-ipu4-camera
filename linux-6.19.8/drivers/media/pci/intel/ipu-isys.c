@@ -148,7 +148,7 @@ static int ipu_isys_csi2_fw_port_to_index(unsigned int fw_port,
 	int index;
 
 #ifdef CONFIG_VIDEO_INTEL_IPU4P
-	/* Inverse of: src = index ? (index + 5) : (index + 3) */
+	/* Inverse of ipu4p_csi2_fw_source_for_index(). */
 	if (fw_port == 3)
 		index = 0;
 	else if (fw_port >= 6)
@@ -492,10 +492,9 @@ static int isys_register_subdevices(struct ipu_isys *isys)
 			     k < NR_OF_CSI2_BE_SOC_SINK_PADS; k++) {
 				rval =
 				    media_create_pad_link(&isys->csi2[i].asd.sd.
-							  entity, j,
-							  &isys->csi2_be_soc.
-							  asd.sd.entity, k,
-							  MEDIA_LNK_FL_DYNAMIC);
+								  entity, j,
+								  &isys->csi2_be_soc.
+								  asd.sd.entity, k, 0);
 				if (rval) {
 					dev_info(&isys->adev->dev,
 						 "can't create link csi2->be_soc\n");
@@ -523,7 +522,7 @@ static int isys_register_subdevices(struct ipu_isys *isys)
 						  TPG_PAD_SOURCE,
 						  &isys->csi2_be_soc.asd.sd.
 						  entity, k,
-						  MEDIA_LNK_FL_DYNAMIC);
+						  0);
 			if (rval) {
 				dev_info(&isys->adev->dev,
 					 "can't create link tpg->be_soc\n");
@@ -786,9 +785,6 @@ static int isys_runtime_pm_suspend(struct device *dev)
 	spin_unlock_irqrestore(&isys->power_lock, flags);
 
 	ipu_trace_stop(dev);
-	mutex_lock(&isys->mutex);
-	isys->reset_needed = false;
-	mutex_unlock(&isys->mutex);
 
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
 	dev_info(dev, "trace isys runtime suspend: complete\n");
@@ -1414,12 +1410,6 @@ static struct ipu_bus_driver isys_driver = {
 };
 
 module_ipu_bus_driver(isys_driver);
-
-static const struct pci_device_id ipu_pci_tbl[] = {
-	{PCI_DEVICE(PCI_VENDOR_ID_INTEL, IPU_PCI_ID)},
-	{0,}
-};
-MODULE_DEVICE_TABLE(pci, ipu_pci_tbl);
 
 MODULE_AUTHOR("Sakari Ailus <sakari.ailus@linux.intel.com>");
 MODULE_AUTHOR("Samu Onkalo <samu.onkalo@intel.com>");

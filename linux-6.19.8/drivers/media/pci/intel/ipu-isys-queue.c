@@ -647,12 +647,19 @@ static void verify_stream_start(struct ipu_isys_pipeline *ip)
 		}
 		if (atomic_read(&ip->frames_done) != done)
 			break;
-		dev_warn(dev,
+		dev_warn_ratelimited(dev,
 			 "no frames from %s after start; bouncing sensor (retry %u)\n",
 			 ip->external->entity->name, retry + 1);
 		v4l2_subdev_call(esd, video, s_stream, 0);
 		/* log + clear accumulated receiver errors */
-		ipu_isys_csi2_error(ip->csi2);
+		rval = ipu_isys_csi2_error(ip->csi2);
+		if (rval || ip->csi2->fatal_receiver_errors) {
+			dev_err(dev,
+				"fatal CSI-2 receiver failure during stream start; "
+				"not retrying sensor bounce (last errors=0x%x)\n",
+				ip->csi2->last_receiver_errors);
+			break;
+		}
 		msleep(20);
 		rval = v4l2_subdev_call(esd, video, s_stream, 1);
 		if (rval) {

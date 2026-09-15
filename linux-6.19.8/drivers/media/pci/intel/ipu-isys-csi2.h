@@ -67,6 +67,9 @@ struct ipu_isys;
 #define IPU_ISYS_SHORT_PACKET_TRACE_EVENT_MASK	0x2082
 #define IPU_SKEW_CAL_LIMIT_HZ (1500000000ul / 2)
 
+/* Frame/line sync loss and DPHY non-recoverable sync loss invalidate capture. */
+#define IPU_ISYS_CSI2_FATAL_ERRORS (BIT(7) | BIT(10))
+
 #define CSI2_CSI_RX_DLY_CNT_TERMEN_CLANE_A		0
 #define CSI2_CSI_RX_DLY_CNT_TERMEN_CLANE_B		0
 #define CSI2_CSI_RX_DLY_CNT_SETTLE_CLANE_A		95
@@ -95,6 +98,9 @@ struct ipu_isys_csi2 {
 
 	void __iomem *base;
 	u32 receiver_errors;
+	/* Preserve the last reported status for post-mortem diagnostics. */
+	u32 last_receiver_errors;
+	u32 fatal_receiver_errors;
 	unsigned int nlanes;
 	unsigned int index;
 	atomic_t sof_sequence;
@@ -171,7 +177,8 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 unsigned int ipu_isys_csi2_get_current_field(struct ipu_isys_pipeline *ip,
 					     unsigned int *timestamp);
 void ipu_isys_csi2_isr(struct ipu_isys_csi2 *csi2);
-void ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2);
+int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2);
+void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2);
 bool ipu_isys_csi2_skew_cal_required(struct ipu_isys_csi2 *csi2);
 int ipu_isys_csi2_set_skew_cal(struct ipu_isys_csi2 *csi2, int enable);
 

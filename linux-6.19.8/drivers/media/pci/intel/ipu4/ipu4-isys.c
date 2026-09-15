@@ -2,8 +2,10 @@
 // Copyright (C) 2018 Intel Corporation
 
 #include <linux/module.h>
+#include <linux/dmi.h>
 
 #include "ipu.h"
+#include "ipu-platform.h"
 #include "ipu-platform-regs.h"
 #include "ipu-platform-buttress-regs.h"
 #include "ipu-platform-isys-csi2-reg.h"
@@ -11,6 +13,48 @@
 #include "ipu-isys.h"
 #include "ipu-isys-video.h"
 #include "ipu-isys-tpg.h"
+
+#ifdef CONFIG_VIDEO_INTEL_IPU4P
+static const struct ipu4p_isys_quirks ipu4p_sp7_quirks = {
+	.name = "Surface Pro 7 camera",
+	.front_csi_index = 2,
+	.front_source = 7,
+	.front_lanes = 2,
+	.front_phy_bb = 10,
+	.front_phy_afe = 0x15,
+	/* Windows source-7 ConfigMipiClk: 350 MHz -> final rounded ticks. */
+	.front_mipi_timing = {
+		.receiver_frequency_hz = 350000000,
+		.clock_first_data_ticks = 1155,
+		.data_ticks = 1269,
+	},
+};
+
+static const struct dmi_system_id ipu4p_isys_dmi_table[] = {
+	{
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "Microsoft Corporation"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "Surface Pro 7"),
+		},
+		.driver_data = (void *)&ipu4p_sp7_quirks,
+	},
+	{ }
+};
+
+const struct ipu4p_isys_quirks *
+ipu4p_isys_get_quirks(const struct device *dev)
+{
+	const struct dmi_system_id *match;
+
+	match = dmi_first_match(ipu4p_isys_dmi_table);
+	if (!match)
+		return NULL;
+
+	dev_dbg(dev, "%s enabled\n",
+		((const struct ipu4p_isys_quirks *)match->driver_data)->name);
+	return match->driver_data;
+}
+#endif
 
 struct ipu_trace_block isys_trace_blocks[] = {
 	{
@@ -144,31 +188,6 @@ static void ipu4p_isys_irq_cfg(struct ipu_isys *isys)
 	writel(0, base + IPU_REG_ISYS_UNISPART_SW_IRQ_MUX_REG);
 }
 
-/*
- * The builtin bbconfig below configures the PHY building blocks for
- * bbs 4/6 and 12/14 only. On Surface Pro 7 the front ov5693 (sip1
- * port 1, x2) appears to sit on bbs that are not in the list, so its
- * analog front end never gets configured and the receiver sees no HS
- * traffic. Allow extra bbs to be configured at runtime; consulted on
- * every isys resume (i.e. after each power island cycle), e.g.:
- *   echo 8,10 > /sys/module/intel_ipu4p_isys/parameters/phy_bb_extra
- * then cycle the island and retry the capture.
- */
-static int phy_bb_extra[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-module_param_array(phy_bb_extra, int, NULL, 0644);
-MODULE_PARM_DESC(phy_bb_extra,
-		 "Extra PHY building blocks to configure (-1 = none)");
-
-static int phy_afe_extra[8] = { -1, -1, -1, -1, -1, -1, -1, -1 };
-module_param_array(phy_afe_extra, int, NULL, 0644);
-MODULE_PARM_DESC(phy_afe_extra,
-		 "AFE config value per extra bb (-1 = alternate 0xf/0x15)");
-
-static bool phy_jsl_bits;
-module_param(phy_jsl_bits, bool, 0644);
-MODULE_PARM_DESC(phy_jsl_bits,
-		 "Also set JSL-style CPHY_RX_CONTROL1/DPHY_CFG bits on all bbs");
-
 static void ipu4p_isys_bb_cfg_one(struct ipu_isys *isys, unsigned int bb,
 				  unsigned int crc, unsigned int drc,
 				  unsigned int afe)
@@ -191,31 +210,21 @@ static void ipu4p_isys_bb_cfg_one(struct ipu_isys *isys, unsigned int bb,
 	cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(bb));
 	dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(bb));
 	afe_readback = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(bb));
-	dev_info(&isys->adev->dev,
-		 "trace phy bb%u: requested crc=%u drc=%u afe=0x%x "
+	dev_dbg(&isys->adev->dev,
+		 "phy bb%u: requested crc=%u drc=%u afe=0x%x "
 		 "readback cphy_dll=0x%x dphy_dll=0x%x afe=0x%x\n",
 		 bb, crc, drc, afe, cphy, dphy, afe_readback);
 }
 
 static void ipu4p_isys_bb_cfg(struct ipu_isys *isys)
 {
-	void __iomem *isp_base = isys->adev->isp->base;
-	unsigned int i, val;
-	unsigned int bbconfig[5][4] = {
+	const struct ipu4p_isys_quirks *quirks;
+	unsigned int i;
+	unsigned int bbconfig[4][4] = {
 		{4, 13, 32, 0xf},
 		{6, 13, 32, 0x15},
 		{12, 13, 32, 0xf},
 		{14, 13, 32, 0x15},
-		/*
-		 * Surface Pro 7: the front ov5693 (sip1, x2) sits on
-		 * building block 10, which the original list left
-		 * unconfigured — its AFE never powered up and the
-		 * receiver saw no HS traffic. AFE 0x15 matches the JSL
-		 * x2 value; verified stable (0 sync errors). Do NOT
-		 * configure bb 8 the same way: it injects DPHY sync
-		 * errors on bb 10 (bb 8 is likely the ov7251 IR lane).
-		 */
-		{10, 13, 32, 0x15},
 	};
 
 	/* Config building block */
@@ -223,104 +232,21 @@ static void ipu4p_isys_bb_cfg(struct ipu_isys *isys)
 		ipu4p_isys_bb_cfg_one(isys, bbconfig[i][0], bbconfig[i][1],
 				      bbconfig[i][2], bbconfig[i][3]);
 
-	for (i = 0; i < ARRAY_SIZE(phy_bb_extra); i++) {
-		int bb = phy_bb_extra[i];
-		unsigned int afe;
-
-		if (bb < 0)
-			continue;
-		afe = phy_afe_extra[i] >= 0 ? phy_afe_extra[i] :
-			((i & 1) ? 0x15 : 0xf);
-		dev_info(&isys->adev->dev,
-			 "phy: extra bb %d cfg, afe 0x%x\n", bb, afe);
-		ipu4p_isys_bb_cfg_one(isys, bb, 13, 32, afe);
-	}
-
-	if (phy_jsl_bits) {
-		dev_info(&isys->adev->dev, "phy: applying JSL-style bits\n");
-		for (i = 0; i < 16; i += 2) {
-			val = readl(isp_base +
-				    BUTTRESS_REG_CPHYX_RX_CONTROL1(i));
-			val |= BIT(31);
-			writel(val, isp_base +
-			       BUTTRESS_REG_CPHYX_RX_CONTROL1(i));
-			/*
-			 * DPHY_CFG is 4 bytes below DPHY_DLL_OVRD (0x148 vs
-			 * 0x14c); no dedicated macro exists in the header.
-			 */
-			val = readl(isp_base +
-				    BUTTRESS_REG_DPHYX_DLL_OVRD(i) - 4);
-			val |= BIT(25) | BIT(26);
-			writel(val, isp_base +
-			       BUTTRESS_REG_DPHYX_DLL_OVRD(i) - 4);
-		}
-	}
-
-	/* Log full PHY bb state to aid bring-up diagnosis */
-	for (i = 0; i < 16; i += 2) {
+	quirks = ipu4p_isys_get_quirks(&isys->adev->dev);
+	if (quirks) {
 		dev_dbg(&isys->adev->dev,
-			"phy bb %u: cphy_dll=0x%x rx_ctrl1=0x%x dphy_cfg=0x%x dphy_dll=0x%x afe=0x%x\n",
-			i,
-			readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(i)),
-			readl(isp_base + BUTTRESS_REG_CPHYX_RX_CONTROL1(i)),
-			readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(i) - 4),
-			readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(i)),
-			readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(i)));
+			 "applying %s PHY bb%u AFE 0x%x quirk\n", quirks->name,
+			 quirks->front_phy_bb, quirks->front_phy_afe);
+		ipu4p_isys_bb_cfg_one(isys, quirks->front_phy_bb, 13, 32,
+				      quirks->front_phy_afe);
 	}
+
 }
-
-static int csi_gpreg_hpll_freq = -1;
-module_param(csi_gpreg_hpll_freq, int, 0644);
-MODULE_PARM_DESC(csi_gpreg_hpll_freq,
-		 "Override CSI GPREG HPLL frequency (-1 = log only)");
-
-static int csi_gpreg_isclk_ratio = -1;
-module_param(csi_gpreg_isclk_ratio, int, 0644);
-MODULE_PARM_DESC(csi_gpreg_isclk_ratio,
-		 "Override CSI GPREG ISCLK ratio (-1 = log only)");
 
 static void ipu4p_isys_port_cfg(struct ipu_isys *isys)
 {
 	void __iomem *base = isys->pdata->base;
 	void __iomem *isp_base = isys->adev->isp->base;
-	u32 legacy_hpll, legacy_isclk, combo_hpll, combo_isclk;
-
-	/*
-	 * Windows CCsi::Prepare programs these two fields in both CSI GPREG
-	 * banks before programming CR_PORT_CONFIG.  Keep the override disabled
-	 * by default: the values are platform configuration, not settle-time
-	 * tuning, and must not be guessed.
-	 */
-	if (csi_gpreg_hpll_freq >= 0 && csi_gpreg_isclk_ratio >= 0) {
-		writel((u32)csi_gpreg_hpll_freq,
-		       base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_HPLL_FREQ);
-		writel((u32)csi_gpreg_isclk_ratio,
-		       base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_ISCLK_RATIO);
-		writel((u32)csi_gpreg_hpll_freq,
-		       base + IPU_COMBO_GPOFFSET + CSI2_REG_CSI_GPREG_HPLL_FREQ);
-		writel((u32)csi_gpreg_isclk_ratio,
-		       base + IPU_COMBO_GPOFFSET + CSI2_REG_CSI_GPREG_ISCLK_RATIO);
-		dev_info(&isys->adev->dev,
-			 "trace isys gpreg clock override: hpll=0x%x isclk=0x%x\n",
-			 (u32)csi_gpreg_hpll_freq, (u32)csi_gpreg_isclk_ratio);
-	} else if (csi_gpreg_hpll_freq >= 0 || csi_gpreg_isclk_ratio >= 0) {
-		dev_err(&isys->adev->dev,
-			"trace isys gpreg clock override requires both values\n");
-	}
-
-	legacy_hpll = readl(base + IPU_GPOFFSET +
-				    CSI2_REG_CSI_GPREG_HPLL_FREQ);
-	legacy_isclk = readl(base + IPU_GPOFFSET +
-				     CSI2_REG_CSI_GPREG_ISCLK_RATIO);
-	combo_hpll = readl(base + IPU_COMBO_GPOFFSET +
-				 CSI2_REG_CSI_GPREG_HPLL_FREQ);
-	combo_isclk = readl(base + IPU_COMBO_GPOFFSET +
-				  CSI2_REG_CSI_GPREG_ISCLK_RATIO);
-	dev_info(&isys->adev->dev,
-		 "trace isys gpreg clocks: legacy hpll=0x%x isclk=0x%x "
-		 "combo hpll=0x%x isclk=0x%x\n",
-		 legacy_hpll, legacy_isclk, combo_hpll, combo_isclk);
-
 	/* Port config */
 	writel(0x3895, base + IPU_GPOFFSET +
 	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
@@ -328,22 +254,14 @@ static void ipu4p_isys_port_cfg(struct ipu_isys *isys)
 	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
 	writel((0x100 << 1) | (0x100 << 10) | (0x100 << 19), isp_base +
 		   BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
-	dev_info(&isys->adev->dev,
-		 "trace isys port cfg: gpo=0x%x combo_gpo=0x%x bscan=0x%x\n",
-		 readl(base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_CR_PORT_CONFIG),
-		 readl(base + IPU_COMBO_GPOFFSET +
-		       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG),
-		 readl(isp_base + BUTTRESS_REG_CSI_BSCAN_EXCLUDE));
 }
 
 void isys_setup_hw(struct ipu_isys *isys)
 {
-	dev_info(&isys->adev->dev, "trace isys setup: begin\n");
 	ipu4p_isys_irq_cfg(isys);
 	ipu4p_isys_port_cfg(isys);
 	ipu4p_isys_bb_cfg(isys);
 	ipu4p_isys_flush_idrain_en(isys);
-	dev_info(&isys->adev->dev, "trace isys setup: complete\n");
 }
 #endif
 
