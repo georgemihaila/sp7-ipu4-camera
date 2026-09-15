@@ -122,7 +122,7 @@ static int buf_prepare(struct vb2_buffer *vb)
 		if (IS_ERR(ib->req)) {
 			dev_err(&av->isys->adev->dev,
 				"can't find request %u (%ld)\n", b->request_fd, PTR_ERR(ib->req));
-			return ib->req;
+			return PTR_ERR(ib->req);
 		} else if (!ib->req) {
 			dev_dbg(&av->isys->adev->dev,
 				"can't find request %u\n", b->request_fd);

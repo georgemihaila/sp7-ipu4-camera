@@ -125,6 +125,7 @@ struct ipu_isys {
 
 	struct dentry *debugfsdir;
 	struct mutex mutex;	/* Serialise isys video open/release related */
+	struct mutex recovery_mutex;	/* Serialise post-timeout power recovery */
 	struct mutex stream_mutex;	/* Stream start, stop, queueing reqs */
 	struct mutex lib_mutex;	/* Serialise optional external library mutex */
 
@@ -177,6 +178,8 @@ void ipu_put_fw_mgs_buffer(struct ipu_isys *isys, u64 data);
 void ipu_cleanup_fw_msg_bufs(struct ipu_isys *isys);
 
 extern const struct v4l2_ioctl_ops ipu_isys_ioctl_ops;
+
+int ipu_isys_force_power_cycle(struct ipu_isys *isys);
 
 void isys_setup_hw(struct ipu_isys *isys);
 int isys_isr_one(struct ipu_bus_device *adev);

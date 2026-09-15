@@ -1,0 +1,5 @@
+link Intel IPU4 CSI-2 0:1 -> Intel IPU4 CSI2 BE SOC:0 flags 0x5
+link Intel IPU4 CSI2 BE SOC:8 -> Intel IPU4 BE SOC capture 0:0 flags 0x5
+capturing from /dev/video42 (rear camera, 3264x2448, BE SOC path)...
+<<<
+-rw-r--r--. 1 george george 47941632 Sep 14 23:25 /home/george/repos/sp7-ipu4-camera/reports/init-trace-20260914-232546/captures/rear.raw

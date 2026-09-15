@@ -1,0 +1,782 @@
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-2 set_stream=1: stream_count=0 remote_streams=1 source=7 external=ov5693 1-0036
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 timing: link_freq=419200000 accinv=8 calculated ctermen=0 csettle=684 dtermen=0 dsettle=661
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=2 enable=1\n
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream entry: rx enable=0x0 lanes=2 config=0x0 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream enable done: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 stream enabled: lanes=2 timing ctermen=0 csettle=684 dtermen=0 dsettle=661 source=7
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open: handle=0 size=340 abi_size=340
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000000: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000010: 00000000 00000000 00000000 00000798
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000020: 00000a20 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000030: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000040: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000050: 00000000 00000a20 00000798 400a002b
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000060: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000070: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000080: 00000000 00000a20 00000798 00001440
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 00000090: 00000000 00000000 18030001 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000a0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000b0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000c0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000d0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000e0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: e4 fw stream-open abi: 000000f0: 00000000 00000000 00000000 00000000
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open cfg: src=7 vc=0 isl=0 compfmt=0 inputs=1 outputs=1
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw input[0]: dt=43 2592x1944 store=0
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw output[0]: type=3 fmt=24 input=0 stride=5184 2592x1944 wm=0 irq=1
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x4000
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:55 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:55 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 1)
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 2)
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:17:56 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:56 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 3)
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:57 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:57 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:58 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 4)
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 5)
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:58 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 6)
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:17:59 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:17:59 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:17:59 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:17:59 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 7)
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 8)
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:00 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:00 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 9)
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:01 pico-qcd kernel: ipu_isys_csi2_error: 21 callbacks suppressed
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:01 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:01 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 10)
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 11)
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:02 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:02 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:03 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 12)
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:03 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 13)
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 14)
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:04 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:05 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 15)
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 16)
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:05 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:06 pico-qcd kernel: ipu_isys_csi2_error: 22 callbacks suppressed
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 17)
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:06 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 18)
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 19)
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:07 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:07 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:08 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:08 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 20)
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:08 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 21)
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 22)
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:09 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:10 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 23)
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:10 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 24)
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:11 pico-qcd kernel: ipu_isys_csi2_error: 16 callbacks suppressed
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 25)
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:11 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:11 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 26)
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:12 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:12 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 27)
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 28)
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:13 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8607
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 29)
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:14 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:15 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 30)
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=1
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: begin xvclk=19200000Hz reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerup: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-asserted: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power clock-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power regulators-enabled: xvclk=19200000Hz reset=1 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power reset-and-powerdown-released: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-settle: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace powerup: done
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor_init: start
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init configured mode: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: sensor_init stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 0100=00 0103=00 id=005690 3016=f0 3017=f0 3018=f0 3022=01 3098=02 3099=19 30a0=d2 30b4=03
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace sensor after-init: 3503=07 350b=40 out=0a20 x 0798 hts=0a80 vts=07b8 481f=30 4837=0a
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-on register write ret=0
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-on: stream_reg=0x01 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:15 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=1 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8687
+Sep 14 22:18:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 14 22:18:16 pico-qcd kernel: ipu_isys_csi2_error: 21 callbacks suppressed
+Sep 14 22:18:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: stream stop time out (source=7 handle=0 vc=0 stream_id=0 send_type=5)
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: s_stream ov5693 1-0036 (ext)
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: request enable=0
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream pre: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream: stream-off register write ret=0
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream stream-off: stream_reg=0x00 hts=2688 vts=2078 out=2592x1944 crop=[x=16..2608 y=6..1950]
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: s_stream post: stream=0 fmt=2592x1944 crop=[l=16 t=6 w=2592 h=1944] binning[x=0 y=0] inc[x_odd=1 y_odd=1] vts=2078 ctrls[vblank=134 exp=2070 again=8 dgain=1024 hflip=0 vflip=0 test_pattern=0
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-2 set_stream=0: stream_count=1 remote_streams=1 source=7 external=ov5693 1-0036
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=2 enable=0\n
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream entry: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream disable pre-error: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power before-powerdown: xvclk=19200000Hz reset=0 powerdown=-19 avdd=1 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: reset-gpio=1 powerdown-gpio=0
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream disable done: rx enable=0x0 lanes=2 config=0x0 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x400
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: stream close error: 3
+Sep 14 22:18:17 pico-qcd kernel: intel-ipu6 intel-ipu60: Intel IPU4 BE SOC capture 0: cleaning active queue 3
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: trace power after-powerdown: xvclk=19200000Hz reset=1 powerdown=-19 avdd=0 dovdd=1 dvdd=1 runtime=inactive
+Sep 14 22:18:17 pico-qcd kernel: ov5693 i2c-INT33BE:00: powerdown: done

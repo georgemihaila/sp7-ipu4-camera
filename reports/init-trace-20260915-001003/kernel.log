@@ -1,0 +1,298 @@
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-0 set_stream=1: stream_count=0 remote_streams=1 source=3 external=ov8865 2-0010
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 timing: link_freq=360000000 accinv=8 calculated ctermen=0 csettle=672 dtermen=0 dsettle=658
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=0 enable=1\n
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream entry: rx enable=0x0 lanes=0 config=0x0 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=0 d0termen=0 d0settle=0 d1termen=0 d1settle=0 receiver_errors=0x0
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream enable done: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 stream enabled: lanes=4 timing ctermen=0 csettle=672 dtermen=0 dsettle=658 source=3
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open: handle=0 size=340 abi_size=340
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000000: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000010: 00000000 00000000 00000000 00000990
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000020: 00000cc0 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000030: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000040: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000050: 00000000 00000cc0 00000990 400a002b
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000060: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000070: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000080: 00000000 00000cc0 00000990 00001980
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 00000090: 00000000 00000000 18030001 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000a0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000b0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000c0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000d0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000e0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: e4 fw stream-open abi: 000000f0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open cfg: src=3 vc=0 isl=0 compfmt=0 inputs=1 outputs=1
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw input[0]: dt=43 3264x2448 store=0
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw output[0]: type=3 fmt=24 input=0 stride=6528 3264x2448 wm=0 irq=1
+Sep 15 00:10:03 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x4000
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: s_stream ov8865 2-0010 (ext)
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-0 set_stream=0: stream_count=1 remote_streams=1 source=3 external=ov8865 2-0010
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=0 enable=0\n
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream entry: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream disable pre-error: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream disable done: rx enable=0x0 lanes=4 config=0x0 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-2 set_stream=1: stream_count=0 remote_streams=1 source=7 external=ov5693 1-0036
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 timing: link_freq=419200000 accinv=8 calculated ctermen=0 csettle=684 dtermen=0 dsettle=661
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=2 enable=1\n
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream entry: rx enable=0x0 lanes=0 config=0x0 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=0 d0termen=0 d0settle=0 d1termen=0 d1settle=0 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream enable done: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 stream enabled: lanes=2 timing ctermen=0 csettle=684 dtermen=0 dsettle=661 source=7
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open: handle=0 size=340 abi_size=340
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000000: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000010: 00000000 00000000 00000000 00000798
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000020: 00000a20 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000030: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000040: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000050: 00000000 00000a20 00000798 400a002b
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000060: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000070: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000080: 00000000 00000a20 00000798 00001440
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 00000090: 00000000 00000000 18030001 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000a0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000b0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000c0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000d0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000e0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: e4 fw stream-open abi: 000000f0: 00000000 00000000 00000000 00000000
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw stream-open cfg: src=7 vc=0 isl=0 compfmt=0 inputs=1 outputs=1
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw input[0]: dt=43 2592x1944 store=0
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: e4 fw output[0]: type=3 fmt=24 input=0 stride=5184 2592x1944 wm=0 irq=1
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x4000
+Sep 15 00:10:04 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 1)
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 2)
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:05 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 3)
+Sep 15 00:10:06 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 4)
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 5)
+Sep 15 00:10:07 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x607
+Sep 15 00:10:08 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 6)
+Sep 15 00:10:08 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:09 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 7)
+Sep 15 00:10:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:09 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 8)
+Sep 15 00:10:09 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8687
+Sep 15 00:10:10 pico-qcd kernel: ipu_isys_csi2_error: 10 callbacks suppressed
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 9)
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:10 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 10)
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 11)
+Sep 15 00:10:11 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:12 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 12)
+Sep 15 00:10:12 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 13)
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 14)
+Sep 15 00:10:13 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:14 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 15)
+Sep 15 00:10:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:14 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 16)
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:15 pico-qcd kernel: ipu_isys_csi2_error: 31 callbacks suppressed
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 17)
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:15 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 18)
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:16 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 19)
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 20)
+Sep 15 00:10:17 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:18 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 21)
+Sep 15 00:10:18 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:18 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:19 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 22)
+Sep 15 00:10:19 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:19 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:19 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 23)
+Sep 15 00:10:19 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:20 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 24)
+Sep 15 00:10:20 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:21 pico-qcd kernel: ipu_isys_csi2_error: 20 callbacks suppressed
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 25)
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 26)
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:21 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 27)
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:22 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:23 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 28)
+Sep 15 00:10:23 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:23 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:23 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 29)
+Sep 15 00:10:23 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:24 pico-qcd kernel: intel-ipu6 intel-ipu60: no frames from ov5693 1-0036 after start; bouncing sensor (retry 30)
+Sep 15 00:10:24 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:24 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:24 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:24 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:26 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:26 pico-qcd kernel: ipu_isys_csi2_error: 17 callbacks suppressed
+Sep 15 00:10:26 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:26 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:27 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:27 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:28 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:29 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:29 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:29 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:29 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:30 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:31 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:31 pico-qcd kernel: ipu_isys_csi2_error: 6 callbacks suppressed
+Sep 15 00:10:31 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:31 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:32 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:33 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:34 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:34 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:35 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:36 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:36 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:36 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:36 pico-qcd kernel: ipu_isys_csi2_error: 10 callbacks suppressed
+Sep 15 00:10:36 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:36 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: Frame sync error
+Sep 15 00:10:37 pico-qcd kernel: intel-ipu6 intel-ipu60: csi2-2 error: DPHY non-recoverable synchronization error
+Sep 15 00:10:38 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:38 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:38 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:39 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:39 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:39 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:39 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x0 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8603
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x683
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x8683
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: s_stream ov5693 1-0036 (ext)
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-2 set_stream=0: stream_count=1 remote_streams=1 source=7 external=ov5693 1-0036
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: diag entry: csi2_set_stream index=2 enable=0\n
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream entry: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream disable pre-error: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 error snapshot: rx enable=0x1 lanes=2 config=0x3 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x603
+Sep 15 00:10:40 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 2 set_stream disable done: rx enable=0x0 lanes=2 config=0x0 status=0x1 hs=0x301 lp=0x0 ctermen=0 csettle=684 d0termen=0 d0settle=661 d1termen=0 d1settle=661 receiver_errors=0x0

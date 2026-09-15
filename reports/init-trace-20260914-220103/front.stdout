@@ -1,0 +1,3 @@
+link Intel IPU4 CSI-2 2:1 -> Intel IPU4 CSI2 BE SOC:0 flags 0x5
+link Intel IPU4 CSI2 BE SOC:8 -> Intel IPU4 BE SOC capture 0:0 flags 0x5
+capturing from /dev/video42 (front camera, 2592x1944, BE SOC path)...

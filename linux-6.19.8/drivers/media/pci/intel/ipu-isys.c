@@ -11,6 +11,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/string.h>
 #include <linux/sched.h>
+#include <linux/sysfs.h>
 #include <linux/version.h>
 
 #include <media/ipu-bridge.h>
@@ -33,6 +34,103 @@
 #include "ipu-platform-buttress-regs.h"
 
 #define ISYS_PM_QOS_VALUE	300
+
+int ipu_isys_force_power_cycle(struct ipu_isys *isys)
+{
+	struct ipu_device *isp;
+	struct ipu_bus_device *iommu;
+	bool parent_ref = false;
+	int ret;
+
+	if (!isys || !isys->adev || !isys->adev->isp)
+		return -ENODEV;
+
+	isp = isys->adev->isp;
+	iommu = isp->isys_iommu;
+	if (!iommu)
+		return -ENODEV;
+
+	mutex_lock(&isys->recovery_mutex);
+
+	mutex_lock(&isys->mutex);
+	if (!isys->reset_needed) {
+		mutex_unlock(&isys->mutex);
+		mutex_unlock(&isys->recovery_mutex);
+		return 0;
+	}
+	mutex_unlock(&isys->mutex);
+
+	/*
+	 * A timed-out firmware release leaves the ISYS context unusable. The
+	 * reset_needed comment describes the required d0i0 -> i3 transition;
+	 * force the parent MMU/buttress runtime-PM path to perform that
+	 * transition, then bring it back so the next open gets fresh hardware
+	 * and firmware state. Do not clear reset_needed until both operations
+	 * have succeeded.
+	 */
+	dev_warn(&isys->adev->dev,
+		 "recovering ISYS after firmware release timeout via power cycle\n");
+	ret = pm_runtime_resume_and_get(&iommu->dev);
+	if (ret < 0) {
+		dev_err(&isys->adev->dev, "ISYS power-up for recovery failed: %d\n",
+			ret);
+		goto out_unlock;
+	}
+	parent_ref = true;
+
+	ret = pm_runtime_force_suspend(&iommu->dev);
+	if (ret) {
+		dev_err(&isys->adev->dev, "ISYS power-down recovery failed: %d\n",
+			ret);
+		goto out_unlock;
+	}
+
+	usleep_range(1000, 1100);
+	ret = pm_runtime_force_resume(&iommu->dev);
+	if (ret) {
+		dev_err(&isys->adev->dev, "ISYS power-up recovery failed: %d\n",
+			ret);
+		goto out_unlock;
+	}
+
+	mutex_lock(&isys->mutex);
+	isys->reset_needed = false;
+	mutex_unlock(&isys->mutex);
+
+out_unlock:
+	if (parent_ref)
+		pm_runtime_put_sync(&iommu->dev);
+	mutex_unlock(&isys->recovery_mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(ipu_isys_force_power_cycle);
+
+static ssize_t force_power_cycle_store(struct device *dev,
+					       struct device_attribute *attr,
+					       const char *buf, size_t count)
+{
+	struct ipu_bus_device *adev = to_ipu_bus_device(dev);
+	struct ipu_isys *isys = ipu_bus_get_drvdata(adev);
+	int ret;
+
+	if (!sysfs_streq(buf, "1"))
+		return -EINVAL;
+	if (!isys)
+		return -ENODEV;
+
+	mutex_lock(&isys->mutex);
+	if (isys->video_opened || isys->stream_opened) {
+		mutex_unlock(&isys->mutex);
+		return -EBUSY;
+	}
+	isys->reset_needed = true;
+	mutex_unlock(&isys->mutex);
+
+	ret = ipu_isys_force_power_cycle(isys);
+	return ret ? ret : count;
+}
+
+static DEVICE_ATTR_WO(force_power_cycle);
 
 /*
  * Convert firmware/ACPI CSI-2 port number to isys->csi2[] array index.
@@ -645,6 +743,8 @@ static int isys_runtime_pm_resume(struct device *dev)
 		return 0;
 	}
 
+	dev_info(dev, "trace isys runtime resume: begin\n");
+
 	ipu_trace_restore(dev);
 
 	cpu_latency_qos_update_request(&isys->pm_qos, ISYS_PM_QOS_VALUE);
@@ -663,6 +763,7 @@ static int isys_runtime_pm_resume(struct device *dev)
 		mutex_unlock(&isys->short_packet_tracing_mutex);
 	}
 	isys_setup_hw(isys);
+	dev_info(dev, "trace isys runtime resume: complete\n");
 
 	return 0;
 }
@@ -678,6 +779,8 @@ static int isys_runtime_pm_suspend(struct device *dev)
 		return 0;
 	}
 
+	dev_info(dev, "trace isys runtime suspend: begin\n");
+
 	spin_lock_irqsave(&isys->power_lock, flags);
 	isys->power = 0;
 	spin_unlock_irqrestore(&isys->power_lock, flags);
@@ -688,6 +791,7 @@ static int isys_runtime_pm_suspend(struct device *dev)
 	mutex_unlock(&isys->mutex);
 
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
+	dev_info(dev, "trace isys runtime suspend: complete\n");
 
 	return 0;
 }
@@ -728,6 +832,7 @@ static void isys_remove(struct ipu_bus_device *adev)
 	struct isys_fw_msgs *fwmsg, *safe;
 
 	dev_info(&adev->dev, "removed\n");
+	device_remove_file(&adev->dev, &dev_attr_force_power_cycle);
 	if (isp->ipu_dir)
 		debugfs_remove_recursive(isys->debugfsdir);
 
@@ -757,6 +862,7 @@ static void isys_remove(struct ipu_bus_device *adev)
 	}
 
 	mutex_destroy(&isys->stream_mutex);
+	mutex_destroy(&isys->recovery_mutex);
 	mutex_destroy(&isys->mutex);
 
 	if (isys->short_packet_source == IPU_ISYS_SHORT_PACKET_FROM_TUNIT) {
@@ -957,6 +1063,7 @@ static int isys_probe(struct ipu_bus_device *adev)
 	isys->power = 0;
 
 	mutex_init(&isys->mutex);
+	mutex_init(&isys->recovery_mutex);
 	mutex_init(&isys->stream_mutex);
 	mutex_init(&isys->lib_mutex);
 
@@ -1012,6 +1119,11 @@ static int isys_probe(struct ipu_bus_device *adev)
 	if (rval)
 		goto out_remove_pkg_dir_shared_buffer;
 
+	rval = device_create_file(&adev->dev, &dev_attr_force_power_cycle);
+	if (rval)
+		dev_warn(&adev->dev,
+			 "can't create force_power_cycle sysfs file: %d\n", rval);
+
 	trace_printk("E|TMWK\n");
 	return 0;
 
@@ -1030,6 +1142,7 @@ release_firmware:
 
 	trace_printk("E|TMWK\n");
 
+	mutex_destroy(&isys->recovery_mutex);
 	mutex_destroy(&isys->mutex);
 	mutex_destroy(&isys->stream_mutex);
 

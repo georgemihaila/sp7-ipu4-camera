@@ -1,0 +1,40 @@
+trace_start=2026-09-14T23:40:25+03:00
+2026-09-14T23:40:25+03:00
+Linux pico-qcd 6.19.8-sp7cam-test1 #3 SMP PREEMPT_DYNAMIC Mon Sep 14 12:41:27 EEST 2026 x86_64 GNU/Linux
+--- modinfo intel_ipu4p_isys ---
+filename:       /lib/modules/6.19.8-sp7cam-test1/kernel/drivers/media/pci/intel/ipu4/intel-ipu4p-isys.ko
+vermagic:       6.19.8-sp7cam-test1 SMP preempt mod_unload 
+parm:           wall_clock_ts_on:Timestamp based on REALTIME clock (bool)
+parm:           front_initial_attempt:Front OV5693 diagnostic mode: suppress start-recovery bounces (bool)
+parm:           num_stream_support:IPU project support number of stream (uint)
+parm:           use_stream_stop:Use STOP command if running in CSI capture mode (bool)
+parm:           debug_capture_links:Also link the debug capture nodes (per-CSI-2 MIPI packet dumps, CSI2 BE/ISA) into the media graph; their output is not a clean raster (default 0) (bool)
+parm:           phy_bb_extra:Extra PHY building blocks to configure (-1 = none) (array of int)
+parm:           phy_afe_extra:AFE config value per extra bb (-1 = alternate 0xf/0x15) (array of int)
+parm:           phy_jsl_bits:Also set JSL-style CPHY_RX_CONTROL1/DPHY_CFG bits on all bbs (bool)
+parm:           phy_bb10_drc:BB10 DPHY DRC override (Windows SP7 value is 8; default 32) (int)
+parm:           phy_bb10_afe:BB10 AFE override (Windows SP7 value is 0x4f3cf008; default 0x15) (int)
+parm:           e1_timeline:Enable bounded E1 first-failure timeline (max 128 events) (bool)
+parm:           csi2_fw_src:Override ISYS fw stream source per CSI-2 index (-1 = builtin mapping) (array of int)
+parm:           csi2_csettle:Clock-lane settle count (-1 = calc) (int)
+parm:           csi2_dsettle:Data-lane settle count (-1 = calc) (int)
+parm:           csi2_port_optimized:IPU CSI2 port optimization (bool)
+--- modinfo intel_ipu4p ---
+filename:       /lib/modules/6.19.8-sp7cam-test1/kernel/drivers/media/pci/intel/ipu4/intel-ipu4p.ko
+vermagic:       6.19.8-sp7cam-test1 SMP preempt mod_unload 
+parm:           fw_version_check:enable/disable checking firmware version (bool)
+parm:           secure_mode_enable:bool
+parm:           secure_mode:IPU secure mode enable
+--- modinfo ov5693 ---
+filename:       /lib/modules/6.19.8-sp7cam-test1/kernel/drivers/media/i2c/ov5693.ko
+vermagic:       6.19.8-sp7cam-test1 SMP preempt mod_unload 
+--- module parameters ---
+csi2_csettle=-1
+csi2_dsettle=-1
+csi2_fw_src=-1,-1,-1,-1,-1,-1,-1,-1
+phy_afe_extra=-1,-1,-1,-1,-1,-1,-1,-1
+phy_bb_extra=-1,-1,-1,-1,-1,-1,-1,-1
+phy_jsl_bits=N
+--- sensor runtime state ---
+/sys/bus/i2c/devices/i2c-INT33BE:00/power/runtime_status=suspended
+/sys/bus/i2c/devices/i2c-INT33BE:00/power/control=auto

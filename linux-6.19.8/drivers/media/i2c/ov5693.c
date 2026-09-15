@@ -16,6 +16,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
@@ -210,6 +211,63 @@ static void ov5693_log_hw_state(struct ov5693_device *ov5693, const char *tag)
 		ov5693->mode.crop.left + ov5693->mode.crop.width,
 		ov5693->mode.crop.top,
 		ov5693->mode.crop.top + ov5693->mode.crop.height);
+}
+
+/*
+ * The ACPI tables provide the actual GPIO and regulator resources for the
+ * sensor, while this driver provides their ordering.  Keep a read-back of
+ * both here so a failed link can be distinguished from a failed power-up.
+ * GPIO values are logical (descriptor) values, not raw pad voltages.
+ */
+static void ov5693_log_power_state(struct ov5693_device *ov5693,
+				   const char *tag)
+{
+	int reset = ov5693->reset ? gpiod_get_value_cansleep(ov5693->reset) : -ENODEV;
+	int powerdown = ov5693->powerdown ?
+		gpiod_get_value_cansleep(ov5693->powerdown) : -ENODEV;
+	int avdd = regulator_is_enabled(ov5693->supplies[0].consumer);
+	int dovdd = regulator_is_enabled(ov5693->supplies[1].consumer);
+	int dvdd = regulator_is_enabled(ov5693->supplies[2].consumer);
+
+	dev_info(ov5693->dev,
+		"trace power %s: xvclk=%luHz reset=%d powerdown=%d "
+		"avdd=%d dovdd=%d dvdd=%d runtime=%s\n",
+		tag, clk_get_rate(ov5693->xvclk), reset, powerdown,
+		avdd, dovdd, dvdd,
+		pm_runtime_active(ov5693->dev) ? "active" : "inactive");
+}
+
+static void ov5693_log_sensor_regs(struct ov5693_device *ov5693,
+				   const char *tag)
+{
+	static const unsigned int regs[] = {
+		0x0100, 0x0103, 0x300a, 0x300b, 0x3016, 0x3017,
+		0x3018, 0x3022, 0x3098, 0x3099, 0x30a0, 0x30b4,
+		0x3503, 0x350b, 0x3808, 0x3809, 0x380a, 0x380b,
+		0x380c, 0x380d, 0x380e, 0x380f, 0x481f, 0x4837,
+	};
+	u64 val[ARRAY_SIZE(regs)];
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < ARRAY_SIZE(regs); i++) {
+		ret = cci_read(ov5693->regmap, CCI_REG8(regs[i]), &val[i], NULL);
+		if (ret)
+			val[i] = ~0ULL;
+	}
+
+	dev_info(ov5693->dev,
+		"trace sensor %s: 0100=%02llx 0103=%02llx id=%04llx%02llx "
+		"3016=%02llx 3017=%02llx 3018=%02llx 3022=%02llx "
+		"3098=%02llx 3099=%02llx 30a0=%02llx 30b4=%02llx\n",
+		tag, val[0], val[1], val[2], val[3], val[4], val[5], val[6],
+		val[7], val[8], val[9], val[10], val[11]);
+	dev_info(ov5693->dev,
+		"trace sensor %s: 3503=%02llx 350b=%02llx "
+		"out=%02llx%02llx x %02llx%02llx "
+		"hts=%02llx%02llx vts=%02llx%02llx 481f=%02llx 4837=%02llx\n",
+		tag, val[12], val[13], val[14], val[15], val[16], val[17],
+		val[18], val[19], val[20], val[21], val[22], val[23]);
 }
 
 static const struct cci_reg_sequence ov5693_global_regs[] = {
@@ -671,7 +729,7 @@ static int ov5693_sensor_init(struct ov5693_device *ov5693)
 {
 	int ret;
 
-	dev_dbg(ov5693->dev, "sensor_init: start\n");
+	dev_info(ov5693->dev, "trace sensor_init: start\n");
 	ret = ov5693_sw_reset(ov5693);
 	if (ret)
 		return dev_err_probe(ov5693->dev, ret,
@@ -695,12 +753,15 @@ static int ov5693_sensor_init(struct ov5693_device *ov5693)
 		dev_err(ov5693->dev, "stop streaming error\n");
 	else
 		ov5693_log_hw_state(ov5693, "sensor_init stream-off");
+	if (!ret)
+		ov5693_log_sensor_regs(ov5693, "after-init");
 
 	return ret;
 }
 
 static void ov5693_sensor_powerdown(struct ov5693_device *ov5693)
 {
+	ov5693_log_power_state(ov5693, "before-powerdown");
 	dev_dbg(ov5693->dev, "powerdown: reset-gpio=%d powerdown-gpio=%d\n",
 		ov5693->reset ? 1 : 0, ov5693->powerdown ? 1 : 0);
 	gpiod_set_value_cansleep(ov5693->reset, 1);
@@ -709,6 +770,7 @@ static void ov5693_sensor_powerdown(struct ov5693_device *ov5693)
 	regulator_bulk_disable(OV5693_NUM_SUPPLIES, ov5693->supplies);
 
 	clk_disable_unprepare(ov5693->xvclk);
+	ov5693_log_power_state(ov5693, "after-powerdown");
 	dev_dbg(ov5693->dev, "powerdown: done\n");
 }
 
@@ -717,16 +779,20 @@ static int ov5693_sensor_powerup(struct ov5693_device *ov5693)
 	int ret;
 	unsigned long xvclk_rate = clk_get_rate(ov5693->xvclk);
 
-	dev_dbg(ov5693->dev, "powerup: xvclk=%lu reset-gpio=%d powerdown-gpio=%d\n",
+	dev_info(ov5693->dev,
+		"trace powerup: begin xvclk=%luHz reset-gpio=%d powerdown-gpio=%d\n",
 		xvclk_rate, ov5693->reset ? 1 : 0, ov5693->powerdown ? 1 : 0);
+	ov5693_log_power_state(ov5693, "before-powerup");
 	gpiod_set_value_cansleep(ov5693->reset, 1);
 	gpiod_set_value_cansleep(ov5693->powerdown, 1);
+	ov5693_log_power_state(ov5693, "reset-and-powerdown-asserted");
 
 	ret = clk_prepare_enable(ov5693->xvclk);
 	if (ret) {
 		dev_err(ov5693->dev, "Failed to enable clk\n");
 		goto fail_power;
 	}
+	ov5693_log_power_state(ov5693, "clock-enabled");
 
 	ret = regulator_bulk_enable(OV5693_NUM_SUPPLIES, ov5693->supplies);
 	if (ret) {
@@ -734,13 +800,15 @@ static int ov5693_sensor_powerup(struct ov5693_device *ov5693)
 		goto fail_power;
 	}
 
-	dev_dbg(ov5693->dev, "powerup: regulators enabled (avdd,dovdd,dvdd)\n");
+	ov5693_log_power_state(ov5693, "regulators-enabled");
 	gpiod_set_value_cansleep(ov5693->powerdown, 0);
 	gpiod_set_value_cansleep(ov5693->reset, 0);
+	ov5693_log_power_state(ov5693, "reset-and-powerdown-released");
 
 	usleep_range(5000, 7500);
 
-	dev_dbg(ov5693->dev, "powerup: done\n");
+	ov5693_log_power_state(ov5693, "after-settle");
+	dev_info(ov5693->dev, "trace powerup: done\n");
 	return 0;
 
 fail_power:

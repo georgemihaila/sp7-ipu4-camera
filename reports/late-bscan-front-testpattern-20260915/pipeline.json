@@ -1,0 +1,23 @@
+[
+  [
+    "ov5693 1-0036",
+    0,
+    "Intel IPU4 CSI-2 2",
+    0,
+    ""
+  ],
+  [
+    "Intel IPU4 CSI-2 2",
+    1,
+    "Intel IPU4 CSI2 BE SOC",
+    0,
+    "DYNAMIC"
+  ],
+  [
+    "Intel IPU4 CSI2 BE SOC",
+    8,
+    "Intel IPU4 BE SOC capture 0",
+    0,
+    "ENABLED,DYNAMIC"
+  ]
+]

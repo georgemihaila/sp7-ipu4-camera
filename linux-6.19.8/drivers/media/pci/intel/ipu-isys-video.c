@@ -260,12 +260,29 @@ static int video_open(struct file *file)
 
 	mutex_lock(&isys->mutex);
 
-	if (isys->reset_needed || isp->flr_done) {
+	if (isp->flr_done) {
 		mutex_unlock(&isys->mutex);
-		dev_warn(&isys->adev->dev, "isys power cycle required\n");
+		dev_warn(&isys->adev->dev,
+			 "isys FLR recovery still in progress\n");
 		return -EIO;
 	}
-	mutex_unlock(&isys->mutex);
+	if (isys->reset_needed) {
+		if (isys->video_opened || isys->stream_opened) {
+			mutex_unlock(&isys->mutex);
+			dev_warn(&isys->adev->dev,
+				 "isys recovery deferred while streams are open\n");
+			return -EBUSY;
+		}
+		mutex_unlock(&isys->mutex);
+		rval = ipu_isys_force_power_cycle(isys);
+		if (rval) {
+			dev_warn(&isys->adev->dev,
+				 "isys power-cycle recovery failed: %d\n", rval);
+			return rval;
+		}
+	} else {
+		mutex_unlock(&isys->mutex);
+	}
 
 	do {
 		rval = ipu_buttress_authenticate(isp);
@@ -2139,13 +2156,13 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 		if (ip->csi2) {
 			dev_dbg(dev,
 				"stream off ext: %s stream_count=%u remote_streams=%u\n",
-				ip->external->entity->name, ip->csi2->stream_count,
-				ip->csi2->remote_streams);
+			ip->external->entity->name, ip->csi2->stream_count,
+			ip->csi2->remote_streams);
 			if (ip->csi2->stream_count == 1) {
-				v4l2_subdev_call(esd, video, s_stream, state);
 #if defined(CONFIG_VIDEO_INTEL_IPU4) || defined(CONFIG_VIDEO_INTEL_IPU4P)
 				ipu_isys_csi2_wait_last_eof(ip->csi2);
 #endif
+				v4l2_subdev_call(esd, video, s_stream, state);
 			}
 		} else {
 			v4l2_subdev_call(esd, video, s_stream, state);
@@ -2307,6 +2324,7 @@ static long ipu_isys_compat_ioctl(struct file *file, unsigned int cmd,
 static const struct v4l2_ioctl_ops ioctl_ops_splane = {
 	.vidioc_querycap = ipu_isys_vidioc_querycap,
 	.vidioc_enum_fmt_vid_cap = ipu_isys_vidioc_enum_fmt,
+	.vidioc_enum_framesizes = ipu_isys_vidioc_enum_framesizes,
 	.vidioc_g_fmt_vid_cap = vidioc_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap = vidioc_s_fmt_vid_cap,
 	.vidioc_try_fmt_vid_cap = vidioc_try_fmt_vid_cap,
@@ -2450,6 +2468,8 @@ int ipu_isys_video_init(struct ipu_isys_video *av,
 	if (av->debug_link_only && !debug_capture_links) {
 		/* Debug tap: leave unlinked, see ipu_isys_video::debug_link_only */
 		rval = 0;
+		mutex_unlock(&av->mutex);
+		return 0;
 	} else if (pad_flags & MEDIA_PAD_FL_SINK) {
 		rval = media_create_pad_link(entity, pad,
 					     &av->vdev.entity, 0, flags);

@@ -15,6 +15,9 @@ else
 fi
 FMT=SBGGR10_1X10
 HERE=$(dirname "$(readlink -f "$0")")
+OUTPUT_DIR=${OUTPUT_DIR:-"$HERE/captures"}
+CAPTURE_TIMEOUT=${CAPTURE_TIMEOUT:-30}
+mkdir -p "$OUTPUT_DIR"
 
 media-ctl -d /dev/media0 -r
 media-ctl -d /dev/media0 -V "\"$SENSOR\":0 [fmt:$FMT/$RES]"
@@ -30,8 +33,8 @@ media-ctl -d /dev/media0 -V "\"Intel IPU4 CSI2 BE SOC\":8 [fmt:$FMT/$RES]"
 DEV=$(media-ctl -d /dev/media0 -e "Intel IPU4 BE SOC capture 0")
 W=${RES%x*}; H=${RES#*x}
 echo "capturing from $DEV ($CAM camera, $RES, BE SOC path)..."
-timeout 30 v4l2-ctl -d "$DEV" \
+timeout "$CAPTURE_TIMEOUT" v4l2-ctl -d "$DEV" \
     --set-fmt-video=width=$W,height=$H,pixelformat=BG10 \
     --stream-mmap=4 --stream-count=3 \
-    --stream-to=/home/user/camera/$CAM.raw
-ls -la /home/user/camera/$CAM.raw
+    --stream-to="$OUTPUT_DIR/$CAM.raw"
+ls -la "$OUTPUT_DIR/$CAM.raw"

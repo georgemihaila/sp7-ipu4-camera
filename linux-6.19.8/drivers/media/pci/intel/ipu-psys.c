@@ -146,7 +146,7 @@ static int ipu_psys_get_userpages(struct ipu_dma_buf_attach *attach)
 	int nr = 0;
 	u32 flags;
 
-	start = attach->userptr;
+	start = (unsigned long)attach->userptr;
 	end = PAGE_ALIGN(start + attach->len);
 	npages = (end - (start & PAGE_MASK)) >> PAGE_SHIFT;
 	array_size = npages * sizeof(struct page *);

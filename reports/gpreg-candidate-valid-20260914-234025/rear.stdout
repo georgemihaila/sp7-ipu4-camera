@@ -1,0 +1,5 @@
+link Intel IPU4 CSI-2 0:1 -> Intel IPU4 CSI2 BE SOC:0 flags 0x5
+link Intel IPU4 CSI2 BE SOC:8 -> Intel IPU4 BE SOC capture 0:0 flags 0x5
+capturing from /dev/video42 (rear camera, 3264x2448, BE SOC path)...
+		VIDIOC_STREAMON returned -1 (Connection timed out)
+-rw-r--r--. 1 george george 0 Sep 14 23:40 /home/george/repos/sp7-ipu4-camera/reports/gpreg-candidate-valid-20260914-234025/captures/rear.raw

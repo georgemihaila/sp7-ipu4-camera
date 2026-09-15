@@ -1,0 +1,11 @@
+Format Video Capture:
+	Width/Height      : 2592/1944
+	Pixel Format      : 'BG10' (10-bit Bayer BGBG/GRGR)
+	Field             : None
+	Bytes per Line    : 5184
+	Size Image        : 15987072
+	Colorspace        : Raw
+	Transfer Function : Default (maps to None)
+	YCbCr/HSV Encoding: Default (maps to ITU-R 601)
+	Quantization      : Default (maps to Full Range)
+	Flags             : 

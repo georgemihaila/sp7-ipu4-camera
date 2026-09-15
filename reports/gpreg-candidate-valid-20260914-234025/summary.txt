@@ -1,0 +1,13 @@
+--- capture files ---
+rear.raw 0 bytes
+--- trace lines ---
+Sep 14 23:40:25 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-0 set_stream=1: stream_count=0 remote_streams=1 source=3 external=ov8865 2-0010
+Sep 14 23:40:25 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 timing: link_freq=360000000 accinv=8 calculated ctermen=0 csettle=672 dtermen=0 dsettle=658
+Sep 14 23:40:25 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream entry: rx enable=0x0 lanes=4 config=0x0 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 14 23:40:25 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream enable done: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 14 23:40:25 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 stream enabled: lanes=4 timing ctermen=0 csettle=672 dtermen=0 dsettle=658 source=3
+Sep 14 23:40:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi2-0 set_stream=0: stream_count=1 remote_streams=1 source=3 external=ov8865 2-0010
+Sep 14 23:40:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream entry: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 14 23:40:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream disable pre-error: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0
+Sep 14 23:40:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 error snapshot: rx enable=0x1 lanes=4 config=0x3 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x4000
+Sep 14 23:40:27 pico-qcd kernel: intel-ipu6 intel-ipu60: trace csi 0 set_stream disable done: rx enable=0x0 lanes=4 config=0x0 status=0x0 hs=0x0 lp=0x0 ctermen=0 csettle=672 d0termen=0 d0settle=658 d1termen=0 d1settle=658 receiver_errors=0x0

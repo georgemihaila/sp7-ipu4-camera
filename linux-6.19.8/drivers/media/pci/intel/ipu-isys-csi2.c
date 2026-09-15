@@ -334,8 +334,11 @@ ipu_isys_csi2_calc_timing(struct ipu_isys_csi2 *csi2,
 	timing->dsettle = calc_timing(CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_A,
 				      CSI2_CSI_RX_DLY_CNT_SETTLE_DLANE_B,
 				      link_freq, accinv);
-	dev_dbg(&csi2->isys->adev->dev, "dtermen %u\n", timing->dtermen);
-	dev_dbg(&csi2->isys->adev->dev, "dsettle %u\n", timing->dsettle);
+	dev_info(&csi2->isys->adev->dev,
+		 "trace csi %u timing: link_freq=%lld accinv=%u "
+		 "calculated ctermen=%u csettle=%u dtermen=%u dsettle=%u\n",
+		 csi2->index, link_freq, accinv, timing->ctermen,
+		 timing->csettle, timing->dtermen, timing->dsettle);
 
 	if (csi2_csettle >= 0) {
 		dev_info(&csi2->isys->adev->dev, "csettle override %u -> %d\n",
@@ -379,6 +382,11 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 		"csi2 set_stream(%d): stream_count=%u remote_streams=%u src=%u ext=%s\n",
 		enable, csi2->stream_count, csi2->remote_streams,
 		csi2->asd.source, ext_sd ? ext_sd->name : "<none>");
+	dev_info(&csi2->isys->adev->dev,
+		 "trace csi2-%u set_stream=%d: stream_count=%u remote_streams=%u "
+		 "source=%u external=%s\n",
+		 csi2->index, enable, csi2->stream_count, csi2->remote_streams,
+		 csi2->asd.source, ext_sd ? ext_sd->name : "<none>");
 
 	if (!enable) {
 		csi2->stream_count--;
@@ -453,7 +461,8 @@ static int csi2_link_validate(struct media_link *link)
 	struct ipu_isys_pipeline *ip;
 	struct v4l2_subdev_route r[IPU_ISYS_MAX_STREAMS];
 	struct v4l2_subdev_routing routing = {
-		.routes = r,
+		.len_routes = IPU_ISYS_MAX_STREAMS,
+		.routes = (uintptr_t)r,
 		.num_routes = IPU_ISYS_MAX_STREAMS,
 	};
 	unsigned int active = 0;
@@ -675,11 +684,17 @@ static const struct ipu_isys_pixelformat *
 csi2_try_fmt(struct ipu_isys_video *av,
 	     struct v4l2_pix_format_mplane *mpix)
 {
-	struct media_link *link = list_first_entry(&av->vdev.entity.links,
-						   struct media_link, list);
-	struct v4l2_subdev *sd =
-	    media_entity_to_v4l2_subdev(link->source->entity);
+	struct media_link *link;
+	struct v4l2_subdev *sd;
 	struct ipu_isys_csi2 *csi2;
+
+	/* Debug capture taps are intentionally unlinked from the graph. */
+	if (list_empty(&av->vdev.entity.links))
+		return NULL;
+
+	link = list_first_entry(&av->vdev.entity.links,
+				struct media_link, list);
+	sd = media_entity_to_v4l2_subdev(link->source->entity);
 
 	if (!sd)
 		return NULL;

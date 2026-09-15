@@ -7,7 +7,11 @@ set -e
 modprobe ipu_bridge
 modprobe intel_ipu4p_isys_csslib
 modprobe intel_ipu4p_psys_csslib
-modprobe intel_ipu4p
+# The Surface Pro 7 ships the signed 2019 CPD while the open driver carries
+# the older 2018 CSS release identifier.  The kernel driver's strict check
+# rejects that known-good firmware before the camera graph is even created;
+# the reference setup intentionally disables only this metadata check.
+modprobe intel_ipu4p fw_version_check=0
 modprobe intel_ipu4p_psys
 
 # Pin mmu1 (psys island) ON before the isys module creates video nodes.

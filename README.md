@@ -55,9 +55,29 @@ Module reload does not work — one load per boot, reboot to iterate.
 
 ```sh
 sudo ./load-ipu4.sh
-sudo ./test-capture.sh front   # -> front.raw, 3x 2592x1944 RAW10
-sudo ./test-capture.sh rear    # -> rear.raw,  3x 3264x2448 RAW10
+sudo ./test-capture.sh front   # -> captures/front.raw, 3x 2592x1944 RAW10
+sudo ./test-capture.sh rear    # -> captures/rear.raw,  3x 3264x2448 RAW10
 ```
+
+The capture script writes to `captures/` by default. Override it with
+`OUTPUT_DIR=/path/to/output`; `CAPTURE_TIMEOUT=20` is useful for bounded
+diagnostic attempts. The loader passes `fw_version_check=0` explicitly because
+the SP7 firmware is the signed 2019 CPD while the open CSS library identifies
+itself as the older 2018 release.
+
+## Initialization trace
+
+The instrumented drivers read back the OV5693 clock, regulator, GPIO and
+sensor-register state, along with IPU4P PHY and CSI receiver registers. After
+loading the instrumented modules, run:
+
+```sh
+./trace-capture.sh
+```
+
+It saves the rear/front capture results and kernel trace under
+`reports/init-trace-*`. The trace reports effective logical state; ACPI still
+provides the physical GPIO and regulator wiring.
 
 Frames at default exposure are near-black; raise
 `exposure`/`analogue_gain` on the sensor subdev for visible content.
@@ -118,6 +138,11 @@ Beware: a logged-in desktop session's wireplumber grabs every
     (`RAW_SOC` pin) writes pixel-perfect line-addressed raster frames.
     `enable-link.py` exists because the BE SOC links are DYNAMIC and
     media-ctl drops that flag on MEDIA_IOC_SETUP_LINK (kernel EINVAL).
+13. Recover a timed-out ISYS firmware release by forcing the existing IPU bus
+    runtime-PM power-off/power-on sequence before the next video-node open;
+    this clears the stale `reset_needed` state without requiring a reboot. A
+    guarded root-only `force_power_cycle` sysfs trigger is also available on
+    `intel-ipu60` for controlled bring-up tests.
 
 ## The front-camera reliability fix, in short
 
@@ -140,7 +165,8 @@ bounce at all, the rest typically 1-6.
 
 ## Known limitations
 
-- One module load per boot (reload wedges the CSE/firmware handshake).
+- One module load per boot (reload can wedge the CSE/firmware handshake); the
+  new runtime-PM recovery is for stream-release failures, not module reload.
 - The start-guard doesn't cover the rare case of a stream dying
   mid-capture after a good start.
 - ov7251 (IR) i2c probe fails (`-110`) and is ignored.

@@ -22,6 +22,7 @@ Module.symvers
 
 # Captures and per-run logs
 *.raw
+/captures/
 /logs/
 /logs-run*/
 /autotest/boot-*/

@@ -174,7 +174,7 @@ static void ipu4p_isys_bb_cfg_one(struct ipu_isys *isys, unsigned int bb,
 				  unsigned int afe)
 {
 	void __iomem *isp_base = isys->adev->isp->base;
-	u32 val;
+	u32 val, cphy, dphy, afe_readback;
 
 	val = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(bb));
 	val &= ~0x7e;
@@ -187,6 +187,14 @@ static void ipu4p_isys_bb_cfg_one(struct ipu_isys *isys, unsigned int bb,
 	writel(val, isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(bb));
 	val = afe | (2 << 29);
 	writel(val, isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(bb));
+
+	cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(bb));
+	dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(bb));
+	afe_readback = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(bb));
+	dev_info(&isys->adev->dev,
+		 "trace phy bb%u: requested crc=%u drc=%u afe=0x%x "
+		 "readback cphy_dll=0x%x dphy_dll=0x%x afe=0x%x\n",
+		 bb, crc, drc, afe, cphy, dphy, afe_readback);
 }
 
 static void ipu4p_isys_bb_cfg(struct ipu_isys *isys)
@@ -261,24 +269,81 @@ static void ipu4p_isys_bb_cfg(struct ipu_isys *isys)
 	}
 }
 
+static int csi_gpreg_hpll_freq = -1;
+module_param(csi_gpreg_hpll_freq, int, 0644);
+MODULE_PARM_DESC(csi_gpreg_hpll_freq,
+		 "Override CSI GPREG HPLL frequency (-1 = log only)");
+
+static int csi_gpreg_isclk_ratio = -1;
+module_param(csi_gpreg_isclk_ratio, int, 0644);
+MODULE_PARM_DESC(csi_gpreg_isclk_ratio,
+		 "Override CSI GPREG ISCLK ratio (-1 = log only)");
+
 static void ipu4p_isys_port_cfg(struct ipu_isys *isys)
 {
 	void __iomem *base = isys->pdata->base;
 	void __iomem *isp_base = isys->adev->isp->base;
+	u32 legacy_hpll, legacy_isclk, combo_hpll, combo_isclk;
+
+	/*
+	 * Windows CCsi::Prepare programs these two fields in both CSI GPREG
+	 * banks before programming CR_PORT_CONFIG.  Keep the override disabled
+	 * by default: the values are platform configuration, not settle-time
+	 * tuning, and must not be guessed.
+	 */
+	if (csi_gpreg_hpll_freq >= 0 && csi_gpreg_isclk_ratio >= 0) {
+		writel((u32)csi_gpreg_hpll_freq,
+		       base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_HPLL_FREQ);
+		writel((u32)csi_gpreg_isclk_ratio,
+		       base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+		writel((u32)csi_gpreg_hpll_freq,
+		       base + IPU_COMBO_GPOFFSET + CSI2_REG_CSI_GPREG_HPLL_FREQ);
+		writel((u32)csi_gpreg_isclk_ratio,
+		       base + IPU_COMBO_GPOFFSET + CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+		dev_info(&isys->adev->dev,
+			 "trace isys gpreg clock override: hpll=0x%x isclk=0x%x\n",
+			 (u32)csi_gpreg_hpll_freq, (u32)csi_gpreg_isclk_ratio);
+	} else if (csi_gpreg_hpll_freq >= 0 || csi_gpreg_isclk_ratio >= 0) {
+		dev_err(&isys->adev->dev,
+			"trace isys gpreg clock override requires both values\n");
+	}
+
+	legacy_hpll = readl(base + IPU_GPOFFSET +
+				    CSI2_REG_CSI_GPREG_HPLL_FREQ);
+	legacy_isclk = readl(base + IPU_GPOFFSET +
+				     CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+	combo_hpll = readl(base + IPU_COMBO_GPOFFSET +
+				 CSI2_REG_CSI_GPREG_HPLL_FREQ);
+	combo_isclk = readl(base + IPU_COMBO_GPOFFSET +
+				  CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+	dev_info(&isys->adev->dev,
+		 "trace isys gpreg clocks: legacy hpll=0x%x isclk=0x%x "
+		 "combo hpll=0x%x isclk=0x%x\n",
+		 legacy_hpll, legacy_isclk, combo_hpll, combo_isclk);
 
 	/* Port config */
-	writel(0x3895, base + IPU_GPOFFSET + 0x14);
-	writel(0x3895, base + IPU_COMBO_GPOFFSET + 0x14);
+	writel(0x3895, base + IPU_GPOFFSET +
+	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
+	writel(0x3895, base + IPU_COMBO_GPOFFSET +
+	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
 	writel((0x100 << 1) | (0x100 << 10) | (0x100 << 19), isp_base +
 		   BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
+	dev_info(&isys->adev->dev,
+		 "trace isys port cfg: gpo=0x%x combo_gpo=0x%x bscan=0x%x\n",
+		 readl(base + IPU_GPOFFSET + CSI2_REG_CSI_GPREG_CR_PORT_CONFIG),
+		 readl(base + IPU_COMBO_GPOFFSET +
+		       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG),
+		 readl(isp_base + BUTTRESS_REG_CSI_BSCAN_EXCLUDE));
 }
 
 void isys_setup_hw(struct ipu_isys *isys)
 {
+	dev_info(&isys->adev->dev, "trace isys setup: begin\n");
 	ipu4p_isys_irq_cfg(isys);
 	ipu4p_isys_port_cfg(isys);
 	ipu4p_isys_bb_cfg(isys);
 	ipu4p_isys_flush_idrain_en(isys);
+	dev_info(&isys->adev->dev, "trace isys setup: complete\n");
 }
 #endif
 
