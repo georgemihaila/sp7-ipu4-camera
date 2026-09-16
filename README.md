@@ -36,7 +36,9 @@ The rear camera's DW9719 focus actuator is included as a module. Linux 6.19
 dropped the I2C ID table required for its ACPI-created device, so this project
 bundles a corrected module that exposes the V4L2 absolute focus-position
 control. This makes lens movement available; automatic focus still requires a
-userspace autofocus algorithm, which this project does not provide.
+userspace autofocus algorithm. The repository includes a manual one-shot
+contrast sweep for the rear camera; desktop and libcamera autofocus remain
+outside the supported application path.
 
 ## Install from a clone
 
@@ -191,6 +193,20 @@ Live checks require the camera tools, firmware, permissions, and a usable
 media graph. They do not install, load, unload, or reload modules. A quick
 manual capture is also available with `sudo ./test-capture.sh front` or
 `sudo ./test-capture.sh rear`.
+
+For a one-shot contrast-based focus sweep on the rear camera, run:
+
+```sh
+sudo ./autofocus-rear.sh
+```
+
+The script moves the DW9719 through a coarse-to-fine range, captures temporary
+BE SOC raw frames, selects the sharpest tested position, and removes the
+temporary captures. Keep a detailed, well-lit target still during the sweep.
+It requires the DW9719 `focus_absolute` control, `media-ctl`, `v4l2-ctl`,
+Python 3, and NumPy. `MIN_POS`, `MAX_POS`, `STEP`, and `LEVELS` can tune the
+scan; run `./autofocus-rear.sh --help` for defaults. This is a one-shot
+contrast sweep, not continuous autofocus or GUI/libcamera AF.
 
 ## Credits and licensing
 

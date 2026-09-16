@@ -36,8 +36,9 @@ evidence.
 - The Surface Pro 7 rear lens uses a DW9719 voice-coil actuator. This tree
   bundles its V4L2 lens driver with the I2C ID table needed for the ACPI-created
   device and exposes absolute lens-position control. This is actuator support;
-  an automatic-focus algorithm still has to be provided by a userspace camera
-  stack and is not included here.
+  `autofocus-rear.sh` provides a one-shot userspace contrast sweep through the
+  existing BE SOC raw capture path. Continuous autofocus and GUI/libcamera AF
+  still require integration with a camera stack and are not included here.
 - No libcamera pipeline-handler or IPA source is present. The `libcamera/`
   directory contains only a downstream patch and a rebuild helper. Therefore
   this repository does not claim libcamera discovery, processed-frame delivery,

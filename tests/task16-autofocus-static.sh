@@ -9,6 +9,8 @@ INSTALL="$ROOT/scripts/install-modules.sh"
 UNINSTALL="$ROOT/scripts/uninstall-modules.sh"
 PACKAGE="$ROOT/scripts/package-release.sh"
 DOC="$ROOT/docs/task8-camera-contract.md"
+README="$ROOT/README.md"
+AUTOFOCUS="$ROOT/autofocus-rear.sh"
 
 [ -f "$DRIVER" ]
 grep -Fq 'i2c_get_match_data(client)' "$DRIVER"
@@ -25,5 +27,8 @@ grep -Fq 'dw9719.ko' "$INSTALL"
 grep -Fq 'dw9719.ko' "$UNINSTALL"
 grep -Fq 'drivers/media/i2c/dw9719.ko|dw9719.ko' "$PACKAGE"
 grep -Fiq 'dw9719' "$DOC"
+grep -Fq 'test-capture.sh' "$AUTOFOCUS"
+grep -Fq 'focus_absolute' "$AUTOFOCUS"
+grep -Fq 'one-shot' "$README"
 
 echo 'task16-autofocus-static: PASS'
