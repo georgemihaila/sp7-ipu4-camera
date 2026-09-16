@@ -29,6 +29,13 @@ grep -Fq 'drivers/media/i2c/dw9719.ko|dw9719.ko' "$PACKAGE"
 grep -Fiq 'dw9719' "$DOC"
 grep -Fq 'test-capture.sh' "$AUTOFOCUS"
 grep -Fq 'focus_absolute' "$AUTOFOCUS"
+grep -Fq 'runuser -u "$WP_USER"' "$AUTOFOCUS"
+grep -Fq 'XDG_RUNTIME_DIR="$WP_RUNTIME_DIR"' "$AUTOFOCUS"
+grep -Fq 'DBUS_SESSION_BUS_ADDRESS="$WP_DBUS_ADDRESS"' "$AUTOFOCUS"
+grep -Fq 'is-active --quiet wireplumber.service' "$AUTOFOCUS"
+grep -Fq 'stop wireplumber.service' "$AUTOFOCUS"
+grep -Fq 'start wireplumber.service' "$AUTOFOCUS"
+grep -Fq 'if (( WIREPLUMBER_STOPPED ))' "$AUTOFOCUS"
 grep -Fq 'one-shot' "$README"
 
 echo 'task16-autofocus-static: PASS'

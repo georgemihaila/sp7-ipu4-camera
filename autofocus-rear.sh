@@ -72,6 +72,16 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/sp7-af.XXXXXX")
 ORIGINAL=$(v4l2-ctl -d "$FOCUS_NODE" --get-ctrl=focus_absolute | sed 's/.*: *//')
 BEST=$ORIGINAL
 SUCCESS=0
+WIREPLUMBER_STOPPED=0
+WP_USER=${SUDO_USER:-}
+WP_RUNTIME_DIR=
+WP_DBUS_ADDRESS=
+user_systemctl() {
+	runuser -u "$WP_USER" -- env \
+		XDG_RUNTIME_DIR="$WP_RUNTIME_DIR" \
+		DBUS_SESSION_BUS_ADDRESS="$WP_DBUS_ADDRESS" \
+		systemctl --user "$@"
+}
 cleanup() {
 	local status=$?
 	if (( SUCCESS )); then
@@ -83,10 +93,35 @@ cleanup() {
 		v4l2-ctl -d "$FOCUS_NODE" --set-ctrl="focus_absolute=$ORIGINAL" >/dev/null 2>&1 ||
 			echo "Warning: could not restore starting focus position $ORIGINAL." >&2
 	fi
+	if (( WIREPLUMBER_STOPPED )); then
+		if user_systemctl start wireplumber.service >/dev/null 2>&1; then
+			echo "Restored the invoking user's WirePlumber service."
+		else
+			echo "Warning: could not restart the invoking user's WirePlumber service." >&2
+			(( status != 0 )) || status=1
+		fi
+	fi
 	rm -rf -- "$TMP"
 	exit "$status"
 }
 trap cleanup EXIT
+
+# WirePlumber may claim the camera nodes. Pause it only when it was already
+# active in the invoking desktop user's systemd manager, then restore in EXIT.
+if [[ -n $WP_USER ]] && command -v runuser >/dev/null && command -v systemctl >/dev/null; then
+	if wp_uid=$(id -u "$WP_USER" 2>/dev/null); then
+		WP_RUNTIME_DIR="/run/user/$wp_uid"
+		WP_DBUS_ADDRESS="unix:path=$WP_RUNTIME_DIR/bus"
+		if [[ -S $WP_RUNTIME_DIR/bus ]] && user_systemctl is-active --quiet wireplumber.service 2>/dev/null; then
+			if user_systemctl stop wireplumber.service >/dev/null 2>&1; then
+				WIREPLUMBER_STOPPED=1
+				echo "Paused the invoking user's WirePlumber service for camera capture."
+			else
+				echo "WirePlumber is active but could not be paused; continuing without stopping it." >&2
+			fi
+		fi
+	fi
+fi
 
 score_position() {
 	local pos=$1 raw="$TMP/rear.raw" score

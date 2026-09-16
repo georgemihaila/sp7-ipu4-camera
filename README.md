@@ -206,7 +206,10 @@ temporary captures. Keep a detailed, well-lit target still during the sweep.
 It requires the DW9719 `focus_absolute` control, `media-ctl`, `v4l2-ctl`,
 Python 3, and NumPy. `MIN_POS`, `MAX_POS`, `STEP`, and `LEVELS` can tune the
 scan; run `./autofocus-rear.sh --help` for defaults. This is a one-shot
-contrast sweep, not continuous autofocus or GUI/libcamera AF.
+contrast sweep, not continuous autofocus or GUI/libcamera AF. When run via
+sudo from a desktop session, it pauses the invoking user's active WirePlumber
+service for the capture and restarts it on exit; it skips this when that
+user's systemd bus or service is unavailable.
 
 ## Credits and licensing
 
