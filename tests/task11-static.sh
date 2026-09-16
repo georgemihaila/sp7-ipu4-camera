@@ -66,7 +66,7 @@ if [ -d "$ROOT/systemd" ] && [ -n "$(find "$ROOT/systemd" -type f -print 2>/dev/
 		exit 1
 	fi
 fi
-if grep -R -q 'enable-link.py\|/dev/media0\|fuser -k\|systemctl.*restart' \
+if grep -R -q '/dev/media0\|fuser -k\|systemctl.*restart' \
 	"$ROOT/tests/task8-camera-static.sh" "$ROOT/tests/task9-csi2-static.sh" \
 	"$ROOT/tests/task10-production-static.sh" "$ROOT/load-ipu4.sh" "$ROOT/modprobe.d"; then
 	echo 'task11-static: hard-coded or service-mutating production helper found' >&2

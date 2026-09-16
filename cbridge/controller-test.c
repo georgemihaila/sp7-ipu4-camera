@@ -21,6 +21,7 @@ typedef struct {
 	unsigned wp_stop_calls;
 	unsigned wp_start_calls;
 	unsigned query_calls[CAMERA_COUNT];
+	MediaFormat last_camera_format[CAMERA_COUNT];
 	unsigned capture_poll_calls;
 	bool fail_camera_start[CAMERA_COUNT];
 	bool fail_query[CAMERA_COUNT];
@@ -74,12 +75,12 @@ static int fake_backend_start(void *context, CameraKey camera, bool filler,
 	Fake *fake = context;
 	FakeHandle *fake_handle;
 
-	(void)format;
 	fake->start_calls++;
 	if (filler)
 		fake->filler_start_calls[camera]++;
 	else {
 		fake->camera_start_calls[camera]++;
+		fake->last_camera_format[camera] = format;
 		if (fake->fail_camera_start[camera]) {
 			(void)snprintf(error, error_size, "synthetic camera start failure");
 			return -1;
@@ -228,6 +229,8 @@ static void test_priority_switch_and_close(void)
 		"priority transition failed");
 	CHECK(camera_controller_active(controller) == CAMERA_REAR,
 		"rear was not preferred when both consumers were present");
+	CHECK(fake.last_camera_format[CAMERA_REAR] == MEDIA_FORMAT_MJPEG,
+		"rear capture did not receive its negotiated MJPEG format");
 	rear_starts = fake.camera_start_calls[CAMERA_REAR];
 
 	fake.consumers = (1U << CAMERA_FRONT) | (1U << CAMERA_REAR);
@@ -251,6 +254,8 @@ static void test_priority_switch_and_close(void)
 		"front switch failed");
 	CHECK(camera_controller_active(controller) == CAMERA_FRONT,
 		"front did not become active after rear release");
+	CHECK(fake.last_camera_format[CAMERA_FRONT] == MEDIA_FORMAT_YUYV,
+		"front capture did not receive its negotiated YUYV format");
 
 	fake.consumers = 0U;
 	fake.now++;

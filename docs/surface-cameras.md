@@ -57,8 +57,7 @@ no caller-supplied or standard installed CPD firmware is available.
 The source installer builds the C bridge in `cbridge/` and setup installs it as
 `/usr/local/libexec/sp7-camera-bridge`. A prebuilt release archive carries the
 same binary, so bridge setup does not require a compiler or development
-packages. The Python bridge remains in the checkout only for comparison while
-the C replacement is being qualified.
+packages. The C executable is the only supported camera bridge.
 
 The setup installs the module labels, loads the loopback nodes, and enables a
 per-user systemd service. It overrides RPM Fusion's same-named modprobe file

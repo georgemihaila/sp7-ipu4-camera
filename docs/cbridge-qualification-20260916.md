@@ -1,9 +1,9 @@
 # C bridge integration acceptance matrix
 
 The C controller is installed as the current user service executable on the
-Surface Pro 7. The Python executable is no longer installed by setup, but its
-source remains in the checkout until a real-camera and Snapshot qualification
-passes.
+Surface Pro 7. The obsolete Python bridge and its bridge-specific test
+harnesses have been removed; the historical optimization report retains the
+pre-C measurements for comparison.
 
 | Acceptance case | Result | Evidence |
 | --- | --- | --- |
@@ -24,7 +24,6 @@ and recovers with the configured backoff. Discord also held `/dev/video55`, so
 the normal setup script correctly refused a destructive loopback reload; the C
 binary was installed directly without disturbing that consumer.
 
-The WirePlumber workaround remains. The plan's final Python removal and
-narrow-kernel maintenance steps are intentionally not claimed complete until
-the historical raw-node owner is released and front/rear GUI preview and still
-capture produce non-filler images.
+The remaining acceptance gaps are narrow-kernel maintenance and a dedicated
+Snapshot still-capture check. The active camera path is the C bridge and its
+WirePlumber ownership policy described above.

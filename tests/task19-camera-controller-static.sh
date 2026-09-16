@@ -21,7 +21,7 @@ grep -Fq 'CLOSE_GRACE_MS' "$CROOT/controller.c"
 grep -Fq 'consumer_mask' "$CROOT/surface-camera-bridge.c"
 grep -Fq 'readlink' "$CROOT/surface-camera-bridge.c"
 grep -Fq 'VIDIOC_G_FMT' "$CROOT/media-backend.c"
-grep -Fq 'SYSTEMCTL_TIMEOUT_MS' "$CROOT/surface-camera-bridge.c"
+grep -Fq 'return WIREPLUMBER_ALREADY_INACTIVE;' "$CROOT/surface-camera-bridge.c"
 
 make -C "$CROOT" clean test-controller
 printf '%s\n' 'task19-camera-controller-static: PASS'

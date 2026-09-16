@@ -8,14 +8,9 @@ not part of the repository.
 
 ## Reproduction
 
-The harness is:
-
-```sh
-BASELINE_SECONDS=60 BASELINE_REPEATS=3 \
-  ./tests/bridge-baseline.sh
-```
-
-It measures the service cgroup's CPU time, current memory, process/thread
+The measurements below were collected before the Python bridge was removed;
+the temporary baseline harness is no longer part of the checkout. It measured
+the service cgroup's CPU time, current memory, process/thread
 count, and aggregate voluntary/non-voluntary context switches. Streaming cases
 hold a named V4L2 endpoint open for 60 seconds, save the output only in a
 temporary directory, and inspect YUYV luma or decoded JPEG dimensions/contrast

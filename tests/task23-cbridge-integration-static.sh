@@ -1,5 +1,5 @@
 #!/bin/sh
-# Static checks for installing the C bridge instead of the Python service.
+# Static checks for installing the C bridge as the camera service.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -16,8 +16,6 @@ grep -Fq 'install -D -m 0755 "$BRIDGE_BINARY"' "$SETUP"
 grep -Fq 'C_BRIDGE_BINARY=' "$PACKAGE"
 grep -Fq 'cbridge/sp7-camera-bridge' "$PACKAGE"
 grep -Fq 'ExecStart=/usr/local/libexec/sp7-camera-bridge' "$UNIT"
-! grep -Fq 'surface-camera-bridge.py' "$SETUP"
-! grep -Fq 'surface-camera-bridge.py' "$PACKAGE"
 
 make -C "$ROOT/cbridge" clean all
 printf '%s\n' 'task23-cbridge-integration-static: PASS'
