@@ -24,7 +24,7 @@ reaping.
 | Repeated front/rear switching | PASS | 20 alternating switches with overlap/close-grace timing; service remained active |
 | Worker resource bounds | PASS | final lifecycle check: fd delta 0, parent `VmRSS` delta 4 KiB; worker count remained bounded |
 | Service restart and recovery | PASS | explicit restart recovered `sp7-camera-bridge.service` |
-| Package assembly and checksums | PENDING fresh rebuild | rerun after this final source/docs state; exact-kernel module artifacts already verified |
+| Package assembly and checksums | PASS | `localqual2` archive for `6.19.8-3.surface.fc43.x86_64`; `sha256sum -c` passed and no `.py`/`.pyc` artifact was present |
 | Narrow kernel maintenance build | PASS, not installed | `scripts/build-modules.sh` produced matching `6.19.8-3.surface.fc43.x86_64` vermagic |
 
 The first frames after a camera handoff can still be black filler while the
