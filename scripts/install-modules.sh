@@ -17,6 +17,14 @@ intel-ipu4p-psys.ko
 intel-ipu4p-isys-csslib.ko
 intel-ipu4p-psys-csslib.ko'
 
+# Avoid shadowing a bridge already supplied for this exact kernel. Keep the
+# overlay bridge in the install set on kernels that do not have one.
+NATIVE_BRIDGE=
+if native_bridge=$(modinfo -k "$KREL" -n ipu_bridge 2>/dev/null) && [ -f "$native_bridge" ]; then
+	NATIVE_BRIDGE=$native_bridge
+	MODULES=$(printf '%s\n' "$MODULES" | sed '/^ipu-bridge\.ko$/d')
+fi
+
 if [ -z "$FIRMWARE" ]; then
 	printf '%s\n' 'usage: FIRMWARE=/path/to/ipu4p_cpd.bin sudo ./scripts/install-modules.sh' >&2
 	exit 2
@@ -26,10 +34,10 @@ fi
 source_for() {
 	case $1 in
 		ipu-bridge.ko) printf '%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu-bridge.ko" ;;
-		intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko)
-			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4" "$1" ;;
 		intel-ipu4p-psys-csslib.ko)
 			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys" "$1" ;;
+		intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko)
+			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4" "$1" ;;
 		*) return 1 ;;
 	esac
 }
@@ -64,6 +72,22 @@ if [ -e "$MANIFEST" ]; then
 			printf 'error: duplicate module manifest entry: %s\n' "$name" >&2; exit 2;
 		}
 	done < "$MANIFEST"
+fi
+
+# If a prior install placed its bridge overlay and the kernel now has a native
+# bridge, remove only the unchanged file owned by our manifest. Leaving it in
+# place would continue to shadow the native module even if the new manifest
+# omitted it. Refuse modified or untracked files.
+if [ -n "$NATIVE_BRIDGE" ] && { [ -e "$MODDIR/ipu-bridge.ko" ] || [ -L "$MODDIR/ipu-bridge.ko" ]; }; then
+	owned_hash=$(manifest_hash ipu-bridge.ko) || {
+		printf 'error: refusing to remove untracked bridge module while native bridge exists: %s\n' "$MODDIR/ipu-bridge.ko" >&2; exit 2;
+	}
+	current_hash=$(file_hash "$MODDIR/ipu-bridge.ko") || {
+		printf 'error: cannot hash existing bridge module: %s\n' "$MODDIR/ipu-bridge.ko" >&2; exit 2;
+	}
+	[ "$current_hash" = "$owned_hash" ] || {
+		printf 'error: tracked bridge module was modified; refusing to remove it: %s\n' "$MODDIR/ipu-bridge.ko" >&2; exit 2;
+	}
 fi
 
 # Check the complete allowlist and all conflicts before changing the module or
@@ -116,6 +140,12 @@ trap cleanup EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+# Preflight succeeded and the old manifest still records this file until it is
+# removed, so interrupted cleanup remains safe for the regular uninstaller.
+if [ -n "$NATIVE_BRIDGE" ] && { [ -e "$MODDIR/ipu-bridge.ko" ] || [ -L "$MODDIR/ipu-bridge.ko" ]; }; then
+	rm -f "$MODDIR/ipu-bridge.ko"
+fi
 
 # Publish the exact intended file set before placing any new module. If an
 # interrupted install is rolled back, uninstall still has exact names and

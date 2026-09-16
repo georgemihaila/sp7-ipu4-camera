@@ -63,6 +63,11 @@ mockbin="$tmpdir/bin"
 mkdir -p "$mockbin"
 cat > "$mockbin/modinfo" <<'EOF'
 #!/bin/sh
+if [ "$1" = -k ] && [ "$3" = -n ] && [ "$4" = ipu_bridge ]; then
+	[ -n "${NATIVE_BRIDGE_PATH:-}" ] || exit 1
+	printf '%s\n' "$NATIVE_BRIDGE_PATH"
+	exit 0
+fi
 [ "$1" = -F ] && [ "$2" = vermagic ] || exit 2
 printf '%s SMP test\n' "$KREL"
 EOF
@@ -99,6 +104,21 @@ PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
 [ -z "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' -print -quit)" ]
 [ -f "$firmware_target" ]
 [ ! -e "$moddir/.ipu4p-camera-modules" ]
+
+# On a kernel with a native bridge, install the five IPU4P modules only and
+# ensure the manifest/uninstaller never claims or removes that bridge.
+native_moddir="$tmpdir/install-native-bridge"
+native_path="$tmpdir/native/ipu-bridge.ko"
+mkdir -p "$(dirname "$native_path")"
+printf 'native bridge bytes\n' > "$native_path"
+PATH="$mockbin:$PATH" NATIVE_BRIDGE_PATH="$native_path" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$native_moddir" \
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/native-fw" sh "$INSTALL"
+[ ! -e "$native_moddir/ipu-bridge.ko" ]
+[ "$(find "$native_moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 5 ]
+! grep -q '^ipu-bridge\.ko ' "$native_moddir/.ipu4p-camera-modules"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$native_moddir" sh "$UNINSTALL"
+[ -f "$native_path" ]
+[ ! -e "$native_moddir/.ipu4p-camera-modules" ]
 
 # An untracked collision must fail in preflight without placing peer modules.
 conflict_dir="$tmpdir/install-conflict"
