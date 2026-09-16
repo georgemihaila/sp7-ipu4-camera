@@ -3,6 +3,32 @@
 This repository is a hardware-specific development snapshot, not a complete
 upstream camera stack. Use this status when reviewing or submitting changes.
 
+## Plan for dependable SP7 use
+
+The initial support target is a Surface Pro 7 with the validated firmware and
+kernel combination. Broad IPU4P support and a complete camera application stack
+remain separate goals.
+
+1. **Close the current reliability defects (in progress).** Make installation
+   and removal exact and conflict-safe; make stream-start and request failures
+   return clean errors; keep CSI-2 error reporting race-free; and keep sensor
+   format, crop, blanking, and exposure state consistent. The static suite must
+   exercise these failure cases.
+2. **Build and package the exact artifact.** Build against the target kernel
+   tree, audit module dependencies and metadata, and verify installation and
+   removal in a temporary module tree before touching the SP7.
+3. **Qualify that artifact on the SP7.** After a clean boot, run repeated front
+   and rear captures, mode/control changes, bounded stream restart and runtime
+   power recovery checks, and inspect kernel logs. Record the kernel build,
+   module hashes, and results so the tested artifact is identifiable.
+4. **Keep the support boundary explicit.** OV8865 still comes from an external
+   driver, OV7251 probe fails on the validated unit, and the GUI portal path is
+   unverified. Do not claim those paths or other IPU4P systems are supported
+   until their own source and hardware checks pass.
+
+Readiness means steps 1–3 pass for the stated SP7 target. Upstreaming, support
+for other systems, and the limitations in step 4 need their own work.
+
 ## Validation status
 
 | Area | Status | Evidence/qualification |
