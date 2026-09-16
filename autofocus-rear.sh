@@ -57,7 +57,7 @@ fi
 [[ -n $MEDIA_DEVICE ]] || { echo "No media device contains both OV8865 and DW9719." >&2; exit 77; }
 GRAPH=$(media-ctl -d "$MEDIA_DEVICE" -p)
 FOCUS_NODE=$(awk '
-	/dw9719/ { actuator=1 }
+	/^- entity .*: dw9719/ { actuator=1; next }
 	actuator && /device node name/ { print $NF; exit }
 	actuator && /^- entity/ { actuator=0 }
 ' <<<"$GRAPH")
