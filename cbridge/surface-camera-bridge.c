@@ -1,7 +1,6 @@
 #include "controller.h"
 
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
@@ -12,7 +11,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -21,7 +19,6 @@
 #define POLL_INTERVAL_MS 200U
 #define ACTIVE_CONSUMER_SCAN_MS 200U
 #define IDLE_CONSUMER_SCAN_MS 1000U
-#define SYSTEMCTL_TIMEOUT_MS 5000U
 #define CAMERA_FRONT_DEVICE "/dev/video60"
 #define CAMERA_REAR_DEVICE "/dev/video61"
 
@@ -306,99 +303,27 @@ static void backend_free(void *opaque, void *handle)
 	free(live_handle);
 }
 
-static int run_systemctl(const char *verb, bool quiet, char *error,
-	unsigned error_size)
-{
-	pid_t child;
-	int status;
-	uint64_t deadline;
-
-	child = fork();
-	if (child < 0) {
-		if (error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size, "fork systemctl: %s", strerror(errno));
-		return -1;
-	}
-	if (child == 0) {
-		if (quiet)
-			execl("/usr/bin/systemctl", "systemctl", "--user", verb,
-				"--quiet", "wireplumber.service", (char *)NULL);
-		else
-			execl("/usr/bin/systemctl", "systemctl", "--user", verb,
-				"wireplumber.service", (char *)NULL);
-		_exit(127);
-	}
-	deadline = monotonic_ms() + SYSTEMCTL_TIMEOUT_MS;
-	for (;;) {
-		pid_t result = waitpid(child, &status, WNOHANG);
-
-		if (result == child) {
-			if (WIFEXITED(status))
-				return WEXITSTATUS(status);
-			if (error != NULL && error_size != 0U)
-				(void)snprintf(error, error_size, "systemctl terminated by signal");
-			return -1;
-		}
-		if (result < 0 && errno != EINTR) {
-			if (error != NULL && error_size != 0U)
-				(void)snprintf(error, error_size, "wait systemctl: %s",
-					strerror(errno));
-			return -1;
-		}
-		if (monotonic_ms() >= deadline) {
-			(void)kill(child, SIGTERM);
-			while (waitpid(child, &status, 0) < 0 && errno == EINTR)
-				;
-			if (error != NULL && error_size != 0U)
-				(void)snprintf(error, error_size,
-					"systemctl %s timed out after %u ms", verb,
-					SYSTEMCTL_TIMEOUT_MS);
-			return -1;
-		}
-		{
-			struct timespec pause = { .tv_sec = 0, .tv_nsec = 20000000L };
-			(void)nanosleep(&pause, NULL);
-		}
-	}
-}
-
 static WirePlumberStopResult wireplumber_stop(void *opaque, char *error,
 	unsigned error_size)
 {
-	int status;
-
 	(void)opaque;
-	status = run_systemctl("is-active", true, error, error_size);
-	if (status == 3)
-		return WIREPLUMBER_ALREADY_INACTIVE;
-	if (status != 0) {
-		if (status >= 0 && error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size,
-				"WirePlumber is-active returned status %d", status);
-		return WIREPLUMBER_STOP_FAILED;
-	}
-	status = run_systemctl("stop", false, error, error_size);
-	if (status != 0) {
-		if (status >= 0 && error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size,
-				"WirePlumber stop returned status %d", status);
-		return WIREPLUMBER_STOP_FAILED;
-	}
-	return WIREPLUMBER_STOPPED;
+	(void)error;
+	(void)error_size;
+	/*
+	 * The installed WirePlumber profile disables the libcamera monitor but
+	 * keeps WirePlumber running for PipeWire's V4L2 loopback targets. Stopping
+	 * it here would destroy the target that the application is opening.
+	 */
+	return WIREPLUMBER_ALREADY_INACTIVE;
 }
 
 static int wireplumber_start(void *opaque, char *error, unsigned error_size)
 {
-	int status;
-
 	(void)opaque;
-	status = run_systemctl("start", false, error, error_size);
-	if (status == 0)
-		return 0;
-	if (status >= 0 && error != NULL && error_size != 0U)
-		(void)snprintf(error, error_size,
-			"WirePlumber start returned status %d", status);
-	return -1;
+	(void)error;
+	(void)error_size;
+	/* WirePlumber remains active for the lifetime of the bridge service. */
+	return 0;
 }
 
 static int initialize_context(LiveContext *context)

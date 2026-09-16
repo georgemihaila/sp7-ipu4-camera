@@ -63,16 +63,17 @@ the C replacement is being qualified.
 The setup installs the module labels, loads the loopback nodes, and enables a
 per-user systemd service. It overrides RPM Fusion's same-named modprobe file
 with an `/etc` configuration that keeps the OBS virtual camera and adds the
-two SP7 devices. It also installs the WirePlumber rule that hides the raw
-`ipu4p` nodes from normal application enumeration and lets the bridge release
-the shared backend when needed.
+two SP7 devices. It also installs a WirePlumber policy that hides the raw
+`ipu4p` nodes and disables the physical libcamera monitor. This leaves
+WirePlumber serving the named loopback devices without opening the shared
+backend itself.
 
 Restart applications that were already open so they rescan the new V4L2
 devices. Choose **Surface Camera (front)** or **Surface Camera (back)**. The
-bridge streams only the selected camera. While it is active, the bridge
-temporarily stops WirePlumber so the direct libcamera pipeline can own the
-shared IPU4P backend; WirePlumber is restarted when the client closes. The two
-physical sensors cannot be captured simultaneously through this backend.
+bridge streams only the selected camera. It opens the selected physical sensor
+directly while WirePlumber remains active for the application's PipeWire
+loopback target. The two physical sensors cannot be captured simultaneously
+through this backend.
 
 The bridge reads each loopback endpoint’s current V4L2 format before starting a producer. It emits packed YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG. This keeps consumers such as Zoom from leaving the producer with a `not-negotiated` pipeline.
 
