@@ -4,6 +4,8 @@
 #ifndef IPU_ISYS_CSI2_H
 #define IPU_ISYS_CSI2_H
 
+#include <linux/spinlock.h>
+
 #include <media/media-entity.h>
 #include <media/v4l2-device.h>
 
@@ -97,6 +99,7 @@ struct ipu_isys_csi2 {
 	struct completion eof_completion;
 
 	void __iomem *base;
+	spinlock_t receiver_error_lock;
 	u32 receiver_errors;
 	/* Preserve the last reported status for post-mortem diagnostics. */
 	u32 last_receiver_errors;
@@ -112,6 +115,33 @@ struct ipu_isys_csi2 {
 
 	struct v4l2_ctrl *store_csi2_header;
 };
+
+static inline void
+ipu_isys_csi2_get_error_state(struct ipu_isys_csi2 *csi2,
+			      u32 *receiver_errors, u32 *last_receiver_errors,
+			      u32 *fatal_receiver_errors)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
+	*receiver_errors = csi2->receiver_errors;
+	*last_receiver_errors = csi2->last_receiver_errors;
+	*fatal_receiver_errors = csi2->fatal_receiver_errors;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+}
+
+static inline u32
+ipu_isys_csi2_get_fatal_errors(struct ipu_isys_csi2 *csi2)
+{
+	unsigned long flags;
+	u32 fatal_receiver_errors;
+
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
+	fatal_receiver_errors = csi2->fatal_receiver_errors;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+
+	return fatal_receiver_errors;
+}
 
 struct ipu_isys_csi2_timing {
 	u32 ctermen;

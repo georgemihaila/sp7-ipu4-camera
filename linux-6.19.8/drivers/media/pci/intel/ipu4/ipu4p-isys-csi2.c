@@ -67,6 +67,8 @@ static bool ipu4p_csi2_apply_source7_mipi_timing(struct ipu_isys_csi2 *csi2)
 
 static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 {
+	unsigned long flags;
+	u32 receiver_errors, last_receiver_errors, fatal_receiver_errors;
 	u32 enable = readl(csi2->base + CSI2_REG_CSI_RX_ENABLE);
 	u32 lanes = readl(csi2->base + CSI2_REG_CSI_RX_NOF_ENABLED_LANES);
 	u32 config = readl(csi2->base + CSI2_REG_CSI_RX_CONFIG);
@@ -80,6 +82,12 @@ static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 	u32 dtermen1 = readl(csi2->base + CSI2_REG_CSI_RX_DLY_CNT_TERMEN_DLANE(1));
 	u32 dsettle1 = readl(csi2->base + CSI2_REG_CSI_RX_DLY_CNT_SETTLE_DLANE(1));
 
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
+	receiver_errors = csi2->receiver_errors;
+	last_receiver_errors = csi2->last_receiver_errors;
+	fatal_receiver_errors = csi2->fatal_receiver_errors;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+
 	dev_dbg(&csi2->isys->adev->dev,
 		"csi %u %s: rx enable=0x%x lanes=%u config=0x%x "
 		"status=0x%x hs=0x%x lp=0x%x "
@@ -88,26 +96,28 @@ static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 		"last_receiver_errors=0x%x fatal_receiver_errors=0x%x\n",
 		csi2->index, tag, enable, lanes, config, status, hs, lp,
 		ctermen, csettle, dtermen0, dsettle0, dtermen1, dsettle1,
-		csi2->receiver_errors, csi2->last_receiver_errors,
-		csi2->fatal_receiver_errors);
+		receiver_errors, last_receiver_errors, fatal_receiver_errors);
 }
 
 static void ipu4p_isys_register_errors(struct ipu_isys_csi2 *csi2)
 {
 	u32 status;
 	unsigned int index;
+	unsigned long flags;
 	struct ipu_isys *isys = csi2->isys;
 	void __iomem *isys_base = isys->pdata->base;
 
 	index = csi2->index;
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	status = readl(isys_base +
 			   IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(index) + 0x8);
 	writel(status, isys_base +
 		   IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(index) + 0xc);
 
 	status &= 0xffff;
-	dev_dbg(&isys->adev->dev, "csi %d rxsync status 0x%x", index, status);
 	csi2->receiver_errors |= status;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+	dev_dbg(&isys->adev->dev, "csi %d rxsync status 0x%x", index, status);
 }
 
 int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
@@ -139,15 +149,18 @@ int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 		{"Inter-frame long packet discarded", true},
 	};
 	u32 status;
+	unsigned long flags;
 	unsigned int i;
 
 	/* Register errors once more in case of error interrupts are disabled */
 	ipu4p_isys_register_errors(csi2);
 	ipu4p_csi2_log_rx_state(csi2, "error snapshot");
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	status = csi2->receiver_errors;
 	csi2->receiver_errors = 0;
 	csi2->last_receiver_errors = status;
 	csi2->fatal_receiver_errors |= status & IPU_ISYS_CSI2_FATAL_ERRORS;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 	if (status)
 		dev_err_ratelimited(&csi2->isys->adev->dev,
 				    "csi2-%i receiver error status 0x%x%s\n",
@@ -176,7 +189,9 @@ void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2)
 {
 	void __iomem *isys_base = csi2->isys->pdata->base;
 	u32 status;
+	unsigned long flags;
 
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	status = readl(isys_base +
 		       IPU_REG_ISYS_CSI_IRQ_CTRL_BASE(csi2->index) + 0x8);
 	writel(status, isys_base +
@@ -186,7 +201,9 @@ void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2)
 	writel(status, isys_base +
 	       IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(csi2->index) + 0xc);
 	csi2->receiver_errors = 0;
+	csi2->last_receiver_errors = 0;
 	csi2->fatal_receiver_errors = 0;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 }
 
 int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
@@ -305,6 +322,8 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 void ipu_isys_csi2_isr(struct ipu_isys_csi2 *csi2)
 {
 	u32 status = 0;
+	u32 ctrl_status;
+	unsigned long flags;
 #ifdef IPU_VC_SUPPORT
 	unsigned int i, bus;
 #else
@@ -314,23 +333,31 @@ void ipu_isys_csi2_isr(struct ipu_isys_csi2 *csi2)
 	void __iomem *isys_base = isys->pdata->base;
 
 	bus = csi2->index;
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	/* handle ctrl and ctrl0 irq */
-	status = readl(isys_base +
+	ctrl_status = readl(isys_base +
 			   IPU_REG_ISYS_CSI_IRQ_CTRL_BASE(bus) + 0x8);
-	writel(status, isys_base +
+	writel(ctrl_status, isys_base +
 		   IPU_REG_ISYS_CSI_IRQ_CTRL_BASE(bus) + 0xc);
-	dev_dbg(&isys->adev->dev, "csi %d irq_ctrl status 0x%x", bus, status);
 
-	if (!(status & BIT(0)))
+	if (!(ctrl_status & BIT(0))) {
+		spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+		dev_dbg(&isys->adev->dev, "csi %d irq_ctrl status 0x%x",
+			bus, ctrl_status);
 		return;
+	}
 
 	status = readl(isys_base +
 			   IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(bus) + 0x8);
 	writel(status, isys_base +
 		   IPU_REG_ISYS_CSI_IRQ_CTRL0_BASE(bus) + 0xc);
-	dev_dbg(&isys->adev->dev, "csi %d irq_ctrl0 status 0x%x", bus, status);
 	/* register the csi sync error */
 	csi2->receiver_errors |= status & 0xffff;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
+	dev_dbg(&isys->adev->dev, "csi %d irq_ctrl status 0x%x", bus,
+		ctrl_status);
+	dev_dbg(&isys->adev->dev, "csi %d irq_ctrl0 status 0x%x", bus,
+		status);
 	/* handle sof and eof event */
 #ifdef IPU_VC_SUPPORT
 	for (i = 0; i < NR_OF_CSI2_VC; i++) {

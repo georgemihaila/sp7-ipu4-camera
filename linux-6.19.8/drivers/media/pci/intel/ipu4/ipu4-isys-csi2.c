@@ -249,10 +249,14 @@ static int csi2_ev_correction_params(struct ipu_isys_csi2 *csi2,
 
 static void ipu_isys_register_errors(struct ipu_isys_csi2 *csi2)
 {
-	u32 status = readl(csi2->base + CSI2_REG_CSIRX_IRQ_STATUS);
+	unsigned long flags;
+	u32 status;
 
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
+	status = readl(csi2->base + CSI2_REG_CSIRX_IRQ_STATUS);
 	writel(status, csi2->base + CSI2_REG_CSIRX_IRQ_CLEAR);
 	csi2->receiver_errors |= status;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 }
 
 int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
@@ -284,14 +288,17 @@ int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 		{"Inter-frame long packet discarded", true},
 	};
 	u32 status;
+	unsigned long flags;
 	unsigned int i;
 
 	/* Register errors once more in case of error interrupts are disabled */
 	ipu_isys_register_errors(csi2);
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	status = csi2->receiver_errors;
 	csi2->receiver_errors = 0;
 	csi2->last_receiver_errors = status;
 	csi2->fatal_receiver_errors |= status & IPU_ISYS_CSI2_FATAL_ERRORS;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 	if (status)
 		dev_err_ratelimited(&csi2->isys->adev->dev,
 				    "csi2-%i receiver error status 0x%x%s\n",
@@ -319,11 +326,16 @@ int ipu_isys_csi2_error(struct ipu_isys_csi2 *csi2)
 
 void ipu_isys_csi2_reset_errors(struct ipu_isys_csi2 *csi2)
 {
-	u32 status = readl(csi2->base + CSI2_REG_CSIRX_IRQ_STATUS);
+	unsigned long flags;
+	u32 status;
 
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
+	status = readl(csi2->base + CSI2_REG_CSIRX_IRQ_STATUS);
 	writel(status, csi2->base + CSI2_REG_CSIRX_IRQ_CLEAR);
 	csi2->receiver_errors = 0;
+	csi2->last_receiver_errors = 0;
 	csi2->fatal_receiver_errors = 0;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 }
 
 static u64 tunit_time_to_us(struct ipu_isys *isys, u64 time)

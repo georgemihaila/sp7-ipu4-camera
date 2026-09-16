@@ -420,6 +420,7 @@ static int csi2_link_validate(struct media_link *link)
 		.num_routes = IPU_ISYS_MAX_STREAMS,
 	};
 	unsigned int active = 0;
+	unsigned long flags;
 	int i;
 	int rval;
 
@@ -427,9 +428,13 @@ static int csi2_link_validate(struct media_link *link)
 	if (!media_pipe)
 		return -EINVAL;
 	csi2 =
-	    to_ipu_isys_csi2(media_entity_to_v4l2_subdev(link->sink->entity));
+	to_ipu_isys_csi2(media_entity_to_v4l2_subdev(link->sink->entity));
 	ip = to_ipu_isys_pipeline(media_pipe);
+	spin_lock_irqsave(&csi2->receiver_error_lock, flags);
 	csi2->receiver_errors = 0;
+	csi2->last_receiver_errors = 0;
+	csi2->fatal_receiver_errors = 0;
+	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 	ip->csi2 = csi2;
 	ipu_isys_video_add_capture_done(ip, csi2_capture_done);
 
@@ -713,6 +718,7 @@ int ipu_isys_csi2_init(struct ipu_isys_csi2 *csi2,
 	csi2->isys = isys;
 	csi2->base = base;
 	csi2->index = index;
+	spin_lock_init(&csi2->receiver_error_lock);
 
 	csi2->asd.sd.entity.ops = &csi2_entity_ops;
 	csi2->asd.ctrl_init = csi_ctrl_init;
