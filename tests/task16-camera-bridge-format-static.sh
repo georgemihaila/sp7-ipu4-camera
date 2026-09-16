@@ -17,6 +17,8 @@ grep -Fq '"!", "videoscale"' "$BRIDGE"
 grep -Fq 'format=YUY2' "$BRIDGE"
 grep -Fq 'sink = ["filesink", f"location={camera['"'"'device'"'"']}"]' "$BRIDGE"
 grep -Fq 'sink = ["v4l2sink", f"device={camera['"'"'device'"'"']}", "sync=false"]' "$BRIDGE"
+# Sensor frames are already upright; do not reintroduce the old 180-degree flip.
+! grep -Fq 'rotate-180' "$BRIDGE"
 grep -Fq 'gstreamer1-plugins-good' "$INSTALL"
 grep -Fq 'gstreamer1-plugins-good' "$SETUP"
 grep -Fq 'gstreamer1-plugins-good' "$PACKAGE"

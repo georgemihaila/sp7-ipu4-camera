@@ -135,7 +135,9 @@ def pipeline_for(camera_key: str) -> list[str]:
     return [
         "/usr/bin/gst-launch-1.0", "-e", "libcamerasrc",
         f"camera-name={camera['camera_id']}", "ae-enable=true", "!",
-        "videoflip", "method=rotate-180", "!", "videoconvert", "!", "videoscale",
+        # The IPU4P sensor/ISP output is already upright. Keep that orientation
+        # for every V4L2 consumer instead of applying a bridge-wide rotation.
+        "videoconvert", "!", "videoscale",
         *output_caps(format_name), "!", *sink,
     ]
 
