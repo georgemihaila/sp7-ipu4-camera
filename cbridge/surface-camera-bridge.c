@@ -1,6 +1,7 @@
 #include "controller.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
@@ -11,12 +12,16 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
 #include <gst/gst.h>
 
 #define POLL_INTERVAL_MS 200U
+#define WORKER_START_TIMEOUT_MS 10000U
+#define WORKER_STOP_TIMEOUT_MS 5000U
+#define WORKER_REAP_POLL_MS 50U
 #define ACTIVE_CONSUMER_SCAN_MS 200U
 #define IDLE_CONSUMER_SCAN_MS 1000U
 #define CAMERA_FRONT_DEVICE "/dev/video60"
@@ -40,10 +45,17 @@ typedef struct {
 } LiveContext;
 
 typedef struct {
-	MediaBackend *backend;
+	pid_t worker_pid;
+	int status_fd;
 } LiveBackendHandle;
 
 static volatile sig_atomic_t stop_requested;
+
+static void set_error(char *error, unsigned error_size, const char *message)
+{
+	if (error != NULL && error_size != 0U)
+		(void)snprintf(error, error_size, "%s", message);
+}
 
 static void request_stop(int signal_number)
 {
@@ -58,6 +70,188 @@ static uint64_t monotonic_ms(void)
 	if (clock_gettime(CLOCK_MONOTONIC, &time) != 0)
 		return 0U;
 	return (uint64_t)time.tv_sec * 1000U + (uint64_t)time.tv_nsec / 1000000U;
+}
+
+static int write_worker_status(int fd, char status)
+{
+	ssize_t written;
+
+	do {
+		written = write(fd, &status, sizeof(status));
+	} while (written < 0 && errno == EINTR);
+	return written == (ssize_t)sizeof(status) ? 0 : -1;
+}
+
+static void worker_process(const MediaBackendConfig *config, int status_fd)
+{
+	MediaBackend *backend;
+	char error[512];
+	int result;
+
+	if (setpgid(0, 0) != 0) {
+		(void)write_worker_status(status_fd, 'F');
+		(void)close(status_fd);
+		_exit(EXIT_FAILURE);
+	}
+	/* GStreamer and the media backend are intentionally initialized only here. */
+	gst_init(NULL, NULL);
+	backend = media_backend_new();
+	if (backend == NULL) {
+		(void)fprintf(stderr, "worker could not allocate media backend\n");
+		(void)write_worker_status(status_fd, 'F');
+		(void)close(status_fd);
+		_exit(EXIT_FAILURE);
+	}
+	result = media_backend_start(backend, config, error, sizeof(error));
+	if (result != 0) {
+		(void)fprintf(stderr, "worker media backend start failed: %s\n", error);
+		media_backend_free(backend);
+		(void)write_worker_status(status_fd, 'F');
+		(void)close(status_fd);
+		_exit(EXIT_FAILURE);
+	}
+	if (write_worker_status(status_fd, 'R') != 0) {
+		media_backend_stop(backend, error, sizeof(error));
+		media_backend_free(backend);
+		(void)close(status_fd);
+		_exit(EXIT_FAILURE);
+	}
+	(void)close(status_fd);
+	while (!stop_requested) {
+		result = media_backend_poll(backend, WORKER_REAP_POLL_MS, error,
+			sizeof(error));
+		if (result != 0) {
+			(void)fprintf(stderr, "worker media backend ended: %s\n",
+				result < 0 ? error : "end-of-stream");
+			break;
+		}
+	}
+	if (media_backend_stop(backend, error, sizeof(error)) != 0)
+		(void)fprintf(stderr, "worker media backend stop failed: %s\n", error);
+	media_backend_free(backend);
+	_exit(result < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
+static int reap_worker(pid_t worker_pid, unsigned timeout_ms, int *status)
+{
+	uint64_t deadline = monotonic_ms() + timeout_ms;
+	pid_t result;
+
+	for (;;) {
+		result = waitpid(worker_pid, status, WNOHANG);
+		if (result == worker_pid)
+			return 0;
+		if (result < 0) {
+			if (errno == EINTR)
+				continue;
+			if (errno == ECHILD)
+				return 0;
+			return -1;
+		}
+		if (monotonic_ms() >= deadline)
+			return 1;
+		(void)poll(NULL, 0, (int)WORKER_REAP_POLL_MS);
+	}
+}
+
+static int terminate_worker(LiveBackendHandle *live_handle, char *error,
+	unsigned error_size)
+{
+	bool failed = false;
+	int status = 0;
+	int result;
+	pid_t worker_pid;
+
+	if (live_handle == NULL)
+		return 0;
+	worker_pid = live_handle->worker_pid;
+	if (worker_pid <= 0)
+		return 0;
+	if (kill(-worker_pid, SIGTERM) != 0 && errno != ESRCH) {
+		if (error != NULL && error_size != 0U)
+			(void)snprintf(error, error_size,
+				"could not stop media worker: %s", strerror(errno));
+		failed = true;
+	}
+	result = reap_worker(worker_pid, WORKER_STOP_TIMEOUT_MS, &status);
+	if (result == 1) {
+		if (kill(-worker_pid, SIGKILL) != 0 && errno != ESRCH) {
+			if (error != NULL && error_size != 0U)
+				(void)snprintf(error, error_size,
+					"could not kill media worker: %s", strerror(errno));
+			failed = true;
+		}
+		result = reap_worker(worker_pid, WORKER_STOP_TIMEOUT_MS, &status);
+		if (result == 1) {
+			/* SIGKILL cannot be ignored; finish the reap before returning. */
+			do {
+				result = waitpid(worker_pid, &status, 0);
+			} while (result < 0 && errno == EINTR);
+		}
+	}
+	if (result < 0) {
+		if (errno == ECHILD) {
+			live_handle->worker_pid = 0;
+			return failed ? -1 : 0;
+		}
+		if (error != NULL && error_size != 0U)
+			(void)snprintf(error, error_size,
+				"could not reap media worker: %s", strerror(errno));
+		return -1;
+	}
+	live_handle->worker_pid = 0;
+	return failed ? -1 : 0;
+}
+
+static int wait_for_worker_ready(LiveBackendHandle *live_handle, char *error,
+	unsigned error_size)
+{
+	struct pollfd descriptor;
+	uint64_t deadline = monotonic_ms() + WORKER_START_TIMEOUT_MS;
+	char status;
+	ssize_t received;
+	int timeout;
+	int wait_status;
+	pid_t result;
+
+	descriptor.fd = live_handle->status_fd;
+	descriptor.events = POLLIN | POLLHUP;
+	descriptor.revents = 0;
+	for (;;) {
+		uint64_t remaining = deadline - monotonic_ms();
+
+		if (monotonic_ms() >= deadline)
+			break;
+		timeout = remaining > 100U ? 100 : (int)remaining;
+		result = poll(&descriptor, 1, timeout);
+		if (result < 0) {
+			if (errno == EINTR)
+				continue;
+			set_error(error, error_size, "could not wait for media worker");
+			return -1;
+		}
+		if (result > 0 && (descriptor.revents & (POLLIN | POLLHUP)) != 0) {
+			do {
+				received = read(live_handle->status_fd, &status,
+					sizeof(status));
+			} while (received < 0 && errno == EINTR);
+			if (received == (ssize_t)sizeof(status) && status == 'R')
+				return 0;
+			set_error(error, error_size, "media worker failed during startup");
+			return -1;
+		}
+		result = waitpid(live_handle->worker_pid, &wait_status, WNOHANG);
+		if (result == live_handle->worker_pid) {
+			set_error(error, error_size, "media worker exited during startup");
+			return -1;
+		}
+		if (result < 0 && errno != EINTR) {
+			set_error(error, error_size, "could not monitor media worker");
+			return -1;
+		}
+	}
+	set_error(error, error_size, "media worker startup timed out");
+	return -1;
 }
 
 static const CameraEndpoint *endpoint_for(const LiveContext *context,
@@ -235,31 +429,56 @@ static int backend_start(void *opaque, CameraKey camera, bool filler,
 	const CameraEndpoint *endpoint = endpoint_for(context, camera);
 	LiveBackendHandle *live_handle;
 	MediaBackendConfig config;
+	int status_pipe[2];
+	pid_t worker_pid;
 
 	if (handle == NULL || endpoint == NULL || !endpoint->present) {
-		if (error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size, "camera endpoint is unavailable");
+		set_error(error, error_size, "camera endpoint is unavailable");
 		return -1;
 	}
 	live_handle = calloc(1U, sizeof(*live_handle));
 	if (live_handle == NULL) {
-		if (error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size, "out of memory for media backend");
+		set_error(error, error_size, "out of memory for media worker");
 		return -1;
 	}
-	live_handle->backend = media_backend_new();
-	if (live_handle->backend == NULL) {
-		free(live_handle);
-		if (error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size, "out of memory for media backend");
-		return -1;
-	}
+	live_handle->worker_pid = 0;
+	live_handle->status_fd = -1;
 	config.camera_id = endpoint->camera_id;
 	config.device = endpoint->device;
 	config.format = format;
 	config.kind = filler ? MEDIA_PIPELINE_FILLER : MEDIA_PIPELINE_CAMERA;
-	if (media_backend_start(live_handle->backend, &config, error, error_size) != 0) {
-		media_backend_free(live_handle->backend);
+	if (pipe2(status_pipe, O_CLOEXEC) != 0) {
+		set_error(error, error_size, "could not create media worker status pipe");
+		free(live_handle);
+		return -1;
+	}
+	worker_pid = fork();
+	if (worker_pid < 0) {
+		(void)close(status_pipe[0]);
+		(void)close(status_pipe[1]);
+		set_error(error, error_size, "could not fork media worker");
+		free(live_handle);
+		return -1;
+	}
+	if (worker_pid == 0) {
+		(void)close(status_pipe[0]);
+		worker_process(&config, status_pipe[1]);
+		_exit(EXIT_FAILURE);
+	}
+	(void)close(status_pipe[1]);
+	live_handle->worker_pid = worker_pid;
+	live_handle->status_fd = status_pipe[0];
+	if (setpgid(worker_pid, worker_pid) != 0 && errno != EACCES &&
+		errno != ESRCH) {
+		set_error(error, error_size, "could not create media worker process group");
+		(void)terminate_worker(live_handle, error, error_size);
+		(void)close(live_handle->status_fd);
+		free(live_handle);
+		return -1;
+	}
+	if (wait_for_worker_ready(live_handle, error, error_size) != 0) {
+		(void)terminate_worker(live_handle, error, error_size);
+		(void)close(live_handle->status_fd);
 		free(live_handle);
 		return -1;
 	}
@@ -271,25 +490,36 @@ static int backend_poll(void *opaque, void *handle, char *error,
 	unsigned error_size)
 {
 	LiveBackendHandle *live_handle = handle;
+	int status;
 
 	(void)opaque;
-	if (live_handle == NULL || live_handle->backend == NULL) {
-		if (error != NULL && error_size != 0U)
-			(void)snprintf(error, error_size, "media backend handle is invalid");
+	if (live_handle == NULL || live_handle->worker_pid <= 0) {
+		set_error(error, error_size, "media worker handle is invalid");
 		return -1;
 	}
-	return media_backend_poll(live_handle->backend, 0U, error, error_size);
+	if (waitpid(live_handle->worker_pid, &status, WNOHANG) == 0)
+		return 0;
+	if (errno == EINTR)
+		return 0;
+	set_error(error, error_size, "media worker exited unexpectedly");
+	return -1;
 }
 
 static int backend_stop(void *opaque, void *handle, char *error,
 	unsigned error_size)
 {
 	LiveBackendHandle *live_handle = handle;
+	int result;
 
 	(void)opaque;
-	if (live_handle == NULL || live_handle->backend == NULL)
+	if (live_handle == NULL)
 		return 0;
-	return media_backend_stop(live_handle->backend, error, error_size);
+	result = terminate_worker(live_handle, error, error_size);
+	if (live_handle->status_fd >= 0) {
+		(void)close(live_handle->status_fd);
+		live_handle->status_fd = -1;
+	}
+	return result;
 }
 
 static void backend_free(void *opaque, void *handle)
@@ -299,7 +529,13 @@ static void backend_free(void *opaque, void *handle)
 	(void)opaque;
 	if (live_handle == NULL)
 		return;
-	media_backend_free(live_handle->backend);
+	if (live_handle->worker_pid > 0) {
+		char error[256];
+
+		(void)terminate_worker(live_handle, error, sizeof(error));
+	}
+	if (live_handle->status_fd >= 0)
+		(void)close(live_handle->status_fd);
 	free(live_handle);
 }
 
@@ -369,7 +605,6 @@ int main(void)
 		perror("signal");
 		return EXIT_FAILURE;
 	}
-	gst_init(NULL, NULL);
 	memset(&ops, 0, sizeof(ops));
 	ops.context = &context;
 	ops.now_ms = live_now;
