@@ -524,11 +524,15 @@ static int get_metadata_fmt(struct v4l2_subdev *sd,
 			    struct v4l2_subdev_state *state,
 			    struct v4l2_subdev_format *fmt)
 {
-	struct media_pad *pad =
-	    media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
+	struct media_pad *pad;
 	struct v4l2_mbus_frame_desc_entry entry;
 	int rval;
 
+	/* The entity's links list is initialized when it is registered. */
+	if (!sd->entity.graph_obj.mdev)
+		return -EINVAL;
+
+	pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
 	if (!pad)
 		return -EINVAL;
 
@@ -629,11 +633,20 @@ static void csi2_set_ffmt(struct v4l2_subdev *sd,
 			__ipu_isys_get_ffmt(sd, state, fmt->pad,
 					    fmt->stream,
 					    fmt->which);
-		struct media_pad *pad = media_pad_remote_pad_first(
-			&sd->entity.pads[CSI2_PAD_SINK]);
+		struct media_pad *pad;
 		struct v4l2_mbus_frame_desc_entry entry;
 		int rval;
 
+		/* During init, media_device_register_entity() has not set up links. */
+		if (!sd->entity.graph_obj.mdev) {
+			ffmt->width = 0;
+			ffmt->height = 0;
+			ffmt->code = 0;
+			return;
+		}
+
+		pad = media_pad_remote_pad_first(
+			&sd->entity.pads[CSI2_PAD_SINK]);
 		if (!pad) {
 			ffmt->width = 0;
 			ffmt->height = 0;
