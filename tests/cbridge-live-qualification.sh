@@ -6,9 +6,9 @@
 # endpoints probed together, twenty open/close cycles, twenty front/rear
 # switches, and a service restart. Captures and logs live below /tmp only.
 #
-# This script deliberately controls the user service and loopback formats. Do
-# not run it while another camera application is using /dev/video60 or
-# /dev/video61. Use --quick for a short smoke run.
+# This script can control the user service and loopback formats only when
+# explicitly allowed. Do not run it while another camera application is using
+# /dev/video60 or /dev/video61. Use --quick for a short smoke run.
 
 set -u
 
@@ -31,7 +31,9 @@ STREAM_ATTEMPTS=${CBQ_STREAM_ATTEMPTS:-5}
 KEEP_ARTIFACTS=${CBQ_KEEP_ARTIFACTS:-0}
 CASE_FILTER=${CBQ_CASE:-all}
 SKIP_LIFECYCLE=0
+ALLOW_SERVICE_CONTROL=0
 CURRENT_MATRIX_FORMAT=
+FORMAT_CONTROL_ATTEMPTED=0
 
 LOGDIR=
 INITIAL_ACTIVE=0
@@ -47,7 +49,8 @@ fail() { FAILED=$((FAILED + 1)); say "FAIL [$1] $2 (diagnostics: $LOGDIR)"; }
 
 usage() {
 	cat <<EOF
-usage: $0 [--quick] [--case CASE] [--skip-lifecycle] [--keep-artifacts]
+usage: $0 [--quick] [--case CASE] [--allow-service-control]
+       [--skip-lifecycle] [--keep-artifacts]
 
 CASE is one of front-yuyv, rear-yuyv, front-mjpeg, rear-mjpeg, or all.
 Environment overrides: CBQ_REPEATS, CBQ_DURATION, CBQ_SAMPLE_FRAMES,
@@ -75,6 +78,7 @@ while [ "$#" -gt 0 ]; do
 			shift
 			;;
 		--skip-lifecycle) SKIP_LIFECYCLE=1 ;;
+		--allow-service-control) ALLOW_SERVICE_CONTROL=1 ;;
 		--keep-artifacts) KEEP_ARTIFACTS=1 ;;
 		--help|-h) usage; exit 0 ;;
 		*) say "unknown option: $1" >&2; usage >&2; exit 2 ;;
@@ -114,7 +118,8 @@ cleanup() {
 
 	# A timeout normally closes its V4L2 descriptor before returning. Stop the
 	# service before restoring formats so no producer owns the loopback nodes.
-	if [ -n "$INITIAL_FRONT_FORMAT" ] && [ -n "$INITIAL_REAR_FORMAT" ]; then
+	if [ "$ALLOW_SERVICE_CONTROL" -eq 1 ] && [ "$FORMAT_CONTROL_ATTEMPTED" -eq 1 ] &&
+		[ -n "$INITIAL_FRONT_FORMAT" ] && [ -n "$INITIAL_REAR_FORMAT" ]; then
 		if systemctl --user is-active --quiet "$UNIT" 2>/dev/null && owners_are_bridge_only; then
 			systemctl --user stop "$UNIT" >"$LOGDIR/cleanup-stop.log" 2>&1 || true
 		else
@@ -218,6 +223,11 @@ owners_are_bridge_only() {
 }
 
 stop_for_format_change() {
+	if [ "$ALLOW_SERVICE_CONTROL" -ne 1 ]; then
+		fail format "format control requires --allow-service-control"
+		return 1
+	fi
+	FORMAT_CONTROL_ATTEMPTED=1
 	if ! owners_are_bridge_only; then
 		fail format "another process owns a camera endpoint; refusing to stop the service"
 		return 1
@@ -481,6 +491,15 @@ run_case() {
 		matrix_format=YUYV
 	fi
 	if [ "$CURRENT_MATRIX_FORMAT" != "$matrix_format" ]; then
+		if [ "$ALLOW_SERVICE_CONTROL" -ne 1 ]; then
+			if [ "$(format_name "$FRONT" 2>/dev/null || true)" = "$matrix_format" ] &&
+				[ "$(format_name "$REAR" 2>/dev/null || true)" = "$matrix_format" ]; then
+				CURRENT_MATRIX_FORMAT=$matrix_format
+			else
+				skip "$case_name" "$matrix_format requires --allow-service-control for format setup"
+				return 0
+			fi
+		fi
 		if ! set_matrix_format "$matrix_format"; then return 1; fi
 		CURRENT_MATRIX_FORMAT=$matrix_format
 	fi
@@ -526,8 +545,11 @@ if [ "$SKIP_LIFECYCLE" -eq 0 ]; then
 	# grace interval after the last reader disappears. Let it return to filler
 	# ownership before exercising a service-level restart.
 	sleep 3
-	if systemctl --user restart "$UNIT" >"$LOGDIR/restart.log" 2>&1 && wait_service; then
+	if [ "$ALLOW_SERVICE_CONTROL" -eq 1 ] &&
+		systemctl --user restart "$UNIT" >"$LOGDIR/restart.log" 2>&1 && wait_service; then
 		pass restart "$UNIT recovered after an explicit service restart"
+	elif [ "$ALLOW_SERVICE_CONTROL" -ne 1 ]; then
+		skip restart "service restart requires --allow-service-control"
 	else
 		fail restart "$UNIT did not recover after an explicit service restart"
 	fi
