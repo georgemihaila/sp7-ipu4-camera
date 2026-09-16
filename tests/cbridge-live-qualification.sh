@@ -179,6 +179,20 @@ service_pid() {
 	printf '%s\n' "$pid"
 }
 
+service_cgroup() {
+	systemctl --user show -p ControlGroup --value "$UNIT" 2>/dev/null || true
+}
+
+owner_is_service_member() {
+	owner=$1
+	bridge_pid=$(service_pid 2>/dev/null || true)
+	[ -n "$bridge_pid" ] || return 1
+	[ "$owner" -eq "$bridge_pid" ] && return 0
+	cgroup=$(service_cgroup)
+	[ -n "$cgroup" ] || return 1
+	grep -Fq ":$cgroup" "/proc/$owner/cgroup" 2>/dev/null
+}
+
 format_name() {
 	device=$1
 	value=$(v4l2-ctl -d "$device" --get-fmt-video 2>/dev/null |
@@ -216,7 +230,7 @@ owners_are_bridge_only() {
 			case $owner in
 				''|*[!0-9]*) continue ;;
 			esac
-			[ "$owner" -eq "$bridge_pid" ] || return 1
+			owner_is_service_member "$owner" || return 1
 		done
 	done
 	return 0
