@@ -105,31 +105,43 @@ static void worker_process(const MediaBackendConfig *config, int status_fd)
 	result = media_backend_start(backend, config, error, sizeof(error));
 	if (result != 0) {
 		(void)fprintf(stderr, "worker media backend start failed: %s\n", error);
-		media_backend_free(backend);
+		/*
+		 * Startup failure cleanup must stay bounded. The parent will reap this
+		 * worker and its process group, so do not enter media teardown here.
+		 */
 		(void)write_worker_status(status_fd, 'F');
 		(void)close(status_fd);
 		_exit(EXIT_FAILURE);
 	}
 	if (write_worker_status(status_fd, 'R') != 0) {
-		media_backend_stop(backend, error, sizeof(error));
-		media_backend_free(backend);
+		(void)fprintf(stderr,
+			"worker could not report ready status; exiting without media cleanup\n");
 		(void)close(status_fd);
 		_exit(EXIT_FAILURE);
 	}
 	(void)close(status_fd);
-	while (!stop_requested) {
+	for (;;) {
+		if (stop_requested) {
+			(void)fprintf(stderr,
+				"worker received supervisor stop request; exiting without media cleanup\n");
+			_exit(EXIT_SUCCESS);
+		}
 		result = media_backend_poll(backend, WORKER_REAP_POLL_MS, error,
 			sizeof(error));
 		if (result != 0) {
+			if (stop_requested) {
+				(void)fprintf(stderr,
+					"worker received supervisor stop request while polling; "
+					"exiting without media cleanup\n");
+				_exit(EXIT_SUCCESS);
+			}
 			(void)fprintf(stderr, "worker media backend ended: %s\n",
 				result < 0 ? error : "end-of-stream");
-			break;
+			(void)fprintf(stderr,
+				"worker exiting after backend termination without media cleanup\n");
+			_exit(EXIT_FAILURE);
 		}
 	}
-	if (media_backend_stop(backend, error, sizeof(error)) != 0)
-		(void)fprintf(stderr, "worker media backend stop failed: %s\n", error);
-	media_backend_free(backend);
-	_exit(result < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 static int reap_worker(pid_t worker_pid, unsigned timeout_ms, int *status)
