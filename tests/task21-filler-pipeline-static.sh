@@ -7,7 +7,7 @@ CROOT="$ROOT/cbridge"
 
 # Camera capture retains the conversion and scaling stages, while fillers link
 # videotestsrc directly to their negotiated output caps.
-grep -Fq 'source, convert, scale, caps_filter' "$CROOT/media-backend.c"
+grep -Fq 'source, source_caps_filter, convert, scale' "$CROOT/media-backend.c"
 grep -Fq 'source, caps_filter, jpegenc' "$CROOT/media-backend.c"
 grep -Fq 'source, caps_filter, sink' "$CROOT/media-backend.c"
 
