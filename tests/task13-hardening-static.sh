@@ -58,7 +58,7 @@ trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 tmp="$tmpdir/output"
 
 # Exercise install/uninstall against isolated temp trees. modinfo reports the
-# selected test release so host kernel metadata and privileges are irrelevant.
+# selected test release; fake module payloads avoid depending on build outputs.
 mockbin="$tmpdir/bin"
 mkdir -p "$mockbin"
 cat > "$mockbin/modinfo" <<'EOF'
@@ -73,13 +73,27 @@ EOF
 chmod +x "$mockbin/modinfo" "$mockbin/depmod"
 fwsrc="$tmpdir/firmware-source"
 printf 'firmware bytes\n' > "$fwsrc"
+source_root="$tmpdir/source"
+intel_src="$source_root/linux-6.19.8/drivers/media/pci/intel"
+mkdir -p "$intel_src/ipu4/ipu4p-css/lib2600psys"
+while IFS= read -r module; do
+	[ -n "$module" ] || continue
+	case $module in
+		ipu-bridge.ko) module_source="$intel_src/$module" ;;
+		intel-ipu4p-psys-csslib.ko) module_source="$intel_src/ipu4/ipu4p-css/lib2600psys/$module" ;;
+		*) module_source="$intel_src/ipu4/$module" ;;
+	esac
+	printf 'fake module payload for %s\n' "$module" > "$module_source"
+done <<EOF
+$modules
+EOF
 moddir="$tmpdir/install-modules"
 firmware_target="$tmpdir/firmware/ipu4p_cpd.bin"
-PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" \
+PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
 [ "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 6 ]
 [ "$(wc -l < "$moddir/.ipu4p-camera-modules" | tr -d '[:space:]')" -eq 6 ]
-PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" \
+PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
 PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
 [ -z "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' -print -quit)" ]
@@ -90,7 +104,7 @@ PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
 conflict_dir="$tmpdir/install-conflict"
 mkdir -p "$conflict_dir"
 printf 'existing module\n' > "$conflict_dir/ipu-bridge.ko"
-if PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$conflict_dir" \
+if PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$conflict_dir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/conflict-fw" sh "$INSTALL" > "$tmp" 2>&1; then
 	echo 'task13-hardening-static: installer replaced an untracked module' >&2
 	exit 1
@@ -98,6 +112,26 @@ fi
 grep -q 'refusing to overwrite untracked module' "$tmp"
 [ "$(cat "$conflict_dir/ipu-bridge.ko")" = 'existing module' ]
 [ -z "$(find "$conflict_dir" -maxdepth 1 -type f -name 'intel-ipu4p*.ko' -print -quit)" ]
+
+# A prepared KDIR for another release must fail before invoking make.
+fake_kdir="$tmpdir/fake-kdir"
+mkdir -p "$fake_kdir/include/generated"
+: > "$fake_kdir/Makefile"
+: > "$fake_kdir/.config"
+printf '#define UTS_RELEASE "task13-kdir-release"\n' > "$fake_kdir/include/generated/utsrelease.h"
+cat > "$mockbin/make" <<EOF
+#!/bin/sh
+printf 'make was unexpectedly invoked\\n' > "$tmpdir/make-invoked"
+exit 99
+EOF
+chmod +x "$mockbin/make"
+if PATH="$mockbin:$PATH" KDIR="$fake_kdir" KREL=task13-target-release \
+	sh "$ROOT/scripts/build-modules.sh" > "$tmp" 2>&1; then
+	echo 'task13-hardening-static: build accepted a mismatched KDIR/KREL' >&2
+	exit 1
+fi
+grep -q 'does not match target KREL task13-target-release' "$tmp"
+[ ! -e "$tmpdir/make-invoked" ]
 
 for repeats in 0 -1 1.5 abc; do
 	if CAMERA_TEST_REPEATS=$repeats sh "$CAMERA" --live >"$tmp" 2>&1; then
