@@ -107,6 +107,15 @@ PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
 [ -f "$firmware_target" ]
 [ ! -e "$moddir/.ipu4p-camera-modules" ]
 
+# Upgrade from older installs that tracked the in-tree dw9719 overlay too.
+# The legacy module is removed only when its manifest hash still matches.
+printf 'legacy dw9719 payload\n' > "$moddir/dw9719.ko"
+legacy_hash=$(sha256sum "$moddir/dw9719.ko" | awk '{ print $1 }')
+printf 'dw9719.ko %s\n' "$legacy_hash" > "$moddir/.ipu4p-camera-modules"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
+[ ! -e "$moddir/dw9719.ko" ]
+[ ! -e "$moddir/.ipu4p-camera-modules" ]
+
 # On a kernel with a native bridge, install the five IPU4P modules only and
 # ensure the manifest/uninstaller never claims or removes that bridge.
 native_moddir="$tmpdir/install-native-bridge"
