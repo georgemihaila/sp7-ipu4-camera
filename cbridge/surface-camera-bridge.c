@@ -19,6 +19,8 @@
 #include <gst/gst.h>
 
 #define POLL_INTERVAL_MS 200U
+#define ACTIVE_CONSUMER_SCAN_MS 200U
+#define IDLE_CONSUMER_SCAN_MS 1000U
 #define SYSTEMCTL_TIMEOUT_MS 5000U
 #define CAMERA_FRONT_DEVICE "/dev/video60"
 #define CAMERA_REAR_DEVICE "/dev/video61"
@@ -33,6 +35,11 @@ typedef struct {
 typedef struct {
 	CameraEndpoint endpoints[CAMERA_COUNT];
 	uid_t uid;
+	CameraController *controller;
+	uint64_t next_consumer_scan_ms;
+	unsigned cached_consumer_mask;
+	unsigned consumer_scans;
+	bool consumer_scan_valid;
 } LiveContext;
 
 typedef struct {
@@ -154,9 +161,8 @@ static bool process_uses_endpoint(const char *pid_text,
 	return found;
 }
 
-static unsigned consumer_mask(void *opaque)
+static unsigned scan_consumer_mask(const LiveContext *context)
 {
-	LiveContext *context = opaque;
 	DIR *proc;
 	struct dirent *entry;
 	unsigned mask = 0U;
@@ -183,6 +189,25 @@ static unsigned consumer_mask(void *opaque)
 	}
 	(void)closedir(proc);
 	return mask;
+}
+
+static unsigned consumer_mask(void *opaque)
+{
+	LiveContext *context = opaque;
+	uint64_t current = monotonic_ms();
+	unsigned interval = ACTIVE_CONSUMER_SCAN_MS;
+
+	if (context->controller != NULL &&
+		camera_controller_state(context->controller) == CONTROLLER_IDLE &&
+		context->cached_consumer_mask == 0U)
+		interval = IDLE_CONSUMER_SCAN_MS;
+	if (context->consumer_scan_valid && current < context->next_consumer_scan_ms)
+		return context->cached_consumer_mask;
+	context->cached_consumer_mask = scan_consumer_mask(context);
+	context->consumer_scan_valid = true;
+	context->consumer_scans++;
+	context->next_consumer_scan_ms = current + interval;
+	return context->cached_consumer_mask;
 }
 
 static uint64_t live_now(void *opaque)
@@ -436,6 +461,7 @@ int main(void)
 		fprintf(stderr, "could not create camera controller: %s\n", error);
 		return EXIT_FAILURE;
 	}
+	context.controller = controller;
 	fprintf(stderr, "watching front and rear camera consumers\n");
 	while (!stop_requested) {
 		if (camera_controller_tick(controller) < 0)
@@ -443,6 +469,7 @@ int main(void)
 		(void)poll(NULL, 0, (int)POLL_INTERVAL_MS);
 	}
 	fprintf(stderr, "shutting down camera controller\n");
+	fprintf(stderr, "consumer scans performed: %u\n", context.consumer_scans);
 	if (camera_controller_shutdown(controller, error, sizeof(error)) != 0) {
 		fprintf(stderr, "camera controller shutdown failed: %s\n", error);
 		result = EXIT_FAILURE;

@@ -25,8 +25,9 @@ make -C cbridge test-controller
 The complete C controller is still opt-in and is not installed by the normal
 setup script. It owns the two filler pipelines, selects a requested camera
 after debounce, applies the close grace period, retries failed capture and
-filler starts independently, and bounds WirePlumber operations. Its live
-entrypoint is:
+filler starts independently, bounds WirePlumber operations, and adapts the
+`/proc` consumer scan interval between 200 ms while active and 1000 ms while
+stable and idle. Its live entrypoint is:
 
 ```sh
 ./cbridge/sp7-camera-bridge
