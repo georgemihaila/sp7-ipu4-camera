@@ -61,12 +61,12 @@ while [ "$#" -gt 0 ]; do
 	case $1 in
 	--quick)
 			REPEATS=1
-			DURATION=5
+			DURATION=20
 			SAMPLE_FRAMES=120
 			PROBE_FRAMES=20
 			OPEN_CLOSE_CYCLES=2
 			SWITCH_CYCLES=2
-			STREAM_TIMEOUT=20
+			STREAM_TIMEOUT=40
 			STREAM_ATTEMPTS=3
 			;;
 		--case)
