@@ -3,11 +3,40 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+INSTALL_MODE=${INSTALL_MODE:-full}
 
 fail() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
 }
+
+usage() {
+	cat <<'EOF'
+usage: sudo ./install.sh [--full|--driver-only]
+
+The default --full mode builds and installs the IPU4P driver and configures
+the named Surface Camera bridge when a desktop session is available.
+--driver-only installs only the IPU4P modules and firmware. It does not
+install bridge packages, write bridge configuration, or enable user services.
+For a prebuilt release archive, use scripts/install-modules.sh directly; it
+does not install compiler or development packages.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+	case $1 in
+		--full) INSTALL_MODE=full ;;
+		--driver-only) INSTALL_MODE=driver-only ;;
+		--help|-h) usage; exit 0 ;;
+		*) fail "unknown option: $1" ;;
+	esac
+	shift
+done
+
+case $INSTALL_MODE in
+	full|driver-only) ;;
+	*) fail "invalid INSTALL_MODE: $INSTALL_MODE (expected full or driver-only)" ;;
+esac
 
 [ "$(id -u)" -eq 0 ] || fail 'run this installer as root: sudo ./install.sh'
 
@@ -31,6 +60,10 @@ if [ "${FIRMWARE+x}" = x ] && [ ! -s "$FIRMWARE" ]; then
 	fail "FIRMWARE does not name a non-empty file: ${FIRMWARE:-<empty>}"
 fi
 
+DRIVER_PACKAGES='ca-certificates curl dnf-plugins-core kmod util-linux'
+BUILD_PACKAGES='elfutils-libelf-devel gcc git make openssl-devel perl python3 bc dwarves flex bison'
+BRIDGE_PACKAGES='libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback v4l-utils'
+
 WORKDIR=$(mktemp -d)
 cleanup() {
 	status=$?
@@ -43,12 +76,12 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-printf 'Installing build tools for kernel %s...\n' "$KREL"
-dnf -y install \
-	ca-certificates curl dnf-plugins-core elfutils-libelf-devel gcc git make \
-	msitools openssl-devel perl python3 bc dwarves flex bison kmod util-linux \
-	libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback \
-	v4l2loopback v4l-utils
+printf 'Installing driver dependencies for kernel %s...\n' "$KREL"
+dnf -y install $DRIVER_PACKAGES $BUILD_PACKAGES
+if [ "$INSTALL_MODE" = full ]; then
+	printf '%s\n' 'Installing named-camera runtime dependencies...'
+	dnf -y install $BRIDGE_PACKAGES
+fi
 
 KDIR=${KDIR:-/lib/modules/$KREL/build}
 kernel_tree_release() {
@@ -101,6 +134,8 @@ else
 	MSI_PATH="$WORKDIR/SurfacePro7_Win11_22621_25.090.3489.0.msi"
 	EXTRACT_DIR="$WORKDIR/microsoft-driver-package"
 	mkdir -p "$EXTRACT_DIR"
+	# Install the extraction-only tool only when no usable firmware was found.
+	dnf -y install msitools
 	printf '%s\n' 'CPD firmware is missing; downloading the official Microsoft Surface Pro 7 driver package (about 678 MB)...'
 	curl -fL --retry 3 "$MSI_URL" -o "$MSI_PATH"
 	msiextract -C "$EXTRACT_DIR" "$MSI_PATH"
@@ -133,18 +168,39 @@ fi
 printf '%s\n' 'Installing verified modules and firmware...'
 FIRMWARE="$FIRMWARE_PATH" KREL="$KREL" "$ROOT/scripts/install-modules.sh"
 
-printf '%s\n' 'Installing named Surface Camera endpoints...'
-if [ -n "${SUDO_USER:-}" ] && TARGET_UID=$(id -u "$SUDO_USER" 2>/dev/null) && \
-	[ -S "/run/user/$TARGET_UID/bus" ]; then
-	"$ROOT/scripts/setup-camera-bridge.sh"
+if [ "$INSTALL_MODE" = full ]; then
+	command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer runtime elements'
+	for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
+		gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
+			fail "required GStreamer element is unavailable: $element (check libcamera-gstreamer and gstreamer1-plugins-good)"
+	done
+	printf '%s\n' 'Installing named Surface Camera endpoints...'
+	if [ -n "${SUDO_USER:-}" ] && TARGET_UID=$(id -u "$SUDO_USER" 2>/dev/null) && \
+		[ -S "/run/user/$TARGET_UID/bus" ]; then
+		"$ROOT/scripts/setup-camera-bridge.sh"
+	else
+		printf '%s\n' 'No active desktop user session was found; run sudo ./scripts/setup-camera-bridge.sh after logging in.'
+	fi
 else
-	printf '%s\n' 'No active desktop user session was found; run sudo ./scripts/setup-camera-bridge.sh after logging in.'
+	printf '%s\n' 'Driver-only mode selected; named-camera packages and bridge configuration were skipped.'
 fi
 
 cat <<EOF
 
-Installation complete for kernel $KREL. Surface Camera (front) and Surface Camera (back)
-will be available to V4L2 applications after the desktop user service starts.
+Installation complete for kernel $KREL.
+EOF
+if [ "$INSTALL_MODE" = full ]; then
+	cat <<EOF
+Surface Camera (front) and Surface Camera (back) will be available to V4L2
+applications after the desktop user service starts.
+EOF
+else
+	cat <<EOF
+Only the driver and firmware were installed. Use --full later, or install the
+named-camera dependencies and run scripts/setup-camera-bridge.sh separately.
+EOF
+fi
+cat <<EOF
 Reboot to load the modules. Secure Boot may require signing them with a key
 trusted by this system before they can load.
 EOF

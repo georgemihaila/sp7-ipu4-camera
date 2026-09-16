@@ -197,6 +197,12 @@ For Zoom and other V4L2 applications, see
 [`docs/surface-cameras.md`](docs/surface-cameras.md) for the named front and
 rear camera bridge. The driver install flow enables it automatically.
 
+The source installer supports `sudo ./install.sh --driver-only` when only the
+IPU4P driver and firmware are wanted. The default `--full` mode also installs
+and configures the named-camera bridge. A prebuilt release archive uses
+`scripts/install-modules.sh` directly and does not install compiler or
+development packages.
+
 ## Credits and licensing
 
 The driver code in `linux-6.19.8/drivers/media/pci/intel/` is GPL-2.0 (Linux

@@ -24,7 +24,13 @@ for package in libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4
 done
 command -v v4l2-ctl >/dev/null 2>&1 || fail 'v4l2-ctl is required to verify the virtual camera devices'
 command -v gst-launch-1.0 >/dev/null 2>&1 || fail 'GStreamer tools are required'
+command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer plugins'
 command -v runuser >/dev/null 2>&1 || fail 'runuser is required to configure the target user session'
+
+for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
+	gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
+		fail "required GStreamer element is unavailable: $element (install libcamera-gstreamer and gstreamer1-plugins-good)"
+done
 
 KREL=$(uname -r)
 if ! modinfo -k "$KREL" v4l2loopback >/dev/null 2>&1; then

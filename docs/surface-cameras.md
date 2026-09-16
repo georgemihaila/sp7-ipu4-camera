@@ -20,10 +20,23 @@ before the real camera producer starts. The RPM Fusion OBS virtual camera stays 
 
 ## Install
 
-On Fedora, the top-level driver installer installs these dependencies and
-enables the bridge automatically. For a release bundle or a bridge-only
-installation, install the GStreamer libcamera source and RPM Fusion loopback
-module, then build the module for the running kernel:
+On Fedora, the top-level installer defaults to a full source installation:
+
+```sh
+sudo ./install.sh --full
+```
+
+To install only the kernel driver and firmware, without bridge packages or
+desktop configuration, use:
+
+```sh
+sudo ./install.sh --driver-only
+```
+
+For a prebuilt release archive, `scripts/install-modules.sh` is the module and
+firmware installer; it does not install compiler or development packages.
+For a bridge-only installation on an already prepared host, install the
+runtime dependencies and build the loopback module first:
 
 ```sh
 sudo dnf install libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback
@@ -35,6 +48,11 @@ From this repository, run:
 ```sh
 sudo ./scripts/setup-camera-bridge.sh
 ```
+
+The setup checks every GStreamer element used by the filler and camera
+pipelines and reports the missing element and package group if a plugin is not
+available. Firmware extraction tooling is installed by `install.sh` only when
+no caller-supplied or standard installed CPD firmware is available.
 
 The setup installs the module labels, loads the loopback nodes, and enables a
 per-user systemd service. It overrides RPM Fusion's same-named modprobe file
