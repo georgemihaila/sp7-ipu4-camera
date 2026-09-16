@@ -59,10 +59,10 @@ EOF
 
 while [ "$#" -gt 0 ]; do
 	case $1 in
-		--quick)
+	--quick)
 			REPEATS=1
 			DURATION=5
-			SAMPLE_FRAMES=60
+			SAMPLE_FRAMES=120
 			PROBE_FRAMES=20
 			OPEN_CLOSE_CYCLES=2
 			SWITCH_CYCLES=2
@@ -266,11 +266,11 @@ capture_metrics() {
 	if [ "$format" = YUYV ]; then
 		ffmpeg -hide_banner -loglevel error -f rawvideo -pix_fmt yuyv422 \
 			-s "${WIDTH}x${HEIGHT}" -i "$input" \
-			-vf 'signalstats,metadata=print:file=-' -frames:v 60 -f null - \
+			-vf 'signalstats,metadata=print:file=-' -frames:v "$SAMPLE_FRAMES" -f null - \
 			>"$metrics" 2>&1
 	else
 		ffmpeg -hide_banner -loglevel error -f mjpeg -i "$input" \
-			-vf 'signalstats,metadata=print:file=-' -frames:v 60 -f null - \
+			-vf 'signalstats,metadata=print:file=-' -frames:v "$SAMPLE_FRAMES" -f null - \
 			>"$metrics" 2>&1
 	fi
 }
@@ -522,6 +522,10 @@ if ! run_case rear mjpeg; then :; fi
 
 if [ "$SKIP_LIFECYCLE" -eq 0 ]; then
 	if ! lifecycle_checks; then :; fi
+	# The controller intentionally keeps the selected camera for its close
+	# grace interval after the last reader disappears. Let it return to filler
+	# ownership before exercising a service-level restart.
+	sleep 3
 	if systemctl --user restart "$UNIT" >"$LOGDIR/restart.log" 2>&1 && wait_service; then
 		pass restart "$UNIT recovered after an explicit service restart"
 	else
