@@ -232,6 +232,7 @@ static void test_priority_switch_and_close(void)
 	CHECK(fake.last_camera_format[CAMERA_REAR] == MEDIA_FORMAT_MJPEG,
 		"rear capture did not receive its negotiated MJPEG format");
 	rear_starts = fake.camera_start_calls[CAMERA_REAR];
+	unsigned rear_filler_starts = fake.filler_start_calls[CAMERA_REAR];
 
 	fake.consumers = (1U << CAMERA_FRONT) | (1U << CAMERA_REAR);
 	fake.now += 1000U;
@@ -239,6 +240,8 @@ static void test_priority_switch_and_close(void)
 		"held-camera tick failed");
 	CHECK(fake.camera_start_calls[CAMERA_REAR] == rear_starts,
 		"held rear camera was restarted");
+	CHECK(fake.filler_start_calls[CAMERA_REAR] == rear_filler_starts,
+		"controller retried the active rear filler");
 
 	fake.consumers = 1U << CAMERA_FRONT;
 	fake.now += 1U;

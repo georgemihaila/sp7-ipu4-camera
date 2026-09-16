@@ -358,7 +358,9 @@ int camera_controller_tick(CameraController *controller)
 	current = now_ms(controller);
 	for (CameraKey camera = CAMERA_FRONT; camera < CAMERA_COUNT; camera++) {
 		poll_filler(controller, camera);
-		(void)start_filler(controller, camera);
+		/* The active camera owns this loopback while it is streaming. */
+		if (camera != controller->active)
+			(void)start_filler(controller, camera);
 	}
 	if (controller->capture != NULL && controller->state == CONTROLLER_STREAMING) {
 		int result = controller->ops.backend_poll(controller->ops.context,
