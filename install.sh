@@ -4,6 +4,7 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 INSTALL_MODE=${INSTALL_MODE:-full}
+. "$ROOT/scripts/kernel-release.sh"
 
 fail() {
 	printf 'error: %s\n' "$*" >&2
@@ -84,14 +85,6 @@ if [ "$INSTALL_MODE" = full ]; then
 fi
 
 KDIR=${KDIR:-/lib/modules/$KREL/build}
-kernel_tree_release() {
-	if [ -f "$1/include/generated/utsrelease.h" ]; then
-		sed -n 's/^#define UTS_RELEASE "\(.*\)"$/\1/p' \
-			"$1/include/generated/utsrelease.h"
-	elif [ -f "$1/include/config/kernel.release" ]; then
-		cat "$1/include/config/kernel.release"
-	fi
-}
 
 KDIR_RELEASE=$(kernel_tree_release "$KDIR")
 if [ ! -f "$KDIR/Makefile" ] || [ ! -f "$KDIR/.config" ] || [ "$KDIR_RELEASE" != "$KREL" ]; then

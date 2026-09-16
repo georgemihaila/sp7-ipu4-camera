@@ -8,6 +8,7 @@ KREL=${KREL:?set KREL to the exact target kernel release}
 VERSION=${PACKAGE_VERSION:-snapshot}
 SOURCE_COMMIT=${SOURCE_COMMIT:-unknown}
 OUTPUT_DIR=${OUTPUT_DIR:-$ROOT/dist}
+MODULE_MANIFEST=${MODULE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 
 case $VERSION in
 	''|*[!A-Za-z0-9._+-]*)
@@ -27,6 +28,10 @@ if ! command -v modinfo >/dev/null 2>&1; then
 	printf '%s\n' 'error: modinfo is required to verify module vermagic' >&2
 	exit 2
 fi
+[ -f "$MODULE_MANIFEST" ] || {
+	printf 'error: module manifest is missing: %s\n' "$MODULE_MANIFEST" >&2
+	exit 2
+}
 
 case $OUTPUT_DIR in
 	/*) ;;
@@ -46,16 +51,13 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-MODULES='
-linux-6.19.8/drivers/media/pci/intel/ipu-bridge.ko|ipu-bridge.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p.ko|intel-ipu4p.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-isys.ko|intel-ipu4p-isys.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-psys.ko|intel-ipu4p-psys.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-isys-csslib.ko|intel-ipu4p-isys-csslib.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys/intel-ipu4p-psys-csslib.ko|intel-ipu4p-psys-csslib.ko'
-
-while IFS='|' read -r relative_path module_name; do
+while IFS='|' read -r relative_path module_name extra; do
 	[ -n "$relative_path" ] || continue
+	case $relative_path in \#*) continue ;; esac
+	[ -n "$module_name" ] && [ -z "${extra:-}" ] || {
+		printf 'error: malformed module manifest entry\n' >&2
+		exit 2
+	}
 	source="$ROOT/$relative_path"
 	[ -f "$source" ] || {
 		printf 'error: required module is missing: %s\n' "$source" >&2
@@ -73,9 +75,7 @@ while IFS='|' read -r relative_path module_name; do
 	}
 	mkdir -p "$STAGE/$(dirname -- "$relative_path")"
 	cp -p "$source" "$STAGE/$relative_path"
-done <<EOF
-$MODULES
-EOF
+done < "$MODULE_MANIFEST"
 
 mkdir -p "$STAGE/scripts"
 cp -p "$ROOT/scripts/install-modules.sh" "$STAGE/scripts/"
@@ -83,6 +83,9 @@ cp -p "$ROOT/scripts/uninstall-modules.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/setup-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/surface-camera-bridge.py" "$STAGE/scripts/"
+cp -p "$ROOT/scripts/kernel-release.sh" "$STAGE/scripts/"
+mkdir -p "$STAGE/modules"
+cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
 cp -p "$ROOT/modprobe.d/98-v4l2loopback.conf" "$STAGE/modprobe.d/"
 cp -p "$ROOT/wireplumber/50-sp7-ipu4.conf" "$STAGE/wireplumber/"
@@ -98,6 +101,10 @@ Source commit: $SOURCE_COMMIT
 This archive contains prebuilt modules for this exact kernel release. It does
 not contain firmware. Obtain the Microsoft-signed ipu4p_cpd.bin from an
 authorized source before installing.
+
+The archive includes the shared module inventory and kernel-release helper used
+by the build, installation, and packaging checks. It does not include a
+compiler or kernel development packages.
 
 The named camera bridge also needs Fedora's libcamera-gstreamer and
 gstreamer1-plugins-good packages, plus the RPM Fusion Free

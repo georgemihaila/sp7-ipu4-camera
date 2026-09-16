@@ -18,10 +18,11 @@ intel-ipu4p-isys.ko
 intel-ipu4p-psys.ko
 intel-ipu4p-isys-csslib.ko
 intel-ipu4p-psys-csslib.ko'
+MODULE_MANIFEST="$ROOT/modules/ipu4p-camera.modules"
+test -s "$MODULE_MANIFEST"
 while IFS= read -r module; do
 	[ -n "$module" ] || continue
-	grep -Fq "$module" "$INSTALL"
-	grep -Fq "$module" "$UNINSTALL"
+	grep -Fq "$module" "$MODULE_MANIFEST"
 done <<EOF
 $modules
 EOF
@@ -30,6 +31,8 @@ EOF
 # and copy every module found below the Intel driver tree.
 ! grep -Eq 'find .*\.ko|find .* -name' "$INSTALL"
 grep -Fq 'source_for "$name"' "$INSTALL"
+grep -Fq 'SOURCE_MANIFEST' "$INSTALL"
+grep -Fq 'SOURCE_MANIFEST' "$UNINSTALL"
 grep -Fq '.ipu4p-camera-modules' "$INSTALL"
 grep -Fq 'sha256sum' "$INSTALL"
 grep -Fq 'refusing to overwrite untracked module' "$INSTALL"
@@ -83,6 +86,8 @@ printf 'firmware bytes\n' > "$fwsrc"
 source_root="$tmpdir/source"
 intel_src="$source_root/linux-6.19.8/drivers/media/pci/intel"
 mkdir -p "$intel_src/ipu4/ipu4p-css/lib2600psys"
+mkdir -p "$source_root/modules"
+cp "$ROOT/modules/ipu4p-camera.modules" "$source_root/modules/"
 while IFS= read -r module; do
 	[ -n "$module" ] || continue
 	case $module in

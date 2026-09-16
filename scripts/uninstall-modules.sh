@@ -6,6 +6,8 @@ set -eu
 KREL=${KREL:-$(uname -r)}
 MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
+ROOT=${MODULE_SOURCE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
+SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 
 [ -e "$MANIFEST" ] || {
 	printf 'no IPU4P module manifest in %s; no modules removed\n' "$MODDIR"
@@ -14,15 +16,17 @@ MANIFEST="$MODDIR/.ipu4p-camera-modules"
 [ -f "$MANIFEST" ] || { printf 'error: module manifest is not a regular file: %s\n' "$MANIFEST" >&2; exit 2; }
 
 file_hash() { sha256sum "$1" | awk '{print $1}'; }
+known_module() {
+	[ "$1" = dw9719.ko ] && return 0
+	[ -f "$SOURCE_MANIFEST" ] || return 1
+	awk -F'|' -v module="$1" '$2 == module { found++ } END { exit found == 1 ? 0 : 1 }' "$SOURCE_MANIFEST"
+}
 
 # Reject malformed or unexpected manifest entries instead of allowing the
 # manifest to turn this helper into a general-purpose rm command.
 while IFS=' ' read -r name hash extra; do
 	[ -n "$name" ] || continue
-	case $name in
-		ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko|dw9719.ko) ;;
-		*) printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2 ;;
-	esac
+	known_module "$name" || { printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2; }
 	[ -z "${extra:-}" ] && printf '%s\n' "$hash" | grep -Eq '^[0-9a-f]{64}$' || {
 		printf 'error: malformed module manifest entry for %s\n' "$name" >&2; exit 2;
 	}
