@@ -71,3 +71,9 @@ the bridge itself continued running. This is an application/PipeWire
 negotiation issue, not evidence that the C bridge reverted to Python. A direct
 fixed-caps PipeWire probe did succeed, so no bridge-side ownership change was
 justified for this external gap.
+
+Audio playback and microphone concurrency were not exercised during this
+qualification pass. Synthetic controller tests cover producer failure,
+unavailable-device, format-query, WirePlumber, retry, and shutdown branches;
+live service restart and recovery passed, but no destructive hardware-fault
+injection was performed.
