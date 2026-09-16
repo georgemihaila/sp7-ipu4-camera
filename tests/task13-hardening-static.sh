@@ -6,8 +6,9 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 INSTALL="$ROOT/scripts/install-modules.sh"
 UNINSTALL="$ROOT/scripts/uninstall-modules.sh"
 CAMERA="$ROOT/tests/camera-suite.sh"
+CAPTURE_VALIDATION="$ROOT/tests/capture-validation.sh"
 
-for file in "$INSTALL" "$UNINSTALL" "$CAMERA"; do sh -n "$file"; done
+for file in "$INSTALL" "$UNINSTALL" "$CAMERA" "$CAPTURE_VALIDATION"; do sh -n "$file"; done
 
 modules='ipu-bridge.ko
 intel-ipu4p.ko
@@ -35,6 +36,7 @@ grep -Fq 'refusing to overwrite existing firmware' "$INSTALL"
 # Rollback is manifest-limited and preserves any module whose bytes changed.
 grep -Fq 'done < "$MANIFEST"' "$UNINSTALL"
 grep -Fq 'left modified or non-regular module in place' "$UNINSTALL"
+grep -Fq '[ ! -L "$target" ] && [ -f "$target" ]' "$UNINSTALL"
 grep -Fq 'rm -f "$target"' "$UNINSTALL"
 ! grep -Eq 'rm -f .*\*\.ko|rm -rf .*intel' "$UNINSTALL"
 
@@ -43,14 +45,60 @@ grep -Fq 'rm -f "$target"' "$UNINSTALL"
 # recovery capture.
 grep -Fq 'invalid CAMERA_TEST_REPEATS' "$CAMERA"
 grep -Fq 'diagnostics retained: $LOGDIR' "$CAMERA"
-grep -Fq 'minimum=$((width * height * 2 * 3))' "$CAMERA"
-grep -Fq "LC_ALL=C tr -d '\\000'" "$CAMERA"
+grep -Fq '. "$ROOT/tests/capture-validation.sh"' "$CAMERA"
+grep -Fq 'minimum=$((width * height * 2 * 3))' "$CAPTURE_VALIDATION"
+grep -Fq 'frame_bytes=$((bytes / 3))' "$CAPTURE_VALIDATION"
+grep -Fq 'while [ "$frame" -lt 3 ]; do' "$CAPTURE_VALIDATION"
 grep -Fq 'if [ "$RECOVERY_CAPTURE_OK" -eq 1 ]; then' "$CAMERA"
 grep -Fq 'if capture_is_valid "$cam" "$LOGDIR/$cam.raw"; then' "$CAMERA"
 ! grep -Fq 'dd if="$raw" bs=4096 count=1' "$CAMERA"
 
-tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT HUP INT TERM
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
+tmp="$tmpdir/output"
+
+# Exercise install/uninstall against isolated temp trees. modinfo reports the
+# selected test release so host kernel metadata and privileges are irrelevant.
+mockbin="$tmpdir/bin"
+mkdir -p "$mockbin"
+cat > "$mockbin/modinfo" <<'EOF'
+#!/bin/sh
+[ "$1" = -F ] && [ "$2" = vermagic ] || exit 2
+printf '%s SMP test\n' "$KREL"
+EOF
+cat > "$mockbin/depmod" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$mockbin/modinfo" "$mockbin/depmod"
+fwsrc="$tmpdir/firmware-source"
+printf 'firmware bytes\n' > "$fwsrc"
+moddir="$tmpdir/install-modules"
+firmware_target="$tmpdir/firmware/ipu4p_cpd.bin"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" \
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
+[ "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 6 ]
+[ "$(wc -l < "$moddir/.ipu4p-camera-modules" | tr -d '[:space:]')" -eq 6 ]
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" \
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
+[ -z "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' -print -quit)" ]
+[ -f "$firmware_target" ]
+[ ! -e "$moddir/.ipu4p-camera-modules" ]
+
+# An untracked collision must fail in preflight without placing peer modules.
+conflict_dir="$tmpdir/install-conflict"
+mkdir -p "$conflict_dir"
+printf 'existing module\n' > "$conflict_dir/ipu-bridge.ko"
+if PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$conflict_dir" \
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/conflict-fw" sh "$INSTALL" > "$tmp" 2>&1; then
+	echo 'task13-hardening-static: installer replaced an untracked module' >&2
+	exit 1
+fi
+grep -q 'refusing to overwrite untracked module' "$tmp"
+[ "$(cat "$conflict_dir/ipu-bridge.ko")" = 'existing module' ]
+[ -z "$(find "$conflict_dir" -maxdepth 1 -type f -name 'intel-ipu4p*.ko' -print -quit)" ]
+
 for repeats in 0 -1 1.5 abc; do
 	if CAMERA_TEST_REPEATS=$repeats sh "$CAMERA" --live >"$tmp" 2>&1; then
 		echo "task13-hardening-static: invalid repeat count unexpectedly succeeded: $repeats" >&2
@@ -61,5 +109,33 @@ for repeats in 0 -1 1.5 abc; do
 	[ "$status" -eq 2 ]
 	grep -q 'invalid CAMERA_TEST_REPEATS' "$tmp"
 done
+
+# Exercise the actual validator on sparse three-frame raw files. A nonzero byte
+# in only the first frame must not make the complete stream pass.
+. "$CAPTURE_VALIDATION"
+frame_bytes=$((2592 * 1944 * 2))
+capture="$tmpdir/capture.raw"
+truncate -s "$((frame_bytes * 3))" "$capture"
+printf '\001' | dd of="$capture" bs=1 seek=0 conv=notrunc 2>/dev/null
+if capture_is_valid front "$capture"; then
+	echo 'task13-hardening-static: one valid frame plus two zero frames unexpectedly passed' >&2
+	exit 1
+fi
+for frame in 1 2; do
+	printf '\001' | dd of="$capture" bs=1 seek="$((frame_bytes * frame))" conv=notrunc 2>/dev/null
+done
+capture_is_valid front "$capture"
+
+# A symlink at a tracked module name is not an owned regular module and must
+# survive uninstall even if it resolves to bytes with the recorded hash.
+moddir="$tmpdir/modules"
+mkdir -p "$moddir"
+printf 'module bytes\n' > "$tmpdir/module-backing"
+ln -s ../module-backing "$moddir/intel-ipu4p.ko"
+hash=$(sha256sum "$tmpdir/module-backing" | awk '{print $1}')
+printf 'intel-ipu4p.ko %s\n' "$hash" > "$moddir/.ipu4p-camera-modules"
+MODDIR="$moddir" KREL=test sh "$UNINSTALL" > "$tmp" 2>&1
+[ -L "$moddir/intel-ipu4p.ko" ]
+grep -q 'intel-ipu4p.ko' "$moddir/.ipu4p-camera-modules"
 
 echo 'task13-hardening-static: PASS'

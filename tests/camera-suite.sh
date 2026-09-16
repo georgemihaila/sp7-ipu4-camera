@@ -7,6 +7,7 @@
 set -u
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+. "$ROOT/tests/capture-validation.sh"
 MODE=static
 PM_SAFE=0
 TIMEOUT=${CAMERA_TEST_TIMEOUT:-20}
@@ -63,26 +64,6 @@ trap cleanup EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
-
-capture_is_valid() {
-	cam=$1
-	raw=$2
-	case $cam in
-		front) width=2592; height=1944 ;;
-		rear) width=3264; height=2448 ;;
-		*) return 1 ;;
-	esac
-	[ -s "$raw" ] || return 1
-	bytes=$(wc -c < "$raw" | tr -d '[:space:]')
-	case $bytes in ''|*[!0-9]*) return 1 ;; esac
-	minimum=$((width * height * 2 * 3))
-	[ "$bytes" -ge "$minimum" ] || return 1
-	# BG10 is unpacked 16-bit Bayer data. Count nonzero bytes across the full
-	# three-frame output so a nonzero header or first page cannot mask bad data.
-	nonzero=$(LC_ALL=C tr -d '\000' < "$raw" | wc -c | tr -d '[:space:]')
-	case $nonzero in ''|*[!0-9]*) return 1 ;; esac
-	[ "$nonzero" -gt 0 ]
-}
 
 if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 	for test in "$ROOT"/tests/task8-camera-static.sh \

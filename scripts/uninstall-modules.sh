@@ -39,7 +39,7 @@ while IFS=' ' read -r name expected_hash extra; do
 	if [ ! -e "$target" ] && [ ! -L "$target" ]; then
 		continue
 	fi
-	if [ -f "$target" ] && [ "$(file_hash "$target")" = "$expected_hash" ]; then
+	if [ ! -L "$target" ] && [ -f "$target" ] && [ "$(file_hash "$target")" = "$expected_hash" ]; then
 		rm -f "$target"
 		removed=$((removed + 1))
 	else
