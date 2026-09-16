@@ -884,10 +884,119 @@ static unsigned int __ov5693_calc_vts(u32 height)
 	 */
 
 	unsigned int tgt_fps;
+	unsigned int min_vts;
 
 	tgt_fps = rounddown(OV5693_PIXEL_RATE / OV5693_FIXED_PPL / height, 30);
+	min_vts = max_t(unsigned int,
+			height + OV5693_TIMING_MIN_VTS,
+			OV5693_EXPOSURE_MIN +
+			OV5693_INTEGRATION_TIME_MARGIN);
 
-	return ALIGN_DOWN(OV5693_PIXEL_RATE / OV5693_FIXED_PPL / tgt_fps, 2);
+	return max(ALIGN_DOWN(OV5693_PIXEL_RATE / OV5693_FIXED_PPL / tgt_fps, 2),
+		   ALIGN(min_vts, 2));
+}
+
+static unsigned int __ov5693_min_vblank(u32 height)
+{
+	unsigned int min_exposure_vts;
+
+	min_exposure_vts = OV5693_EXPOSURE_MIN +
+			    OV5693_INTEGRATION_TIME_MARGIN;
+	if (height >= min_exposure_vts - OV5693_TIMING_MIN_VTS)
+		return OV5693_TIMING_MIN_VTS;
+
+	return min_exposure_vts - height;
+}
+
+struct ov5693_ctrl_snapshot {
+	s64 minimum;
+	s64 maximum;
+	s64 step;
+	s64 default_value;
+	s32 value;
+};
+
+static void ov5693_ctrl_snapshot(struct v4l2_ctrl *ctrl,
+				 struct ov5693_ctrl_snapshot *snapshot)
+{
+	snapshot->minimum = ctrl->minimum;
+	snapshot->maximum = ctrl->maximum;
+	snapshot->step = ctrl->step;
+	snapshot->default_value = ctrl->default_value;
+	snapshot->value = ctrl->val;
+}
+
+static void ov5693_ctrl_restore(struct v4l2_ctrl *ctrl,
+				const struct ov5693_ctrl_snapshot *snapshot)
+{
+	__v4l2_ctrl_modify_range(ctrl, snapshot->minimum, snapshot->maximum,
+				 snapshot->step, snapshot->default_value);
+}
+
+/* Caller holds ov5693->lock, which is also the control-handler lock. */
+static int ov5693_set_active_mode(struct ov5693_device *ov5693,
+				  const struct v4l2_mbus_framefmt *format,
+				  const struct v4l2_rect *crop)
+{
+	struct ov5693_ctrl_snapshot vblank_snapshot, hblank_snapshot;
+	struct ov5693_ctrl_snapshot exposure_snapshot;
+	struct ov5693_mode old_mode = ov5693->mode;
+	unsigned int vts = __ov5693_calc_vts(format->height);
+	unsigned int vblank = vts - format->height;
+	unsigned int hblank = OV5693_FIXED_PPL - format->width;
+	unsigned int vblank_min = __ov5693_min_vblank(format->height);
+	int exposure_max = vts - OV5693_INTEGRATION_TIME_MARGIN;
+	int ret;
+
+	ov5693_ctrl_snapshot(ov5693->ctrls.vblank, &vblank_snapshot);
+	ov5693_ctrl_snapshot(ov5693->ctrls.hblank, &hblank_snapshot);
+	ov5693_ctrl_snapshot(ov5693->ctrls.exposure, &exposure_snapshot);
+
+	/* The VBLANK callback uses the new height when calculating VTS. */
+	ov5693->mode.format = *format;
+	ov5693->mode.vts = vts;
+	if (crop)
+		ov5693->mode.crop = *crop;
+
+	ret = __v4l2_ctrl_modify_range(ov5693->ctrls.vblank, vblank_min,
+				       OV5693_TIMING_MAX_VTS - format->height,
+				       1, vblank);
+	if (ret)
+		goto rollback;
+
+	ret = __v4l2_ctrl_s_ctrl(ov5693->ctrls.vblank, vblank);
+	if (ret)
+		goto rollback;
+
+	ret = __v4l2_ctrl_modify_range(ov5693->ctrls.hblank, hblank, hblank,
+				       1, hblank);
+	if (ret)
+		goto rollback;
+
+	ret = __v4l2_ctrl_modify_range(ov5693->ctrls.exposure,
+				       ov5693->ctrls.exposure->minimum,
+				       exposure_max,
+				       ov5693->ctrls.exposure->step,
+				       min(ov5693->ctrls.exposure->val,
+					   exposure_max));
+	if (ret)
+		goto rollback;
+
+	return 0;
+
+rollback:
+	ov5693->mode = old_mode;
+	ov5693_ctrl_restore(ov5693->ctrls.vblank, &vblank_snapshot);
+	if (ov5693->ctrls.vblank->val != vblank_snapshot.value)
+		__v4l2_ctrl_s_ctrl(ov5693->ctrls.vblank,
+				   vblank_snapshot.value);
+	ov5693_ctrl_restore(ov5693->ctrls.hblank, &hblank_snapshot);
+	ov5693_ctrl_restore(ov5693->ctrls.exposure, &exposure_snapshot);
+	if (ov5693->ctrls.exposure->val != exposure_snapshot.value)
+		__v4l2_ctrl_s_ctrl(ov5693->ctrls.exposure,
+				   exposure_snapshot.value);
+
+	return ret;
 }
 
 static struct v4l2_mbus_framefmt *
@@ -946,16 +1055,26 @@ static int ov5693_set_fmt(struct v4l2_subdev *sd,
 	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
 	const struct v4l2_rect *crop;
 	struct v4l2_mbus_framefmt *fmt;
+	struct v4l2_mbus_framefmt new_fmt;
 	unsigned int hratio, vratio;
-	unsigned int hblank;
-	int exposure_max;
+	int ret;
 
 	if (format->pad != 0)
 		return -EINVAL;
+	if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
+		mutex_lock(&ov5693->lock);
+		if (ov5693->streaming) {
+			mutex_unlock(&ov5693->lock);
+			return -EBUSY;
+		}
+	}
 
 	crop = __ov5693_get_pad_crop(ov5693, state, format->pad, format->which);
-	if (!crop)
+	if (!crop) {
+		if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE)
+			mutex_unlock(&ov5693->lock);
 		return -EINVAL;
+	}
 
 	/*
 	 * Surface Pro 7 (IPU4) quirk: 2x2-binned modes never achieve D-PHY
@@ -969,51 +1088,34 @@ static int ov5693_set_fmt(struct v4l2_subdev *sd,
 
 	fmt = __ov5693_get_pad_format(ov5693, state, format->pad,
 				      format->which);
-	if (!fmt)
+	if (!fmt) {
+		if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE)
+			mutex_unlock(&ov5693->lock);
 		return -EINVAL;
-
-	fmt->width = crop->width / hratio;
-	fmt->height = crop->height / vratio;
-	fmt->code = MEDIA_BUS_FMT_SBGGR10_1X10;
-
-	format->format = *fmt;
-
-	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		return 0;
-
-	mutex_lock(&ov5693->lock);
-	if (ov5693->streaming) {
-		mutex_unlock(&ov5693->lock);
-		return -EBUSY;
 	}
 
-	ov5693->mode.binning_x = hratio > 1;
-	ov5693->mode.inc_x_odd = hratio > 1 ? 3 : 1;
-	ov5693->mode.binning_y = vratio > 1;
-	ov5693->mode.inc_y_odd = vratio > 1 ? 3 : 1;
+	new_fmt = *fmt;
+	new_fmt.width = crop->width / hratio;
+	new_fmt.height = crop->height / vratio;
+	new_fmt.code = MEDIA_BUS_FMT_SBGGR10_1X10;
 
-	ov5693->mode.vts = __ov5693_calc_vts(fmt->height);
+	format->format = new_fmt;
 
-	__v4l2_ctrl_modify_range(ov5693->ctrls.vblank,
-				 OV5693_TIMING_MIN_VTS,
-				 OV5693_TIMING_MAX_VTS - fmt->height,
-				 1, ov5693->mode.vts - fmt->height);
-	__v4l2_ctrl_s_ctrl(ov5693->ctrls.vblank,
-			   ov5693->mode.vts - fmt->height);
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
+		*fmt = new_fmt;
+		return 0;
+	}
 
-	hblank = OV5693_FIXED_PPL - fmt->width;
-	__v4l2_ctrl_modify_range(ov5693->ctrls.hblank, hblank, hblank, 1,
-				 hblank);
-
-	exposure_max = ov5693->mode.vts - OV5693_INTEGRATION_TIME_MARGIN;
-	__v4l2_ctrl_modify_range(ov5693->ctrls.exposure,
-				 ov5693->ctrls.exposure->minimum, exposure_max,
-				 ov5693->ctrls.exposure->step,
-				 min(ov5693->ctrls.exposure->val,
-				     exposure_max));
+	ret = ov5693_set_active_mode(ov5693, &new_fmt, NULL);
+	if (!ret) {
+		ov5693->mode.binning_x = hratio > 1;
+		ov5693->mode.inc_x_odd = hratio > 1 ? 3 : 1;
+		ov5693->mode.binning_y = vratio > 1;
+		ov5693->mode.inc_y_odd = vratio > 1 ? 3 : 1;
+	}
 
 	mutex_unlock(&ov5693->lock);
-	return 0;
+	return ret;
 }
 
 static int ov5693_get_selection(struct v4l2_subdev *sd,
@@ -1055,8 +1157,11 @@ static int ov5693_set_selection(struct v4l2_subdev *sd,
 {
 	struct ov5693_device *ov5693 = to_ov5693_sensor(sd);
 	struct v4l2_mbus_framefmt *format;
+	struct v4l2_mbus_framefmt new_format;
 	struct v4l2_rect *__crop;
 	struct v4l2_rect rect;
+	bool size_changed;
+	int ret = 0;
 
 	if (sel->target != V4L2_SEL_TGT_CROP)
 		return -EINVAL;
@@ -1093,23 +1198,39 @@ static int ov5693_set_selection(struct v4l2_subdev *sd,
 		return -EBUSY;
 	}
 
-	if (rect.width != __crop->width || rect.height != __crop->height) {
+	size_changed = rect.width != __crop->width ||
+		       rect.height != __crop->height;
+	if (size_changed) {
 		/*
 		 * Reset the output image size if the crop rectangle size has
 		 * been modified.
 		 */
 		format = __ov5693_get_pad_format(ov5693, state, sel->pad,
 						 sel->which);
-		format->width = rect.width;
-		format->height = rect.height;
+		if (!format) {
+			ret = -EINVAL;
+			goto out_unlock;
+		}
+		new_format = *format;
+		new_format.width = rect.width;
+		new_format.height = rect.height;
+		if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
+			ret = ov5693_set_active_mode(ov5693, &new_format, &rect);
+			if (ret)
+				goto out_unlock;
+		} else {
+			*format = new_format;
+		}
 	}
 
-	*__crop = rect;
+	if (sel->which == V4L2_SUBDEV_FORMAT_TRY || !size_changed)
+		*__crop = rect;
 	sel->r = rect;
+out_unlock:
 	if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE)
 		mutex_unlock(&ov5693->lock);
 
-	return 0;
+	return ret;
 }
 
 static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
@@ -1226,11 +1347,16 @@ static int ov5693_set_frame_interval(struct v4l2_subdev *sd,
 	}
 	vts = div_u64((u64)OV5693_PIXEL_RATE * interval->interval.numerator,
 		      (u64)OV5693_FIXED_PPL * interval->interval.denominator);
-	vts = clamp_t(u64, vts, ov5693->mode.format.height +
-		      OV5693_TIMING_MIN_VTS, OV5693_TIMING_MAX_VTS);
+	vts = clamp_t(u64, vts,
+		      max_t(u32, ov5693->mode.format.height +
+			    OV5693_TIMING_MIN_VTS,
+			    OV5693_EXPOSURE_MIN +
+			    OV5693_INTEGRATION_TIME_MARGIN),
+		      OV5693_TIMING_MAX_VTS);
 	vblank = vts - ov5693->mode.format.height;
 	ret = __v4l2_ctrl_modify_range(ov5693->ctrls.vblank,
-					OV5693_TIMING_MIN_VTS,
+					__ov5693_min_vblank(
+						ov5693->mode.format.height),
 					OV5693_TIMING_MAX_VTS - ov5693->mode.format.height,
 					1, vblank);
 	if (!ret)
@@ -1330,7 +1456,7 @@ static int ov5693_init_controls(struct ov5693_device *ov5693)
 	const struct v4l2_ctrl_ops *ops = &ov5693_ctrl_ops;
 	struct ov5693_v4l2_ctrls *ctrls = &ov5693->ctrls;
 	struct v4l2_fwnode_device_properties props;
-	int vblank_max, vblank_def;
+	int vblank_min, vblank_max, vblank_def;
 	int exposure_max;
 	int hblank;
 	int ret;
@@ -1390,10 +1516,11 @@ static int ov5693_init_controls(struct ov5693_device *ov5693)
 		ctrls->hblank->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	vblank_max = OV5693_TIMING_MAX_VTS - ov5693->mode.format.height;
+	vblank_min = __ov5693_min_vblank(ov5693->mode.format.height);
 	vblank_def = ov5693->mode.vts - ov5693->mode.format.height;
 	ctrls->vblank = v4l2_ctrl_new_std(&ctrls->handler, ops,
 					  V4L2_CID_VBLANK,
-					  OV5693_TIMING_MIN_VTS,
+					  vblank_min,
 					  vblank_max, 1, vblank_def);
 
 	ctrls->test_pattern = v4l2_ctrl_new_std_menu_items(
