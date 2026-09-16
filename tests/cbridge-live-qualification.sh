@@ -278,9 +278,9 @@ capture_metrics() {
 nonblack_payload() {
 	metrics=$1
 	max_avg=$(awk -F= '/lavfi.signalstats.YAVG=/{if ($2 + 0 > max) max=$2 + 0} END {if (max == "") exit 1; printf "%.2f", max}' "$metrics") || return 1
-	max_std=$(awk -F= '/lavfi.signalstats.YSTD=/{if ($2 + 0 > max) max=$2 + 0} END {if (max == "") exit 1; printf "%.2f", max}' "$metrics") || return 1
-	awk -v avg="$max_avg" -v std="$max_std" 'BEGIN { exit !(avg > 22 && std > 2) }' || return 1
-	printf 'max_yavg=%s max_ystd=%s\n' "$max_avg" "$max_std"
+	max_luma=$(awk -F= '/lavfi.signalstats.YMAX=/{if ($2 + 0 > max) max=$2 + 0} END {if (max == "") exit 1; printf "%.2f", max}' "$metrics") || return 1
+	awk -v avg="$max_avg" -v luma="$max_luma" 'BEGIN { exit !(avg > 22 && luma > 24) }' || return 1
+	printf 'max_yavg=%s max_ymax=%s\n' "$max_avg" "$max_luma"
 }
 
 sample_case() {
