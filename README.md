@@ -27,9 +27,43 @@ standalone camera application.
 
 The rear OV8865 sensor driver is an external requirement and is not included
 here. The IR OV7251 camera's I2C probe fails on the validated device. The CPD
-firmware `ipu4p_cpd.bin` is required at runtime but is not redistributed by
-this project. Applications and desktop camera services are supplied by the
-distribution.
+firmware `ipu4p_cpd.bin` is required at runtime but is not included in this
+repository or its release bundles. The source installer can obtain it from
+the official Microsoft Surface Pro 7 driver package. Applications and desktop
+camera services are supplied by the distribution.
+
+## Install from a clone
+
+On Fedora Linux x86_64 running a linux-surface kernel, clone the repository
+and run the installer from the checkout:
+
+```sh
+git clone https://github.com/georgemihaila/sp7-ipu4-camera.git
+cd sp7-ipu4-camera
+sudo ./install.sh
+```
+
+The script installs the Fedora build tools and, if needed, configures the
+linux-surface package repository to install a matching prepared kernel build
+tree. It then builds the modules for the running kernel and installs them.
+The project has been hardware-validated with the linux-surface kernel
+`6.19.8-3.surface.fc43.x86_64` on Fedora 43; other kernel releases need a
+matching prepared build tree and may need additional kernel integration.
+
+The required camera firmware is not bundled with this repository. If
+`/lib/firmware/ipu4p_cpd.bin` is absent, the script downloads Microsoft's
+[official Surface Pro 7 driver package](https://www.microsoft.com/en-us/download/details.aspx?id=100419)
+(Windows 11 package version `25.090.3489.0`, about 678 MB), unpacks it
+temporarily to extract the firmware, and removes the temporary files when it
+exits. Allow additional temporary disk space for extraction. To use a firmware
+file already downloaded from Microsoft, pass its path explicitly:
+
+```sh
+sudo FIRMWARE=/path/to/cpd_component_signed.bin ./install.sh
+```
+
+Reboot after installation. Secure Boot may require signing the modules with a
+key trusted by the system.
 
 ## Install from GitHub Releases
 

@@ -3,12 +3,14 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SOURCE_INSTALLER="$ROOT/install.sh"
 INSTALL="$ROOT/scripts/install-modules.sh"
 UNINSTALL="$ROOT/scripts/uninstall-modules.sh"
 CAMERA="$ROOT/tests/camera-suite.sh"
 CAPTURE_VALIDATION="$ROOT/tests/capture-validation.sh"
 
-for file in "$INSTALL" "$UNINSTALL" "$CAMERA" "$CAPTURE_VALIDATION"; do sh -n "$file"; done
+[ -x "$SOURCE_INSTALLER" ]
+for file in "$SOURCE_INSTALLER" "$INSTALL" "$UNINSTALL" "$CAMERA" "$CAPTURE_VALIDATION"; do sh -n "$file"; done
 
 modules='ipu-bridge.ko
 intel-ipu4p.ko
