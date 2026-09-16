@@ -1,0 +1,82 @@
+name: IPU4P driver build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run hardware-independent checks
+        run: ./tests/camera-suite.sh --static
+      - name: Check patch whitespace
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git diff --check "${PR_BASE_SHA}...${GITHUB_SHA}"
+          else
+            git diff --check "${GITHUB_SHA}^..${GITHUB_SHA}"
+          fi
+
+  build-bundle:
+    needs: static-checks
+    runs-on: ubuntu-latest
+    container: fedora:43
+    env:
+      KREL: 6.19.8-3.surface.fc43.x86_64
+      PACKAGE_VERSION: ${{ github.event.release.tag_name || github.sha }}
+    steps:
+      - name: Install build tools and matching linux-surface kernel devel tree
+        run: |
+          dnf -y install ca-certificates curl dnf-plugins-core elfutils-libelf-devel \
+            gcc git make openssl-devel perl python3 bc dwarves flex bison kmod
+          curl -fsSL https://pkg.surfacelinux.com/fedora/linux-surface.repo \
+            -o /etc/yum.repos.d/linux-surface.repo
+          rpm --import https://raw.githubusercontent.com/linux-surface/linux-surface/master/pkg/keys/surface.asc
+          dnf -y install "kernel-surface-devel-${KREL}"
+          test -f "/usr/src/kernels/${KREL}/Makefile"
+          test -f "/usr/src/kernels/${KREL}/.config"
+      - uses: actions/checkout@v4
+      - name: Build and verify modules against the target kernel
+        run: KDIR="/usr/src/kernels/${KREL}" KREL="${KREL}" ./scripts/build-modules.sh -j2
+      - name: Package installable release bundle
+        run: >-
+          KREL="${KREL}" PACKAGE_VERSION="${PACKAGE_VERSION}"
+          SOURCE_COMMIT="${GITHUB_SHA}" OUTPUT_DIR=dist ./scripts/package-release.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sp7-ipu4-camera-release
+          path: dist/*.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  attach-to-release:
+    if: github.event_name == 'release'
+    needs: build-bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sp7-ipu4-camera-release
+          path: dist
+      - name: Attach bundle to the published GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" dist/*.tar.gz --repo "$GITHUB_REPOSITORY" --clobber

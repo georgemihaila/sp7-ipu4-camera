@@ -34,6 +34,11 @@ i2c probe and is ignored.
 
 ## Building, installing, and rollback
 
+Prebuilt, kernel-specific bundles are attached to GitHub Releases. See
+[`docs/github-releases.md`](docs/github-releases.md) for the download and
+installation steps. The release archive does not include the required CPD
+firmware.
+
 The `linux-6.19.8/` directory is an overlay-only kernel fragment, not a
 complete kernel tree. Build the IPU module subtree against an explicit,
 prepared external kernel build tree:
