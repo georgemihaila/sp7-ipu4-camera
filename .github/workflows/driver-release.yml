@@ -64,6 +64,45 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  publish-package:
+    if: github.event_name == 'push' || github.event_name == 'release'
+    needs: build-bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sp7-ipu4-camera-release
+          path: dist
+      - name: Build and publish the bundle container to GitHub Packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cat > dist/Containerfile <<'EOF'
+          FROM alpine:3.22
+          LABEL org.opencontainers.image.source="https://github.com/georgemihaila/sp7-ipu4-camera"
+          LABEL org.opencontainers.image.description="Surface Pro 7 IPU4P installable kernel module bundle"
+          COPY *.tar.gz /bundle.tar.gz
+          CMD ["sleep", "infinity"]
+          EOF
+
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            docker build -f dist/Containerfile -t "$image:$RELEASE_TAG" dist
+            docker push "$image:$RELEASE_TAG"
+            docker tag "$image:$RELEASE_TAG" "$image:latest"
+            docker push "$image:latest"
+          else
+            docker build -f dist/Containerfile -t "$image:main" -t "$image:sha-${GITHUB_SHA:0:12}" dist
+            docker push "$image:main"
+            docker push "$image:sha-${GITHUB_SHA:0:12}"
+          fi
+
   attach-to-release:
     if: github.event_name == 'release'
     needs: build-bundle

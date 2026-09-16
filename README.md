@@ -67,6 +67,21 @@ cd sp7-ipu4-camera
 sha256sum -c SHA256SUMS
 ```
 
+## Install from GitHub Packages
+
+The [GitHub Packages container image](https://github.com/georgemihaila/sp7-ipu4-camera/pkgs/container/sp7-ipu4-camera)
+provides the same bundle in addition to the direct Release download. The image
+stores the archive at `/bundle.tar.gz`; on Fedora, extract it with Podman:
+
+```sh
+podman run --rm ghcr.io/georgemihaila/sp7-ipu4-camera:main \
+  cat /bundle.tar.gz > sp7-ipu4-camera.tar.gz
+```
+
+Use `:v0.1.0` for the first versioned Release or `:latest` for the newest
+versioned Release. The `:main` tag tracks the latest successful build from the
+main branch. Continue with the checksum and installation steps above.
+
 Install the modules and firmware by giving the installer the firmware path:
 
 ```sh
