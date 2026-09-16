@@ -16,6 +16,9 @@ grep -Fq 'install -D -m 0755 "$BRIDGE_BINARY"' "$SETUP"
 grep -Fq 'C_BRIDGE_BINARY=' "$PACKAGE"
 grep -Fq 'cbridge/sp7-camera-bridge' "$PACKAGE"
 grep -Fq 'ExecStart=/usr/local/libexec/sp7-camera-bridge' "$UNIT"
+grep -Fq 'worker_process' "$ROOT/cbridge/surface-camera-bridge.c"
+grep -Fq 'waitpid' "$ROOT/cbridge/surface-camera-bridge.c"
+grep -Fq 'SIGKILL' "$ROOT/cbridge/surface-camera-bridge.c"
 
 make -C "$ROOT/cbridge" clean all
 printf '%s\n' 'task23-cbridge-integration-static: PASS'

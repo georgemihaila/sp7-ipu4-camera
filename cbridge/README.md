@@ -1,10 +1,11 @@
 # C camera bridge and media backend prototype
 
-The installed C controller owns the named-camera service and keeps one
-GStreamer pipeline in-process. It queries the selected loopback endpoint with
-`VIDIOC_G_FMT`, sets `camera-name` as a native GStreamer property, and reports
-bus errors, warnings, EOS, and state changes without launching
-`gst-launch-1.0`.
+The installed C controller owns the named-camera service and supervises one
+short-lived worker process per active pipeline. Each worker uses the C
+GStreamer API, queries the selected loopback endpoint with `VIDIOC_G_FMT`,
+sets `camera-name` as a native GStreamer property, and reports bus errors,
+warnings, EOS, and state changes. Process isolation bounds libcamera teardown
+failures and ensures the service reaps every media worker.
 
 The MJPEG path intentionally remains:
 
@@ -36,8 +37,8 @@ scaling stages. Its live entrypoint is:
 ./cbridge/sp7-camera-bridge
 ```
 
-The original media-backend prototype remains available for repeated direct
-pipeline checks:
+The original media-backend C implementation remains available for repeated
+direct pipeline checks:
 
 ```sh
 make -C cbridge sanitize
@@ -46,7 +47,7 @@ make -C cbridge sanitize
 ```
 
 The prototype binary does not install or replace the service; the controller
-binary is the service executable installed by setup. Startup and shutdown have
-10-second and 5-second bounds respectively. An unavailable device,
-unsupported format, producer error, EOS, or failed state transition is a
-nonzero result.
+binary is the service executable installed by setup. Worker startup and
+shutdown have 10-second and 5-second bounds respectively. An unavailable
+device, unsupported format, producer error, EOS, or failed state transition is
+a nonzero result.
