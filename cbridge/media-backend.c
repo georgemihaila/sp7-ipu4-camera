@@ -144,12 +144,16 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		config->kind == MEDIA_PIPELINE_CAMERA ? "libcamerasrc" : "videotestsrc",
 		config->kind == MEDIA_PIPELINE_CAMERA ? "camera-source" : "filler-source",
 		error, error_size);
-	convert = make_element(pipeline, "videoconvert", "convert", error,
-		error_size);
-	scale = make_element(pipeline, "videoscale", "scale", error, error_size);
-	if (source == NULL || convert == NULL || scale == NULL)
+	convert = NULL;
+	scale = NULL;
+	if (source == NULL)
 		goto fail;
 	if (config->kind == MEDIA_PIPELINE_CAMERA) {
+		convert = make_element(pipeline, "videoconvert", "convert", error,
+			error_size);
+		scale = make_element(pipeline, "videoscale", "scale", error, error_size);
+		if (convert == NULL || scale == NULL)
+			goto fail;
 		g_object_set(source, "camera-name", config->camera_id, "ae-enable", TRUE,
 			NULL);
 	} else {
@@ -185,8 +189,12 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		else
 			g_object_set(sink, "device", config->device, "sync", FALSE, NULL);
 		gst_caps_unref(caps);
-		if (!gst_element_link_many(source, convert, scale, caps_filter,
-			jpegenc, jpegparse, sink, NULL)) {
+		if ((config->kind == MEDIA_PIPELINE_CAMERA &&
+			!gst_element_link_many(source, convert, scale, caps_filter, jpegenc,
+				jpegparse, sink, NULL)) ||
+			(config->kind == MEDIA_PIPELINE_FILLER &&
+			!gst_element_link_many(source, caps_filter, jpegenc, jpegparse, sink,
+				NULL))) {
 			set_error(error, error_size, "could not link MJPEG GStreamer pipeline");
 			goto fail;
 		}
@@ -203,8 +211,11 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		g_object_set(caps_filter, "caps", caps, NULL);
 		gst_caps_unref(caps);
 		g_object_set(sink, "device", config->device, "sync", FALSE, NULL);
-		if (!gst_element_link_many(source, convert, scale, caps_filter, sink,
-			NULL)) {
+		if ((config->kind == MEDIA_PIPELINE_CAMERA &&
+			!gst_element_link_many(source, convert, scale, caps_filter, sink,
+				NULL)) ||
+			(config->kind == MEDIA_PIPELINE_FILLER &&
+			!gst_element_link_many(source, caps_filter, sink, NULL))) {
 			set_error(error, error_size, "could not link YUYV GStreamer pipeline");
 			goto fail;
 		}
