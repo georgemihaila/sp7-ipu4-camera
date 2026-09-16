@@ -122,6 +122,30 @@ static GstCaps *video_caps(const char *media_type, const char *format,
 	return caps;
 }
 
+static GstCaps *camera_source_caps(const char *camera_id, char *error,
+	unsigned error_size)
+{
+	unsigned width = 2560U;
+	unsigned height = 1600U;
+	GstCaps *caps;
+
+	/* The rear sensor reaches 30 fps through its 1632x1224 mode. The front
+	 * sensor's stable 30-fps mode is 2560x1600. Both are scaled to the public
+	 * 1280x720 loopback contract below. */
+	if (camera_id != NULL && strcmp(camera_id, "\\_SB_.PCI0.I2C3.CAMR") == 0) {
+		width = VIDEO_WIDTH;
+		height = VIDEO_HEIGHT;
+	}
+	caps = gst_caps_new_simple("video/x-raw",
+		"width", G_TYPE_INT, (gint)width,
+		"height", G_TYPE_INT, (gint)height,
+		"framerate", GST_TYPE_FRACTION, 30, 1,
+		NULL);
+	if (caps == NULL)
+		set_error(error, error_size, "could not allocate camera source caps");
+	return caps;
+}
+
 static GstElement *build_pipeline(const MediaBackendConfig *config,
 	char *error, unsigned error_size)
 {
@@ -160,7 +184,7 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 			goto fail;
 		g_object_set(source, "camera-name", config->camera_id, "ae-enable", TRUE,
 			NULL);
-		caps = video_caps("video/x-raw", NULL, error, error_size);
+		caps = camera_source_caps(config->camera_id, error, error_size);
 		if (caps == NULL)
 			goto fail;
 		g_object_set(source_caps_filter, "caps", caps, NULL);
