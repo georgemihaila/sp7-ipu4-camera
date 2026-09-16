@@ -8,7 +8,7 @@ DOC="$ROOT/libcamera/README.md"
 
 test -x "$HELPER"
 test -f "$DOC"
-sh -n "$HELPER"
+bash -n "$HELPER"
 
 # The obsolete 0.5.2/Patch16 injection must not return.
 ! grep -Eq '0\.5\.2|Patch16|Patch17|2001-pipeline-simple-Intel-IPU4-support\.patch' "$HELPER" "$DOC"
