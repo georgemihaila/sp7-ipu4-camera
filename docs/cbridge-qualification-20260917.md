@@ -24,7 +24,7 @@ reaping.
 | Repeated front/rear switching | PASS | 20 alternating switches with overlap/close-grace timing; service remained active |
 | Worker resource bounds | PASS | final lifecycle check: fd delta 0, parent `VmRSS` delta 4 KiB; worker count remained bounded |
 | Service restart and recovery | PASS | explicit restart recovered `sp7-camera-bridge.service` |
-| Package assembly and checksums | PASS | `localqual2` archive for `6.19.8-3.surface.fc43.x86_64`; `sha256sum -c` passed and no `.py`/`.pyc` artifact was present |
+| Package assembly and checksums | PASS | `localqual3` archive for `6.19.8-3.surface.fc43.x86_64`; SHA-256 `d10b1a34b1b9bd5cb24a71efcb3973d903c752703b68b318e63a914b49141223`; `sha256sum -c` passed with no `.py`/`.pyc` artifact |
 | Narrow kernel maintenance build | PASS, not installed | `scripts/build-modules.sh` produced matching `6.19.8-3.surface.fc43.x86_64` vermagic |
 
 The first frames after a camera handoff can still be black filler while the
