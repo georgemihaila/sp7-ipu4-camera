@@ -89,14 +89,29 @@ static struct v4l2_subdev_internal_ops csi2_be_soc_sd_internal_ops = {
 static const struct v4l2_subdev_core_ops csi2_be_soc_sd_core_ops = {
 };
 
-static int set_stream(struct v4l2_subdev *sd, int enable)
+static int csi2_be_soc_enable_streams(struct v4l2_subdev *sd,
+				     struct v4l2_subdev_state *state,
+				     u32 pad, u64 streams_mask)
 {
+	(void)state;
+	if (pad < CSI2_BE_SOC_PAD_SOURCE(0) ||
+	    pad >= NR_OF_CSI2_BE_SOC_PADS || streams_mask != BIT_ULL(0))
+		return -EINVAL;
+
 	return 0;
 }
 
-static const struct v4l2_subdev_video_ops csi2_be_soc_sd_video_ops = {
-	.s_stream = set_stream,
-};
+static int csi2_be_soc_disable_streams(struct v4l2_subdev *sd,
+				      struct v4l2_subdev_state *state,
+				      u32 pad, u64 streams_mask)
+{
+	(void)state;
+	if (pad < CSI2_BE_SOC_PAD_SOURCE(0) ||
+	    pad >= NR_OF_CSI2_BE_SOC_PADS || streams_mask != BIT_ULL(0))
+		return -EINVAL;
+
+	return 0;
+}
 
 /*
  * Each BE SOC sink pad is a hardware input mux.  The media core documents
@@ -201,17 +216,19 @@ static const struct v4l2_subdev_pad_ops csi2_be_soc_sd_pad_ops = {
 	.set_selection = ipu_isys_csi2_be_soc_set_sel,
 	.enum_mbus_code = ipu_isys_subdev_enum_mbus_code,
 	.set_routing = ipu_isys_subdev_set_routing,
+	.enable_streams = csi2_be_soc_enable_streams,
+	.disable_streams = csi2_be_soc_disable_streams,
 };
 
 static struct v4l2_subdev_ops csi2_be_soc_sd_ops = {
 	.core = &csi2_be_soc_sd_core_ops,
-	.video = &csi2_be_soc_sd_video_ops,
 	.pad = &csi2_be_soc_sd_pad_ops,
 };
 
 static struct media_entity_operations csi2_be_soc_entity_ops = {
 	.link_setup = csi2_be_soc_link_setup,
 	.link_validate = v4l2_subdev_link_validate,
+	.has_pad_interdep = v4l2_subdev_has_pad_interdep,
 };
 
 static void csi2_be_soc_set_ffmt(struct v4l2_subdev *sd,

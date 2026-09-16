@@ -396,6 +396,60 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
+static int csi2_enable_streams(struct v4l2_subdev *sd,
+			       struct v4l2_subdev_state *state,
+			       u32 pad, u64 streams_mask)
+{
+	unsigned int started = 0;
+	int ret;
+
+	(void)state;
+	if (pad < CSI2_PAD_SOURCE(0) || pad >= CSI2_PAD_META ||
+	    !streams_mask ||
+	    (streams_mask & ~GENMASK_ULL(NR_OF_CSI2_STREAMS - 1, 0)))
+		return -EINVAL;
+
+	while (streams_mask) {
+		streams_mask &= streams_mask - 1;
+		ret = set_stream(sd, 1);
+		if (ret)
+			goto err_disable;
+		started++;
+	}
+
+	return 0;
+
+err_disable:
+	while (started) {
+		started--;
+		set_stream(sd, 0);
+	}
+
+	return ret;
+}
+
+static int csi2_disable_streams(struct v4l2_subdev *sd,
+				struct v4l2_subdev_state *state,
+				u32 pad, u64 streams_mask)
+{
+	int ret;
+
+	(void)state;
+	if (pad < CSI2_PAD_SOURCE(0) || pad >= CSI2_PAD_META ||
+	    !streams_mask ||
+	    (streams_mask & ~GENMASK_ULL(NR_OF_CSI2_STREAMS - 1, 0)))
+		return -EINVAL;
+
+	while (streams_mask) {
+		streams_mask &= streams_mask - 1;
+		ret = set_stream(sd, 0);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static void csi2_capture_done(struct ipu_isys_pipeline *ip,
 			      struct ipu_fw_isys_resp_info_abi *info)
 {
@@ -466,10 +520,6 @@ static int csi2_link_validate(struct media_link *link)
 	return 0;
 }
 
-static const struct v4l2_subdev_video_ops csi2_sd_video_ops = {
-	.s_stream = set_stream,
-};
-
 static int get_metadata_fmt(struct v4l2_subdev *sd,
 			    struct v4l2_subdev_state *state,
 			    struct v4l2_subdev_format *fmt)
@@ -537,16 +587,18 @@ static const struct v4l2_subdev_pad_ops csi2_sd_pad_ops = {
 	.set_fmt = ipu_isys_csi2_set_fmt,
 	.enum_mbus_code = ipu_isys_subdev_enum_mbus_code,
 	.set_routing = ipu_isys_subdev_set_routing,
+	.enable_streams = csi2_enable_streams,
+	.disable_streams = csi2_disable_streams,
 };
 
 static struct v4l2_subdev_ops csi2_sd_ops = {
 	.core = &csi2_sd_core_ops,
-	.video = &csi2_sd_video_ops,
 	.pad = &csi2_sd_pad_ops,
 };
 
 static struct media_entity_operations csi2_entity_ops = {
 	.link_validate = csi2_link_validate,
+	.has_pad_interdep = v4l2_subdev_has_pad_interdep,
 };
 
 static void csi2_set_ffmt(struct v4l2_subdev *sd,

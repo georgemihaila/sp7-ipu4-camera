@@ -2190,6 +2190,45 @@ static void stop_external_sensor(struct device *dev,
 	}
 }
 
+static int ipu_isys_video_subdev_stream(struct ipu_isys_video *av,
+				       struct v4l2_subdev *sd,
+				       struct ipu_isys_pipeline *ip,
+				       unsigned int enable)
+{
+	struct media_pad *remote_pad;
+	u32 pad, stream;
+	u64 streams_mask;
+
+	if (!(sd->flags & V4L2_SUBDEV_FL_STREAMS))
+		return v4l2_subdev_call(sd, video, s_stream, enable);
+
+	if (ip->csi2 && sd == &ip->csi2->asd.sd) {
+		if (ip->vc >= NR_OF_CSI2_SOURCE_PADS)
+			return -EINVAL;
+		pad = CSI2_PAD_SOURCE(ip->vc);
+	} else {
+		/* BE-SOC capture nodes are wired directly to their output pad. */
+		remote_pad = media_pad_remote_pad_first(&av->pad);
+		if (!remote_pad || remote_pad->entity != &sd->entity ||
+		    !(remote_pad->flags & MEDIA_PAD_FL_SOURCE))
+			return -ENOLINK;
+		pad = remote_pad->index;
+	}
+
+	stream = ipu_isys_get_src_stream_by_src_pad(sd, pad);
+	if (stream >= 64)
+		return -EINVAL;
+	streams_mask = BIT_ULL(stream);
+
+	if (sd == (ip->csi2 ? &ip->csi2->asd.sd : NULL))
+		ip->stream_id = stream;
+
+	if (enable)
+		return v4l2_subdev_enable_streams(sd, pad, streams_mask);
+
+	return v4l2_subdev_disable_streams(sd, pad, streams_mask);
+}
+
 int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				 unsigned int state,
 				 struct ipu_isys_buffer_list *bl)
@@ -2255,8 +2294,8 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 			ip->external->entity == entity)
 			continue;
 
-		dev_dbg(dev, "s_stream %s\n", entity->name);
-		rval = v4l2_subdev_call(sd, video, s_stream, state);
+		dev_dbg(dev, "stream op %s\n", entity->name);
+		rval = ipu_isys_video_subdev_stream(av, sd, ip, state);
 		if (!state)
 			continue;
 		if (rval && rval != -ENOIOCTLCMD) {
@@ -2382,7 +2421,7 @@ out_media_entity_stop_streaming:
 		if (!media_entity_enum_test(&entities, entity2))
 			continue;
 
-		v4l2_subdev_call(sd, video, s_stream, 0);
+		ipu_isys_video_subdev_stream(av, sd, ip, 0);
 	}
 
 	mutex_unlock(&mdev->graph_mutex);

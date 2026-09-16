@@ -616,9 +616,10 @@ int ipu_isys_subdev_set_routing(struct v4l2_subdev *sd,
 	struct ipu_isys_subdev *asd = to_ipu_isys_subdev(sd);
 	struct v4l2_mbus_framefmt initial_fmt = asd->ffmt[0][0];
 	struct v4l2_mbus_framefmt *old_formats;
+	struct v4l2_subdev_route *old_routes = NULL;
 	bool *old_format_valid;
 	size_t format_count;
-	unsigned int i, j;
+	unsigned int i, j, old_route_count = 0;
 	int ret;
 
 	if (!state || !route || route->num_routes != asd->nstreams ||
@@ -692,6 +693,20 @@ int ipu_isys_subdev_set_routing(struct v4l2_subdev *sd,
 		return -ENOMEM;
 	}
 	if (which == V4L2_SUBDEV_FORMAT_TRY) {
+		old_route_count = state->routing.num_routes;
+		if (old_route_count) {
+			if (!state->routing.routes) {
+				ret = -EINVAL;
+				goto out_free;
+			}
+			old_routes = kmemdup(state->routing.routes,
+					     old_route_count * sizeof(*old_routes),
+					     GFP_KERNEL);
+			if (!old_routes) {
+				ret = -ENOMEM;
+				goto out_free;
+			}
+		}
 		for (i = 0; i < sd->entity.num_pads; i++) {
 			for (j = 0; j < asd->pad_stream_count[i]; j++) {
 				struct v4l2_mbus_framefmt *fmt =
@@ -736,9 +751,61 @@ int ipu_isys_subdev_set_routing(struct v4l2_subdev *sd,
 					*fmt = old_formats[idx];
 			}
 		}
+		mutex_lock(&asd->mutex);
+		for (i = 0; i < route->num_routes; i++) {
+			struct v4l2_subdev_route *new_route = &route->routes[i];
+			struct v4l2_mbus_framefmt *fmt;
+			struct v4l2_mbus_framefmt *cached;
+			bool sink_was_active = false;
+			bool source_was_active = false;
+
+			if (!(new_route->flags & V4L2_SUBDEV_ROUTE_FL_ACTIVE))
+				continue;
+
+			for (j = 0; j < old_route_count; j++) {
+				struct v4l2_subdev_route *old_route = &old_routes[j];
+
+				if (!(old_route->flags & V4L2_SUBDEV_ROUTE_FL_ACTIVE))
+					continue;
+				if (old_route->sink_pad == new_route->sink_pad &&
+				    old_route->sink_stream == new_route->sink_stream)
+					sink_was_active = true;
+				if (old_route->source_pad == new_route->source_pad &&
+				    old_route->source_stream == new_route->source_stream)
+					source_was_active = true;
+			}
+
+			/* Keep a TRY format if that endpoint was active on any route. */
+			if (!sink_was_active) {
+				fmt = v4l2_subdev_state_get_format(state,
+								    new_route->sink_pad,
+								    new_route->sink_stream);
+				cached = &asd->ffmt[new_route->sink_pad]
+						[new_route->sink_stream];
+				if (!cached->width || !cached->height)
+					cached = &asd->ffmt[new_route->sink_pad][0];
+				if (fmt)
+					*fmt = *cached;
+			}
+
+			if (!source_was_active) {
+				fmt = v4l2_subdev_state_get_format(state,
+								    new_route->source_pad,
+								    new_route->source_stream);
+				cached = &asd->ffmt[new_route->source_pad]
+						[new_route->source_stream];
+				if (!cached->width || !cached->height)
+					cached = &asd->ffmt[new_route->source_pad][0];
+				if (fmt)
+					*fmt = *cached;
+			}
+		}
+		mutex_unlock(&asd->mutex);
 	}
+out_free:
 	kfree(old_formats);
 	kfree(old_format_valid);
+	kfree(old_routes);
 	return ret;
 }
 
@@ -807,6 +874,7 @@ int ipu_isys_subdev_init_state(struct v4l2_subdev *sd,
 
 int ipu_isys_subdev_init_finalize(struct ipu_isys_subdev *asd)
 {
+	struct v4l2_subdev_state *state;
 	unsigned int pad, stream;
 	int ret;
 
@@ -814,12 +882,17 @@ int ipu_isys_subdev_init_finalize(struct ipu_isys_subdev *asd)
 	if (ret)
 		return ret;
 
+	state = v4l2_subdev_lock_and_get_active_state(&asd->sd);
+	if (!state) {
+		v4l2_subdev_cleanup(&asd->sd);
+		return -EINVAL;
+	}
+
 	mutex_lock(&asd->mutex);
 	for (pad = 0; pad < asd->sd.entity.num_pads; pad++) {
 		for (stream = 0; stream < asd->pad_stream_count[pad]; stream++) {
 			struct v4l2_mbus_framefmt *fmt =
-				v4l2_subdev_state_get_format(asd->sd.active_state,
-							     pad, stream);
+				v4l2_subdev_state_get_format(state, pad, stream);
 
 			if (fmt)
 				*fmt = (asd->ffmt[pad][stream].width &&
@@ -828,6 +901,7 @@ int ipu_isys_subdev_init_finalize(struct ipu_isys_subdev *asd)
 		}
 	}
 	mutex_unlock(&asd->mutex);
+	v4l2_subdev_unlock_state(state);
 
 	return 0;
 }
