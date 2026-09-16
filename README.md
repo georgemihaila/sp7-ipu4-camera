@@ -32,6 +32,12 @@ repository or its release bundles. The source installer can obtain it from
 the official Microsoft Surface Pro 7 driver package. Applications and desktop
 camera services are supplied by the distribution.
 
+The rear camera's DW9719 focus actuator is included as a module. Linux 6.19
+dropped the I2C ID table required for its ACPI-created device, so this project
+bundles a corrected module that exposes the V4L2 absolute focus-position
+control. This makes lens movement available; automatic focus still requires a
+userspace autofocus algorithm, which this project does not provide.
+
 ## Install from a clone
 
 On Fedora Linux x86_64 running a linux-surface kernel, clone the repository

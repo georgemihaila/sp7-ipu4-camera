@@ -39,6 +39,7 @@ for other systems, and the limitations in step 4 need their own work.
 | Build metadata and module discovery | Static/mechanical validation; compile depends on external KDIR | `scripts/build-modules.sh` and `docs/external-kernel-integration.md`. |
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
+| DW9719 rear lens actuator | Source and module included | The Linux 6.19 I2C ID table is restored so the ACPI-created Surface VCM binds and exposes absolute focus position. Automatic-focus algorithms remain a userspace responsibility. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
 
 ## Review checklist

@@ -1,12 +1,13 @@
 #!/bin/sh
-# Build the IPU4P module subtree against an external, prepared kernel tree.
-# This does not build the OV5693 sensor: see docs/external-kernel-integration.md.
+# Build the IPU4P subtree and the Surface Pro 7 DW9719 lens module against an
+# external, prepared kernel tree. OV5693 integration notes are in docs.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 KDIR=${KDIR:-/lib/modules/$(uname -r)/build}
 KREL=${KREL:-$(uname -r)}
 SRC="$ROOT/linux-6.19.8/drivers/media/pci/intel"
+VCM_SRC="$ROOT/linux-6.19.8/drivers/media/i2c"
 
 if [ ! -f "$KDIR/Makefile" ] || [ ! -f "$KDIR/.config" ]; then
 	printf '%s\n' "error: KDIR must be a prepared kernel build/source tree: $KDIR" >&2
@@ -46,16 +47,22 @@ make -C "$KDIR" M="$SRC" EXTERNAL_BUILD=1 srcpath="$SRC" \
 	CONFIG_VIDEO_INTEL_IPU6= CONFIG_VIDEO_IPU3_CIO2= CONFIG_INTEL_VSC= \
 	CONFIG_VIDEO_INTEL_IPU_FW_LIB=y modules "$@"
 
+# Linux 6.19 dropped the I2C ID table from dw9719. Restore it in the bundled
+# driver so ACPI-created Surface VCM clients match and receive model data.
+make -C "$KDIR" M="$VCM_SRC" modules "$@"
+
 MODULES='ipu-bridge.ko
 intel-ipu4p.ko
 intel-ipu4p-isys.ko
 intel-ipu4p-psys.ko
 intel-ipu4p-isys-csslib.ko
-intel-ipu4p-psys-csslib.ko'
+intel-ipu4p-psys-csslib.ko
+dw9719.ko'
 
 module_path() {
 	case $1 in
 		ipu-bridge.ko) printf '%s/%s\n' "$SRC" "$1" ;;
+		dw9719.ko) printf '%s/%s\n' "$VCM_SRC" "$1" ;;
 		intel-ipu4p-psys-csslib.ko)
 			printf '%s/%s\n' "$SRC/ipu4/ipu4p-css/lib2600psys" "$1" ;;
 		*) printf '%s/%s\n' "$SRC/ipu4" "$1" ;;
@@ -79,6 +86,10 @@ while IFS= read -r name; do
 			"$name" "${module_release:-unknown}" "$KREL" >&2
 		exit 2
 	}
+	if [ "$name" = dw9719.ko ] && ! modinfo -F alias "$module" | grep -Fxq 'i2c:dw9719'; then
+		printf 'error: %s is missing the i2c:dw9719 modalias needed by the ACPI-created VCM\n' "$name" >&2
+		exit 2
+	fi
 done <<EOF
 $MODULES
 EOF

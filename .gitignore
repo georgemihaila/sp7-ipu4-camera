@@ -1,6 +1,5 @@
-# Vanilla kernel tree — only the Intel IPU driver subtree is tracked,
-# via `git add -f linux-6.19.8/drivers/media/pci/intel` (the kernel's
-# own nested .gitignore negations defeat a parent unignore chain)
+# Vanilla kernel tree — only the Intel IPU subtree and selected sensor/lens
+# driver files are tracked with explicit `git add -f` paths.
 /linux-6.19.8/
 /linux-6.19.8.tar.xz
 

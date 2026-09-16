@@ -73,7 +73,8 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 		"$ROOT"/tests/task12-libcamera-static.sh \
 		"$ROOT"/tests/task13-hardening-static.sh \
 		"$ROOT"/tests/task14-v4l2-streams-static.sh \
-		"$ROOT"/tests/task15-csi2-init-static.sh; do
+		"$ROOT"/tests/task15-csi2-init-static.sh \
+		"$ROOT"/tests/task16-autofocus-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
@@ -98,6 +99,19 @@ if [ "$MODE" = live ] || [ "$MODE" = all ]; then
 			media-ctl -d "$MEDIA" -p >"$GRAPH" 2>&1
 			if grep -q 'ov5693' "$GRAPH"; then pass discovery "ov5693 discovered"; else skip discovery "front ov5693 is absent"; fi
 			if grep -q 'ov8865' "$GRAPH"; then pass discovery "ov8865 discovered"; else skip discovery "rear ov8865 is absent"; fi
+
+			vcm_subdev=$(awk '$0 ~ "- entity .*: .*dw9719" {hit=1} hit && /device node name/ {print $NF; exit}' "$GRAPH")
+			if [ -n "$vcm_subdev" ]; then
+				if run focus-controls v4l2-ctl -d "$vcm_subdev" --list-ctrls; then
+					if grep -q 'focus_absolute' "$LOGDIR/focus-controls.log"; then
+						pass focus "rear DW9719 lens position control is exposed"
+					else
+					fail focus "DW9719 is present without focus_absolute"
+					fi
+				fi
+			else
+				fail focus "rear DW9719 lens actuator is not bound into the media graph"
+			fi
 
 			# Read-only prerequisites: report the installed module/firmware state.
 			if command -v modinfo >/dev/null 2>&1 && modinfo intel_ipu4p >"$LOGDIR/modinfo" 2>&1; then

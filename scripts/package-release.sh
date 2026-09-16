@@ -52,7 +52,8 @@ linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p.ko|intel-ipu4p.ko
 linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-isys.ko|intel-ipu4p-isys.ko
 linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-psys.ko|intel-ipu4p-psys.ko
 linux-6.19.8/drivers/media/pci/intel/ipu4/intel-ipu4p-isys-csslib.ko|intel-ipu4p-isys-csslib.ko
-linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys/intel-ipu4p-psys-csslib.ko|intel-ipu4p-psys-csslib.ko'
+linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys/intel-ipu4p-psys-csslib.ko|intel-ipu4p-psys-csslib.ko
+linux-6.19.8/drivers/media/i2c/dw9719.ko|dw9719.ko'
 
 while IFS='|' read -r relative_path module_name; do
 	[ -n "$relative_path" ] || continue

@@ -20,7 +20,7 @@ file_hash() { sha256sum "$1" | awk '{print $1}'; }
 while IFS=' ' read -r name hash extra; do
 	[ -n "$name" ] || continue
 	case $name in
-		ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko) ;;
+		ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko|dw9719.ko) ;;
 		*) printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2 ;;
 	esac
 	[ -z "${extra:-}" ] && printf '%s\n' "$hash" | grep -Eq '^[0-9a-f]{64}$' || {
@@ -65,5 +65,5 @@ else
 fi
 
 if [ "$removed" -gt 0 ]; then depmod -a "$KREL"; fi
-printf 'removed %s tracked IPU4P module(s) from %s; retained %s modified module(s); firmware was left in place\n' \
+printf 'removed %s tracked camera module(s) from %s; retained %s modified module(s); firmware was left in place\n' \
 	"$removed" "$MODDIR" "$retained"

@@ -17,7 +17,8 @@ intel-ipu4p.ko
 intel-ipu4p-isys.ko
 intel-ipu4p-psys.ko
 intel-ipu4p-isys-csslib.ko
-intel-ipu4p-psys-csslib.ko'
+intel-ipu4p-psys-csslib.ko
+dw9719.ko'
 while IFS= read -r module; do
 	[ -n "$module" ] || continue
 	grep -Fq "$module" "$INSTALL"
@@ -82,11 +83,12 @@ fwsrc="$tmpdir/firmware-source"
 printf 'firmware bytes\n' > "$fwsrc"
 source_root="$tmpdir/source"
 intel_src="$source_root/linux-6.19.8/drivers/media/pci/intel"
-mkdir -p "$intel_src/ipu4/ipu4p-css/lib2600psys"
+mkdir -p "$intel_src/ipu4/ipu4p-css/lib2600psys" "$source_root/linux-6.19.8/drivers/media/i2c"
 while IFS= read -r module; do
 	[ -n "$module" ] || continue
 	case $module in
 		ipu-bridge.ko) module_source="$intel_src/$module" ;;
+		dw9719.ko) module_source="$source_root/linux-6.19.8/drivers/media/i2c/$module" ;;
 		intel-ipu4p-psys-csslib.ko) module_source="$intel_src/ipu4/ipu4p-css/lib2600psys/$module" ;;
 		*) module_source="$intel_src/ipu4/$module" ;;
 	esac
@@ -98,8 +100,8 @@ moddir="$tmpdir/install-modules"
 firmware_target="$tmpdir/firmware/ipu4p_cpd.bin"
 PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
-[ "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 6 ]
-[ "$(wc -l < "$moddir/.ipu4p-camera-modules" | tr -d '[:space:]')" -eq 6 ]
+[ "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 7 ]
+[ "$(wc -l < "$moddir/.ipu4p-camera-modules" | tr -d '[:space:]')" -eq 7 ]
 PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
 PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
@@ -116,7 +118,7 @@ printf 'native bridge bytes\n' > "$native_path"
 PATH="$mockbin:$PATH" NATIVE_BRIDGE_PATH="$native_path" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$native_moddir" \
 	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/native-fw" sh "$INSTALL"
 [ ! -e "$native_moddir/ipu-bridge.ko" ]
-[ "$(find "$native_moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 5 ]
+[ "$(find "$native_moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 6 ]
 ! grep -q '^ipu-bridge\.ko ' "$native_moddir/.ipu4p-camera-modules"
 PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$native_moddir" sh "$UNINSTALL"
 [ -f "$native_path" ]

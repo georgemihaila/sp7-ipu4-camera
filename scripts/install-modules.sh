@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the explicit IPU4P dependency modules and externally supplied CPD firmware.
+# Install the explicit camera modules and externally supplied CPD firmware.
 # No module loading, service changes, or initramfs rebuild is performed here.
 set -eu
 
@@ -15,7 +15,8 @@ intel-ipu4p.ko
 intel-ipu4p-isys.ko
 intel-ipu4p-psys.ko
 intel-ipu4p-isys-csslib.ko
-intel-ipu4p-psys-csslib.ko'
+intel-ipu4p-psys-csslib.ko
+dw9719.ko'
 
 # Avoid shadowing a bridge already supplied for this exact kernel. Keep the
 # overlay bridge in the install set on kernels that do not have one.
@@ -34,6 +35,7 @@ fi
 source_for() {
 	case $1 in
 		ipu-bridge.ko) printf '%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu-bridge.ko" ;;
+		dw9719.ko) printf '%s\n' "$ROOT/linux-6.19.8/drivers/media/i2c/dw9719.ko" ;;
 		intel-ipu4p-psys-csslib.ko)
 			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys" "$1" ;;
 		intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko)
@@ -62,7 +64,7 @@ if [ -e "$MANIFEST" ]; then
 	while IFS=' ' read -r name hash extra; do
 		[ -n "$name" ] || continue
 		case $name in
-			ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko) ;;
+			ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko|dw9719.ko) ;;
 			*) printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2 ;;
 		esac
 		[ -z "${extra:-}" ] && printf '%s\n' "$hash" | grep -Eq '^[0-9a-f]{64}$' || {

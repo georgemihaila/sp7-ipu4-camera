@@ -20,9 +20,11 @@ KDIR=/lib/modules/$(uname -r)/build ./scripts/build-modules.sh
 `CONFIG_VIDEO_INTEL_IPU=m`, `CONFIG_VIDEO_INTEL_IPU4P=y`, and
 `CONFIG_VIDEO_INTEL_IPU_FW_LIB=y` are supplied for this external build.
 
-This builds the IPU parent, ISYS, PSYS, and CSS-library modules. It does not
-build `ov5693.c`, because that file is in the kernel's `drivers/media/i2c/`
-namespace and the fragment has no replacement for the kernel's i2c Makefile.
+This builds the IPU parent, ISYS, PSYS, CSS-library modules, and the bundled
+DW9719 lens driver. The DW9719 overlay restores I2C matching for ACPI-created
+Surface VCM clients on Linux 6.19. It does not build `ov5693.c`, because that
+sensor source requires integration with the kernel's `drivers/media/i2c/`
+Kconfig and Makefile.
 
 ## Required kernel-tree integration for a complete camera build
 
