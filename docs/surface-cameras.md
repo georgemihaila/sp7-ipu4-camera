@@ -50,6 +50,8 @@ temporarily stops WirePlumber so the direct libcamera pipeline can own the
 shared IPU4P backend; WirePlumber is restarted when the client closes. The two
 physical sensors cannot be captured simultaneously through this backend.
 
+The bridge reads each loopback endpoint’s current V4L2 format before starting a producer. It emits packed YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG. This keeps consumers such as Zoom from leaving the producer with a `not-negotiated` pipeline.
+
 To remove the bridge and restore RPM Fusion's default OBS module options:
 
 ```sh

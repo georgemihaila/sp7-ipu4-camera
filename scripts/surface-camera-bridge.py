@@ -28,6 +28,9 @@ POLL_SECONDS = 0.20
 OPEN_DEBOUNCE_SECONDS = 0.45
 CLOSE_GRACE_SECONDS = 1.50
 RESTART_DELAY_SECONDS = 2.0
+VIDEO_WIDTH = 1280
+VIDEO_HEIGHT = 720
+VIDEO_FRAMERATE = "30/1"
 WIREPLUMBER_UNIT = "wireplumber.service"
 
 logging.basicConfig(
@@ -85,27 +88,47 @@ def consumers(exclude_pids: set[int]) -> set[str]:
     return found
 
 
+def device_format(camera_key: str) -> str:
+    """Return the loopback's current V4L2 pixel format.
+
+    A consumer may set this before the producer opens the device. Keep the
+    producer in step with that choice so v4l2sink does not fail negotiation.
+    """
+    device = CAMERAS[camera_key]["device"]
+    result = subprocess.run(
+        ["/usr/bin/v4l2-ctl", "-d", device, "--get-fmt-video"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    for format_name in ("MJPG", "JPEG", "YUYV"):
+        if f"'{format_name}'" in result.stdout:
+            return format_name
+    LOG.warning("could not determine %s format; using YUYV", device)
+    return "YUYV"
+
+
+def output_caps(format_name: str) -> list[str]:
+    if format_name in ("MJPG", "JPEG"):
+        return [
+            "!", "jpegenc", "quality=85", "!", "jpegparse", "!",
+            f"image/jpeg,parsed=true,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
+        ]
+    return [
+        "!", "videoconvert", "!",
+        f"video/x-raw,format=YUY2,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
+    ]
+
+
 def pipeline_for(camera_key: str) -> list[str]:
     camera = CAMERAS[camera_key]
     return [
-        "/usr/bin/gst-launch-1.0",
-        "-e",
-        "libcamerasrc",
-        f"camera-name={camera['camera_id']}",
-        "ae-enable=true",
-        "!",
-        "video/x-raw,width=1280,height=720,framerate=30/1",
-        "!",
-        "videoflip",
-        "method=rotate-180",
-        "!",
-        "videoconvert",
-        "!",
-        "video/x-raw,format=YUY2,width=1280,height=720,framerate=30/1",
-        "!",
-        "v4l2sink",
-        f"device={camera['device']}",
-        "sync=false",
+        "/usr/bin/gst-launch-1.0", "-e", "libcamerasrc",
+        f"camera-name={camera['camera_id']}", "ae-enable=true", "!",
+        f"video/x-raw,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
+        "!", "videoflip", "method=rotate-180", "!", "videoconvert",
+        *output_caps(device_format(camera_key)), "!", "v4l2sink",
+        f"device={camera['device']}", "sync=false",
     ]
 
 
@@ -113,17 +136,10 @@ def filler_for(camera_key: str) -> list[str]:
     """Keep a stable, capturable V4L2 endpoint while its sensor is idle."""
     camera = CAMERAS[camera_key]
     return [
-        "/usr/bin/gst-launch-1.0",
-        "-e",
-        "videotestsrc",
-        "is-live=true",
-        "pattern=black",
-        "!",
-        "video/x-raw,format=YUY2,width=1280,height=720,framerate=30/1",
-        "!",
-        "v4l2sink",
-        f"device={camera['device']}",
-        "sync=false",
+        "/usr/bin/gst-launch-1.0", "-e", "videotestsrc", "is-live=true",
+        "pattern=black", "!", "videoconvert", "!", "videoscale",
+        *output_caps(device_format(camera_key)), "!", "v4l2sink",
+        f"device={camera['device']}", "sync=false",
     ]
 
 
