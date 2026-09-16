@@ -23,6 +23,7 @@ fi
 grep -Fq 'mktemp -d "${TMPDIR:-/tmp}/sp7-cbridge-qualification.' "$LIVE"
 grep -Fq 'REPEATS=${CBQ_REPEATS:-3}' "$LIVE"
 grep -Fq 'DURATION=${CBQ_DURATION:-60}' "$LIVE"
+grep -Fq 'WARMUP_FRAMES=${CBQ_WARMUP_FRAMES:-120}' "$LIVE"
 grep -Fq 'owners_are_bridge_only' "$LIVE"
 grep -Fq 'service_cgroup' "$LIVE"
 grep -Fq 'owner_is_service_member' "$LIVE"

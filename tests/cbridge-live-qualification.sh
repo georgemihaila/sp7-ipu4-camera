@@ -22,6 +22,7 @@ YUYV_BYTES=$((WIDTH * HEIGHT * 2))
 REPEATS=${CBQ_REPEATS:-3}
 DURATION=${CBQ_DURATION:-60}
 SAMPLE_FRAMES=${CBQ_SAMPLE_FRAMES:-120}
+WARMUP_FRAMES=${CBQ_WARMUP_FRAMES:-120}
 PROBE_FRAMES=${CBQ_PROBE_FRAMES:-45}
 OPEN_CLOSE_CYCLES=${CBQ_OPEN_CLOSE_CYCLES:-20}
 SWITCH_CYCLES=${CBQ_SWITCH_CYCLES:-20}
@@ -53,7 +54,8 @@ usage: $0 [--quick] [--case CASE] [--allow-service-control]
        [--skip-lifecycle] [--keep-artifacts]
 
 CASE is one of front-yuyv, rear-yuyv, front-mjpeg, rear-mjpeg, or all.
-Environment overrides: CBQ_REPEATS, CBQ_DURATION, CBQ_SAMPLE_FRAMES,
+	Environment overrides: CBQ_REPEATS, CBQ_DURATION, CBQ_SAMPLE_FRAMES,
+	CBQ_WARMUP_FRAMES,
 CBQ_PROBE_FRAMES, CBQ_OPEN_CLOSE_CYCLES, CBQ_SWITCH_CYCLES,
 CBQ_START_TIMEOUT, CBQ_STREAM_TIMEOUT, CBQ_STREAM_ATTEMPTS,
 CBQ_KEEP_ARTIFACTS.
@@ -93,7 +95,7 @@ valid_positive_integer() {
 	[ "$1" -gt 0 ] 2>/dev/null
 }
 
-for value in "$REPEATS" "$DURATION" "$SAMPLE_FRAMES" "$PROBE_FRAMES" \
+for value in "$REPEATS" "$DURATION" "$SAMPLE_FRAMES" "$WARMUP_FRAMES" "$PROBE_FRAMES" \
 	"$OPEN_CLOSE_CYCLES" "$SWITCH_CYCLES" "$START_TIMEOUT" "$STREAM_TIMEOUT" \
 	"$STREAM_ATTEMPTS"; do
 	if ! valid_positive_integer "$value"; then
@@ -317,6 +319,11 @@ sample_case() {
 		minimum_bytes=$((YUYV_BYTES * SAMPLE_FRAMES))
 	else
 		minimum_bytes=$((SAMPLE_FRAMES * 1024))
+	fi
+	if ! stream_capture "$device" "$WARMUP_FRAMES" /dev/null \
+		"$LOGDIR/warmup-$cam-$format.log"; then
+		fail "warmup-$cam-$format" "could not read $WARMUP_FRAMES warmup frames"
+		return 1
 	fi
 	if ! stream_capture "$device" "$SAMPLE_FRAMES" "$capture" \
 		"$LOGDIR/sample-$cam-$format.log" "$minimum_bytes"; then
