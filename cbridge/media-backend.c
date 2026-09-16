@@ -20,6 +20,7 @@ struct MediaBackend {
 	GstElement *pipeline;
 	GstBus *bus;
 	bool running;
+	bool stopped;
 };
 
 static void set_error(char *error, unsigned error_size, const char *format, ...)
@@ -319,9 +320,9 @@ void media_backend_free(MediaBackend *backend)
 
 	if (backend == NULL)
 		return;
-	if (backend->pipeline != NULL && backend->bus != NULL)
+	if (backend->pipeline != NULL && !backend->stopped)
 		(void)media_backend_stop(backend, ignored_error, sizeof(ignored_error));
-	else if (backend->pipeline != NULL)
+	else if (backend->pipeline != NULL && backend->bus == NULL)
 		(void)gst_element_set_state(backend->pipeline, GST_STATE_NULL);
 	if (backend->bus != NULL)
 		gst_object_unref(backend->bus);
@@ -344,6 +345,7 @@ int media_backend_start(MediaBackend *backend, const MediaBackendConfig *config,
 	backend->pipeline = build_pipeline(config, error, error_size);
 	if (backend->pipeline == NULL)
 		return -1;
+	backend->stopped = false;
 	backend->bus = gst_element_get_bus(backend->pipeline);
 	if (backend->bus == NULL) {
 		set_error(error, error_size, "could not acquire GStreamer bus");
@@ -413,7 +415,7 @@ int media_backend_stop(MediaBackend *backend, char *error, unsigned error_size)
 	GstState state = GST_STATE_PLAYING;
 	gint64 deadline;
 
-	if (backend == NULL || backend->pipeline == NULL)
+	if (backend == NULL || backend->pipeline == NULL || backend->stopped)
 		return 0;
 	backend->running = false;
 	(void)gst_element_set_state(backend->pipeline, GST_STATE_NULL);
@@ -430,8 +432,10 @@ int media_backend_stop(MediaBackend *backend, char *error, unsigned error_size)
 				return -1;
 		}
 		(void)gst_element_get_state(backend->pipeline, &state, NULL, 0);
-		if (state == GST_STATE_NULL)
+		if (state == GST_STATE_NULL) {
+			backend->stopped = true;
 			return 0;
+		}
 	}
 	set_error(error, error_size, "pipeline did not reach NULL within %u seconds",
 		(unsigned)(STOP_TIMEOUT_US / G_USEC_PER_SEC));
