@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Static regression checks for loopback format negotiation.
-set -euo pipefail
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BRIDGE=$ROOT/scripts/surface-camera-bridge.py
 INSTALL=$ROOT/install.sh
 SETUP=$ROOT/scripts/setup-camera-bridge.sh
