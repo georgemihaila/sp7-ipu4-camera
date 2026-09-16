@@ -57,6 +57,7 @@ include $(srcpath)/$(src)/ipu4-css/Makefile.psyslib
 endif
 
 ccflags-y += -I$(srcpath)/$(src)/../../../../../include/
+ccflags-y += -I$(srcpath)/$(src)/../../../../../include/uapi/
 ccflags-y += -I$(srcpath)/$(src)/../
 ccflags-y += -I$(srcpath)/$(src)/
 ifdef CONFIG_VIDEO_INTEL_IPU_FW_LIB
@@ -67,6 +68,13 @@ ccflags-y += -DPARAMETER_INTERFACE_V2
 endif
 
 ifdef CONFIG_VIDEO_INTEL_IPU4P
+# External builds have no kernel-config-generated IPU4P C define because
+# this driver is not part of the distro kernel configuration. Keep the
+# generation selection local to this overlay build.
+ifeq ($(EXTERNAL_BUILD),1)
+ccflags-y += -DCONFIG_VIDEO_INTEL_IPU4P
+subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU4P
+endif
 ccflags-y += -DHAS_DUAL_CMD_CTX_SUPPORT=0 -DIPU_VC_SUPPORT -DIPU_PSYS_LEGACY -DIPU_HAS_ISA
 ccflags-y += -DIPU_META_DATA_SUPPORT
 
@@ -117,6 +125,7 @@ include $(srcpath)/$(src)/ipu4p-css/Makefile.psyslib
 endif
 
 ccflags-y += -I$(srcpath)/$(src)/../../../../../include/
+subdir-ccflags-y += -I$(srcpath)/$(src)/../../../../../include/uapi/
 ccflags-y += -I$(srcpath)/$(src)/../
 ccflags-y += -I$(srcpath)/$(src)/
 ifdef CONFIG_VIDEO_INTEL_IPU_FW_LIB

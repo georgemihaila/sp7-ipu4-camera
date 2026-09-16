@@ -27,6 +27,8 @@ IPU_PSYSLIB_ROOT = $(srcpath)/$(src)/$(IPU_PSYSLIB_ROOT_REL)
 
 ccflags-y += -I$(srcpath)/$(src)/../../../
 ccflags-y += -I$(srcpath)/$(src)/../../
+ccflags-y += -I$(srcpath)/../../../../include/
+ccflags-y += -I$(srcpath)/../../../../include/uapi/
 ccflags-y += -DHAS_DUAL_CMD_CTX_SUPPORT=0 -DHAS_LATE_BINDING_SUPPORT=0 -DIPU_PSYS_LEGACY
 
 IPU_PSYSLIB_SRC += libcsspsys2600.o

@@ -83,6 +83,7 @@ static const u32 *csi2_be_soc_supported_codes[NR_OF_CSI2_BE_SOC_PADS];
 static struct v4l2_subdev_internal_ops csi2_be_soc_sd_internal_ops = {
 	.open = ipu_isys_subdev_open,
 	.close = ipu_isys_subdev_close,
+	.init_state = ipu_isys_subdev_init_state,
 };
 
 static const struct v4l2_subdev_core_ops csi2_be_soc_sd_core_ops = {
@@ -200,7 +201,6 @@ static const struct v4l2_subdev_pad_ops csi2_be_soc_sd_pad_ops = {
 	.set_selection = ipu_isys_csi2_be_soc_set_sel,
 	.enum_mbus_code = ipu_isys_subdev_enum_mbus_code,
 	.set_routing = ipu_isys_subdev_set_routing,
-	.get_routing = ipu_isys_subdev_get_routing,
 };
 
 static struct v4l2_subdev_ops csi2_be_soc_sd_ops = {
@@ -328,21 +328,15 @@ int ipu_isys_csi2_be_soc_init(struct ipu_isys_csi2_be_soc *csi2_be_soc,
 
 	ipu_isys_subdev_set_ffmt(&csi2_be_soc->asd.sd, NULL, &fmt);
 	csi2_be_soc->asd.sd.internal_ops = &csi2_be_soc_sd_internal_ops;
+	csi2_be_soc->asd.sd.flags |= V4L2_SUBDEV_FL_STREAMS;
 
 	snprintf(csi2_be_soc->asd.sd.name, sizeof(csi2_be_soc->asd.sd.name),
 		 IPU_ISYS_ENTITY_PREFIX " CSI2 BE SOC");
 
 	v4l2_set_subdevdata(&csi2_be_soc->asd.sd, &csi2_be_soc->asd);
 
-	mutex_lock(&csi2_be_soc->asd.mutex);
-	rval = v4l2_device_register_subdev(&isys->v4l2_dev,
-					   &csi2_be_soc->asd.sd);
-	if (rval) {
-		dev_info(&isys->adev->dev, "can't register v4l2 subdev\n");
-		goto fail;
-	}
-
 	/* create default route information */
+	mutex_lock(&csi2_be_soc->asd.mutex);
 	for (i = 0; i < NR_OF_CSI2_BE_SOC_STREAMS; i++) {
 		csi2_be_soc->asd.route[i].sink = CSI2_BE_SOC_PAD_SINK(i);
 		csi2_be_soc->asd.route[i].source = CSI2_BE_SOC_PAD_SOURCE(i);
@@ -362,8 +356,19 @@ int ipu_isys_csi2_be_soc_init(struct ipu_isys_csi2_be_soc *csi2_be_soc,
 		bitmap_set(csi2_be_soc->asd.stream[CSI2_BE_SOC_PAD_SOURCE(i)].
 			   streams_stat, 0, 1);
 	}
-	csi2_be_soc->asd.route[0].flags |= V4L2_SUBDEV_ROUTE_FL_IMMUTABLE;
+	csi2_be_soc->asd.route[0].immutable = true;
 	mutex_unlock(&csi2_be_soc->asd.mutex);
+
+	rval = ipu_isys_subdev_init_finalize(&csi2_be_soc->asd);
+	if (rval)
+		goto fail;
+
+	rval = v4l2_device_register_subdev(&isys->v4l2_dev,
+					   &csi2_be_soc->asd.sd);
+	if (rval) {
+		dev_info(&isys->adev->dev, "can't register v4l2 subdev\n");
+		goto fail;
+	}
 	for (i = 0; i < NR_OF_CSI2_BE_SOC_SOURCE_PADS; i++) {
 		snprintf(csi2_be_soc->av[i].vdev.name,
 			 sizeof(csi2_be_soc->av[i].vdev.name),

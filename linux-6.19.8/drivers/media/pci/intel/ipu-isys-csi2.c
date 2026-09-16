@@ -96,6 +96,7 @@ static const u32 *csi2_supported_codes[NR_OF_CSI2_PADS];
 static struct v4l2_subdev_internal_ops csi2_sd_internal_ops = {
 	.open = ipu_isys_subdev_open,
 	.close = ipu_isys_subdev_close,
+	.init_state = ipu_isys_subdev_init_state,
 };
 
 int ipu_isys_csi2_get_link_freq(struct ipu_isys_csi2 *csi2, s64 *link_freq)
@@ -162,6 +163,22 @@ static int ipu_get_frame_desc_entry_by_dt(struct v4l2_subdev *sd,
 	return -EINVAL;
 }
 
+/* A blob has no line geometry in the current V4L2 frame descriptor API.
+ * Model metadata as its maximum frame byte count in one row.
+ */
+static int ipu_get_metadata_blob_size(
+		const struct v4l2_mbus_frame_desc_entry *entry,
+		unsigned int *width, unsigned int *height)
+{
+	if (!(entry->flags & V4L2_MBUS_FRAME_DESC_FL_LEN_MAX) ||
+	    !(entry->flags & V4L2_MBUS_FRAME_DESC_FL_BLOB) || !entry->length)
+		return -EOPNOTSUPP;
+
+	*width = entry->length;
+	*height = 1;
+	return 0;
+}
+
 static void csi2_meta_prepare_firmware_stream_cfg_default(
 			struct ipu_isys_video *av,
 			struct ipu_fw_isys_stream_cfg_data_abi *cfg)
@@ -171,9 +188,18 @@ static void csi2_meta_prepare_firmware_stream_cfg_default(
 	struct ipu_isys_queue *aq = &av->aq;
 	struct ipu_fw_isys_output_pin_info_abi *pin_info;
 	struct v4l2_mbus_frame_desc_entry entry;
-	int pin = cfg->nof_output_pins++;
-	int inpin = cfg->nof_input_pins++;
+	unsigned int width, height;
+	int pin, inpin;
 	int rval;
+
+	rval = ipu_get_frame_desc_entry_by_dt(media_entity_to_v4l2_subdev
+					      (ip->external->entity), &entry,
+					      IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8);
+	if (rval || ipu_get_metadata_blob_size(&entry, &width, &height))
+		return;
+
+	pin = cfg->nof_output_pins++;
+	inpin = cfg->nof_input_pins++;
 
 	aq->fw_output = pin;
 	ip->output_pins[pin].pin_ready = ipu_isys_queue_buf_ready;
@@ -188,17 +214,9 @@ static void csi2_meta_prepare_firmware_stream_cfg_default(
 	pin_info->ft = av->pfmt->css_pixelformat;
 	pin_info->send_irq = 1;
 
-	rval =
-	    ipu_get_frame_desc_entry_by_dt(media_entity_to_v4l2_subdev
-					   (ip->external->entity), &entry,
-					   IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8);
-	if (!rval) {
-		cfg->input_pins[inpin].dt = IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8;
-		cfg->input_pins[inpin].input_res.width =
-		    entry.two_dim.width * entry.bpp / BITS_PER_BYTE;
-		cfg->input_pins[inpin].input_res.height =
-		    entry.two_dim.height;
-	}
+	cfg->input_pins[inpin].dt = IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8;
+	cfg->input_pins[inpin].input_res.width = width;
+	cfg->input_pins[inpin].input_res.height = height;
 }
 
 static int subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
@@ -313,7 +331,6 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 						    pipe);
 	struct ipu_isys_csi2_config *cfg;
 	struct v4l2_subdev *ext_sd;
-	struct v4l2_control c = {.id = V4L2_CID_MIPI_LANES, };
 	struct ipu_isys_csi2_timing timing;
 	unsigned int nlanes;
 	int rval;
@@ -359,17 +376,9 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 	/* Start a new receiver lifetime with stale IRQ and error state cleared. */
 	ipu_isys_csi2_reset_errors(csi2);
 
-	rval = v4l2_g_ctrl(ext_sd->ctrl_handler, &c);
-	if (cfg)
-		dev_dbg(&csi2->isys->adev->dev,
-			"csi2 lane cfg: hostdata nlanes=%u ctrl nlanes=%d ctrl_rval=%d\n",
-			cfg->nlanes, c.value, rval);
-	if (!rval && c.value > 0 && cfg->nlanes > c.value) {
-		nlanes = c.value;
-		dev_dbg(&csi2->isys->adev->dev, "lane nr %d.\n", nlanes);
-	} else {
-		nlanes = cfg->nlanes;
-	}
+	if (!cfg || !cfg->nlanes || cfg->nlanes > IPU_ISYS_MAX_CSI2_LANES)
+		return -EINVAL;
+	nlanes = cfg->nlanes;
 
 	rval = ipu_isys_csi2_calc_timing(csi2, &timing, CSI2_ACCINV);
 	if (rval)
@@ -413,13 +422,6 @@ static int csi2_link_validate(struct media_link *link)
 	struct media_pipeline *media_pipe;
 	struct ipu_isys_csi2 *csi2;
 	struct ipu_isys_pipeline *ip;
-	struct v4l2_subdev_route r[IPU_ISYS_MAX_STREAMS];
-	struct v4l2_subdev_routing routing = {
-		.len_routes = IPU_ISYS_MAX_STREAMS,
-		.routes = (uintptr_t)r,
-		.num_routes = IPU_ISYS_MAX_STREAMS,
-	};
-	unsigned int active = 0;
 	unsigned long flags;
 	int i;
 	int rval;
@@ -457,35 +459,10 @@ static int csi2_link_validate(struct media_link *link)
 		}
 	}
 
-	rval =
-	    v4l2_subdev_call(media_entity_to_v4l2_subdev(link->source->entity),
-			     pad, get_routing, &routing);
-
-	if (rval) {
-		csi2->remote_streams = 1;
-		dev_dbg(&csi2->isys->adev->dev,
-			"link_validate: get_routing unavailable, default remote_streams=%u\n",
-			csi2->remote_streams);
-		return 0;
-	}
-
-	for (i = 0; i < routing.num_routes; i++) {
-		struct v4l2_subdev_route *route = &r[i];
-		if (route->flags & V4L2_SUBDEV_ROUTE_FL_ACTIVE)
-			active++;
-	}
-
-	if (active !=
-	    bitmap_weight(csi2->asd.stream[link->sink->index].streams_stat, 32))
-		return -EINVAL;
-
-	csi2->remote_streams = active;
-	dev_dbg(&csi2->isys->adev->dev,
-		"link_validate: active routes=%u sink_stream_mask_weight=%u remote_streams=%u\n",
-		active,
-		bitmap_weight(csi2->asd.stream[link->sink->index].streams_stat, 32),
-		csi2->remote_streams);
-
+	/* The supported SP7 sensors provide one external CSI-2 stream. Internal
+	 * IPU routing is represented by the IPU subdevices' active state.
+	 */
+	csi2->remote_streams = 1;
 	return 0;
 }
 
@@ -511,10 +488,11 @@ static int get_metadata_fmt(struct v4l2_subdev *sd,
 					   IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8);
 
 	if (!rval) {
-		fmt->format.width =
-		    entry.two_dim.width * entry.bpp / BITS_PER_BYTE;
-		fmt->format.height = entry.two_dim.height;
-		fmt->format.code = entry.pixelcode;
+		rval = ipu_get_metadata_blob_size(&entry, &fmt->format.width,
+						  &fmt->format.height);
+		if (rval)
+			return rval;
+		fmt->format.code = MEDIA_BUS_FMT_FIXED;
 		fmt->format.field = V4L2_FIELD_NONE;
 	}
 	return rval;
@@ -559,7 +537,6 @@ static const struct v4l2_subdev_pad_ops csi2_sd_pad_ops = {
 	.set_fmt = ipu_isys_csi2_set_fmt,
 	.enum_mbus_code = ipu_isys_subdev_enum_mbus_code,
 	.set_routing = ipu_isys_subdev_set_routing,
-	.get_routing = ipu_isys_subdev_get_routing,
 };
 
 static struct v4l2_subdev_ops csi2_sd_ops = {
@@ -618,11 +595,12 @@ static void csi2_set_ffmt(struct v4l2_subdev *sd,
 				IPU_ISYS_MIPI_CSI2_TYPE_EMBEDDED8);
 
 		if (!rval) {
-			ffmt->width = entry.two_dim.width * entry.bpp
-			    / BITS_PER_BYTE;
-			ffmt->height = entry.two_dim.height;
-			ffmt->code = entry.pixelcode;
-			ffmt->field = V4L2_FIELD_NONE;
+			rval = ipu_get_metadata_blob_size(&entry, &ffmt->width,
+							  &ffmt->height);
+			if (!rval) {
+				ffmt->code = MEDIA_BUS_FMT_FIXED;
+				ffmt->field = V4L2_FIELD_NONE;
+			}
 		}
 
 		return;
@@ -737,7 +715,11 @@ int ipu_isys_csi2_init(struct ipu_isys_csi2 *csi2,
 		goto fail;
 
 	csi2->asd.pad[CSI2_PAD_SINK].flags = MEDIA_PAD_FL_SINK
-	    | MEDIA_PAD_FL_MUST_CONNECT | MEDIA_PAD_FL_MULTIPLEX;
+	    | MEDIA_PAD_FL_MUST_CONNECT;
+	csi2->asd.pad_stream_count[CSI2_PAD_SINK] = NR_OF_CSI2_STREAMS;
+	for (i = CSI2_PAD_SOURCE(0);
+	     i < (NR_OF_CSI2_SOURCE_PADS + CSI2_PAD_SOURCE(0)); i++)
+		csi2->asd.pad_stream_count[i] = NR_OF_CSI2_STREAMS;
 	for (i = CSI2_PAD_SOURCE(0);
 	     i < (NR_OF_CSI2_SOURCE_PADS + CSI2_PAD_SOURCE(0)); i++)
 		csi2->asd.pad[i].flags = MEDIA_PAD_FL_SOURCE;
@@ -759,19 +741,13 @@ int ipu_isys_csi2_init(struct ipu_isys_csi2 *csi2,
 	csi2->asd.set_ffmt = csi2_set_ffmt;
 
 	csi2->asd.sd.flags |= V4L2_SUBDEV_FL_HAS_EVENTS;
+	csi2->asd.sd.flags |= V4L2_SUBDEV_FL_STREAMS;
 	csi2->asd.sd.internal_ops = &csi2_sd_internal_ops;
 	snprintf(csi2->asd.sd.name, sizeof(csi2->asd.sd.name),
 		 IPU_ISYS_ENTITY_PREFIX " CSI-2 %u", index);
 	v4l2_set_subdevdata(&csi2->asd.sd, &csi2->asd);
 
 	mutex_lock(&csi2->asd.mutex);
-	rval = v4l2_device_register_subdev(&isys->v4l2_dev, &csi2->asd.sd);
-	if (rval) {
-		mutex_unlock(&csi2->asd.mutex);
-		dev_info(&isys->adev->dev, "can't register v4l2 subdev\n");
-		goto fail;
-	}
-
 	__ipu_isys_subdev_set_ffmt(&csi2->asd.sd, NULL, &fmt);
 	__ipu_isys_subdev_set_ffmt(&csi2->asd.sd, NULL, &fmt_meta);
 
@@ -787,12 +763,22 @@ int ipu_isys_csi2_init(struct ipu_isys_csi2 *csi2,
 		csi2->asd.stream[CSI2_PAD_SOURCE(i)].stream_id[CSI2_PAD_SINK]
 		    = i;
 	}
-	csi2->asd.route[0].flags = V4L2_SUBDEV_ROUTE_FL_ACTIVE |
-	    V4L2_SUBDEV_ROUTE_FL_IMMUTABLE;
+	csi2->asd.route[0].flags = V4L2_SUBDEV_ROUTE_FL_ACTIVE;
+	csi2->asd.route[0].immutable = true;
 	bitmap_set(csi2->asd.stream[CSI2_PAD_SINK].streams_stat, 0, 1);
 	bitmap_set(csi2->asd.stream[CSI2_PAD_SOURCE(0)].streams_stat, 0, 1);
 
 	mutex_unlock(&csi2->asd.mutex);
+
+	rval = ipu_isys_subdev_init_finalize(&csi2->asd);
+	if (rval)
+		goto fail;
+
+	rval = v4l2_device_register_subdev(&isys->v4l2_dev, &csi2->asd.sd);
+	if (rval) {
+		dev_info(&isys->adev->dev, "can't register v4l2 subdev\n");
+		goto fail;
+	}
 
 	for (i = 0; i < NR_OF_CSI2_SOURCE_PADS; i++) {
 		snprintf(csi2->av[i].vdev.name, sizeof(csi2->av[i].vdev.name),

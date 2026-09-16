@@ -43,6 +43,7 @@ fi
 # ipu4/Makefile includes CSS makefiles relative to this directory.
 make -C "$KDIR" M="$SRC" EXTERNAL_BUILD=1 srcpath="$SRC" \
 	CONFIG_VIDEO_INTEL_IPU=m CONFIG_VIDEO_INTEL_IPU4P=y \
+	CONFIG_VIDEO_INTEL_IPU6= CONFIG_VIDEO_IPU3_CIO2= CONFIG_INTEL_VSC= \
 	CONFIG_VIDEO_INTEL_IPU_FW_LIB=y modules "$@"
 
 MODULES='ipu-bridge.ko

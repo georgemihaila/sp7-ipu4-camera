@@ -9,6 +9,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/compat.h>
+#include <uapi/linux/ipu4-v4l2.h>
 
 #include <uapi/linux/sched/types.h>
 

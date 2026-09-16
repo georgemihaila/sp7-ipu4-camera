@@ -68,6 +68,8 @@ struct ipu_isys_subdev {
 	struct ipu_isys *isys;
 	u32 const *const *supported_codes;
 	struct media_pad *pad;
+	/* Number of valid stream IDs per pad (CSI-2 sink is multiplexed). */
+	unsigned int *pad_stream_count;
 	struct v4l2_mbus_framefmt **ffmt;
 	struct v4l2_rect *crop;
 	struct v4l2_rect *compose;
@@ -79,6 +81,7 @@ struct ipu_isys_subdev {
 		unsigned int sink;
 		unsigned int source;
 		int flags;
+		bool immutable;
 	} *route;	/* pad level info, indexed by stream */
 	unsigned int nstreams;
 	unsigned int nsinks;
@@ -169,8 +172,9 @@ int ipu_isys_subdev_set_routing(struct v4l2_subdev *sd,
 			   struct v4l2_subdev_state *state,
 			   enum v4l2_subdev_format_whence which,
 			   struct v4l2_subdev_krouting *route);
-int ipu_isys_subdev_get_routing(struct v4l2_subdev *sd,
-				struct v4l2_subdev_routing *route);
+int ipu_isys_subdev_init_state(struct v4l2_subdev *sd,
+			       struct v4l2_subdev_state *state);
+int ipu_isys_subdev_init_finalize(struct ipu_isys_subdev *asd);
 bool ipu_isys_subdev_has_route(struct media_entity *entity,
 			       unsigned int pad0, unsigned int pad1, int *stream);
 #endif /* IPU_ISYS_SUBDEV_H */
