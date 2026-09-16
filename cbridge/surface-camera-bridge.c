@@ -42,6 +42,7 @@ typedef struct {
 	unsigned cached_consumer_mask;
 	unsigned consumer_scans;
 	bool consumer_scan_valid;
+	char systemd_cgroup[PATH_MAX];
 } LiveContext;
 
 typedef struct {
@@ -317,6 +318,76 @@ static uid_t process_uid(const char *pid_text, bool *available)
 	return (uid_t)-1;
 }
 
+static bool read_systemd_cgroup(const char *pid_text, char *cgroup,
+	size_t cgroup_size)
+{
+	char path[64];
+	char line[PATH_MAX];
+	FILE *status;
+
+	if (pid_text == NULL || cgroup == NULL || cgroup_size == 0U)
+		return false;
+	if (snprintf(path, sizeof(path), "/proc/%s/cgroup", pid_text) < 0)
+		return false;
+	status = fopen(path, "r");
+	if (status == NULL)
+		return false;
+	while (fgets(line, sizeof(line), status) != NULL) {
+		const char *controllers;
+		const char *controllers_end;
+		const char *cgroup_path;
+		const char *first_colon;
+		const char *second_colon;
+		bool is_systemd = false;
+		const char *prefix;
+
+		line[strcspn(line, "\n")] = '\0';
+		if (strncmp(line, "0::", 3U) == 0) {
+			cgroup_path = line + 3U;
+			prefix = "v2:";
+			is_systemd = true;
+		} else {
+			first_colon = strchr(line, ':');
+			if (first_colon == NULL)
+				continue;
+			second_colon = strchr(first_colon + 1, ':');
+			if (second_colon == NULL)
+				continue;
+			controllers = first_colon + 1;
+			controllers_end = second_colon;
+			while (controllers < controllers_end) {
+				const char *comma = memchr(controllers, ',',
+					(size_t)(controllers_end - controllers));
+				const char *end = comma != NULL ? comma : controllers_end;
+
+				if ((size_t)(end - controllers) == strlen("name=systemd") &&
+					strncmp(controllers, "name=systemd",
+						(size_t)(end - controllers)) == 0) {
+					is_systemd = true;
+					break;
+				}
+				if (comma == NULL)
+					break;
+				controllers = comma + 1;
+			}
+			cgroup_path = second_colon + 1;
+			prefix = "v1:";
+		}
+		if (!is_systemd || *cgroup_path == '\0')
+			continue;
+		if (snprintf(cgroup, cgroup_size, "%s%s", prefix, cgroup_path) < 0 ||
+			(size_t)snprintf(NULL, 0, "%s%s", prefix, cgroup_path) >=
+			cgroup_size) {
+			(void)fclose(status);
+			return false;
+		}
+		(void)fclose(status);
+		return true;
+	}
+	(void)fclose(status);
+	return false;
+}
+
 static bool same_device(const char *target, const CameraEndpoint *endpoint)
 {
 	struct stat status;
@@ -375,11 +446,15 @@ static unsigned scan_consumer_mask(const LiveContext *context)
 	if (proc == NULL)
 		return 0U;
 	while ((entry = readdir(proc)) != NULL) {
+		char cgroup[PATH_MAX];
 		pid_t pid;
 		bool available;
 		uid_t uid;
 
 		if (!decimal_pid(entry->d_name, &pid) || pid == own_pid)
+			continue;
+		if (read_systemd_cgroup(entry->d_name, cgroup, sizeof(cgroup)) &&
+			strcmp(cgroup, context->systemd_cgroup) == 0)
 			continue;
 		uid = process_uid(entry->d_name, &available);
 		if (!available || uid != context->uid)
@@ -587,6 +662,11 @@ static int initialize_context(LiveContext *context)
 
 	memset(context, 0, sizeof(*context));
 	context->uid = getuid();
+	if (!read_systemd_cgroup("self", context->systemd_cgroup,
+		sizeof(context->systemd_cgroup))) {
+		fprintf(stderr, "could not determine bridge systemd cgroup\n");
+		return -1;
+	}
 	for (CameraKey camera = CAMERA_FRONT; camera < CAMERA_COUNT; camera++) {
 		struct stat status;
 
