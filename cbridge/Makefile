@@ -30,7 +30,8 @@ $(CONTROLLER_PROGRAM): $(CONTROLLER_OBJECTS)
 
 sanitize: CFLAGS += -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
 sanitize: LDFLAGS += -fsanitize=address,undefined
-sanitize: clean all
+sanitize: clean all $(CONTROLLER_TEST)
+	./$(CONTROLLER_TEST)
 
 $(CONTROLLER_TEST): $(CONTROLLER_TEST_OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(CONTROLLER_TEST_OBJECTS)

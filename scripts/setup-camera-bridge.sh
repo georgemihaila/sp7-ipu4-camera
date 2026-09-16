@@ -3,6 +3,7 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+BRIDGE_BINARY=${BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 fail() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
@@ -26,6 +27,7 @@ command -v v4l2-ctl >/dev/null 2>&1 || fail 'v4l2-ctl is required to verify the 
 command -v gst-launch-1.0 >/dev/null 2>&1 || fail 'GStreamer tools are required'
 command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer plugins'
 command -v runuser >/dev/null 2>&1 || fail 'runuser is required to configure the target user session'
+[ -x "$BRIDGE_BINARY" ] || fail "C camera bridge is missing or not executable: $BRIDGE_BINARY (build it with make -C cbridge all)"
 
 for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
 	gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
@@ -90,7 +92,7 @@ for pair in \
 	v4l2-ctl --device "$dev" --all 2>/dev/null | grep -Fq "$label" || fail "expected label '$label' on $dev"
 done
 
-install -D -m 0755 "$ROOT/scripts/surface-camera-bridge.py" /usr/local/libexec/sp7-camera-bridge
+install -D -m 0755 "$BRIDGE_BINARY" /usr/local/libexec/sp7-camera-bridge
 install -d -m 0755 -o "$TARGET_UID" -g "$TARGET_GID" "$USER_UNIT_DIR"
 install -m 0644 -o "$TARGET_UID" -g "$TARGET_GID" \
 	"$ROOT/systemd/user/sp7-camera-bridge.service" \

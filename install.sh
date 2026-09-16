@@ -64,6 +64,7 @@ fi
 DRIVER_PACKAGES='ca-certificates curl dnf-plugins-core kmod util-linux'
 BUILD_PACKAGES='elfutils-libelf-devel gcc git make openssl-devel perl python3 bc dwarves flex bison'
 BRIDGE_PACKAGES='libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback v4l-utils'
+BRIDGE_BUILD_PACKAGES='gcc make pkgconf-pkg-config gstreamer1-devel glib2-devel'
 
 WORKDIR=$(mktemp -d)
 cleanup() {
@@ -81,7 +82,7 @@ printf 'Installing driver dependencies for kernel %s...\n' "$KREL"
 dnf -y install $DRIVER_PACKAGES $BUILD_PACKAGES
 if [ "$INSTALL_MODE" = full ]; then
 	printf '%s\n' 'Installing named-camera runtime dependencies...'
-	dnf -y install $BRIDGE_PACKAGES
+	dnf -y install $BRIDGE_PACKAGES $BRIDGE_BUILD_PACKAGES
 fi
 
 KDIR=${KDIR:-/lib/modules/$KREL/build}
@@ -156,6 +157,16 @@ if [ "$BUILD_UID" != 0 ]; then
 		"$ROOT/scripts/build-modules.sh" "-j$JOBS"
 else
 	KDIR="$KDIR" KREL="$KREL" "$ROOT/scripts/build-modules.sh" "-j$JOBS"
+fi
+
+if [ "$INSTALL_MODE" = full ]; then
+	printf '%s\n' 'Building the C camera bridge...'
+	if [ "$BUILD_UID" != 0 ]; then
+		runuser -u "$BUILD_USER" -- env PATH="$PATH" \
+			make -C "$ROOT/cbridge" all
+	else
+		make -C "$ROOT/cbridge" all
+	fi
 fi
 
 printf '%s\n' 'Installing verified modules and firmware...'

@@ -9,6 +9,7 @@ VERSION=${PACKAGE_VERSION:-snapshot}
 SOURCE_COMMIT=${SOURCE_COMMIT:-unknown}
 OUTPUT_DIR=${OUTPUT_DIR:-$ROOT/dist}
 MODULE_MANIFEST=${MODULE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
+C_BRIDGE_BINARY=${C_BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 
 case $VERSION in
 	''|*[!A-Za-z0-9._+-]*)
@@ -30,6 +31,10 @@ if ! command -v modinfo >/dev/null 2>&1; then
 fi
 [ -f "$MODULE_MANIFEST" ] || {
 	printf 'error: module manifest is missing: %s\n' "$MODULE_MANIFEST" >&2
+	exit 2
+}
+[ -x "$C_BRIDGE_BINARY" ] || {
+	printf 'error: C camera bridge is missing or not executable: %s\n' "$C_BRIDGE_BINARY" >&2
 	exit 2
 }
 
@@ -82,8 +87,9 @@ cp -p "$ROOT/scripts/install-modules.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/uninstall-modules.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/setup-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
-cp -p "$ROOT/scripts/surface-camera-bridge.py" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/kernel-release.sh" "$STAGE/scripts/"
+mkdir -p "$STAGE/cbridge"
+cp -p "$C_BRIDGE_BINARY" "$STAGE/cbridge/sp7-camera-bridge"
 mkdir -p "$STAGE/modules"
 cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
@@ -106,7 +112,7 @@ The archive includes the shared module inventory and kernel-release helper used
 by the build, installation, and packaging checks. It does not include a
 compiler or kernel development packages.
 
-The named camera bridge also needs Fedora's libcamera-gstreamer and
+The included C named-camera bridge also needs Fedora's libcamera-gstreamer and
 gstreamer1-plugins-good packages, plus the RPM Fusion Free
 akmod-v4l2loopback and v4l2loopback packages.
 

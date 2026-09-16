@@ -81,10 +81,17 @@ prepare_format() {
 	sleep 3
 	MAIN_PID=$(systemctl --user show "$BRIDGE_UNIT" -p MainPID --value)
 	for device in /dev/video60 /dev/video61; do
-		v4l2-ctl -d "$device" --get-fmt-video | grep -Fq "'$pixel_format'" || {
-			echo "service did not preserve $fmt on $device" >&2
-			return 1
-		}
+		if [ "$fmt" = MJPG ]; then
+			v4l2-ctl -d "$device" --get-fmt-video | grep -Eq "'(MJPG|JPEG)'" || {
+				echo "service did not preserve $fmt on $device" >&2
+				return 1
+			}
+		else
+			v4l2-ctl -d "$device" --get-fmt-video | grep -Fq "'$pixel_format'" || {
+				echo "service did not preserve $fmt on $device" >&2
+				return 1
+			}
+		fi
 	done
 }
 

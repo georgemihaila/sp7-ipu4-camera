@@ -44,7 +44,8 @@ make -C cbridge sanitize
   --seconds 10 --cycles 3
 ```
 
-Neither C binary installs or replaces the Python service. Startup and shutdown
-have 10-second and 5-second bounds respectively. An unavailable device,
+The prototype binary does not install or replace the service; the controller
+binary is the service executable installed by setup. Startup and shutdown have
+10-second and 5-second bounds respectively. An unavailable device,
 unsupported format, producer error, EOS, or failed state transition is a
 nonzero result.

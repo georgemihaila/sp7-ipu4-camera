@@ -50,7 +50,8 @@ The project has been hardware-validated with the linux-surface kernel
 `6.19.8-3.surface.fc43.x86_64` on Fedora 43; other kernel releases need a
 matching prepared build tree and may need additional kernel integration.
 
-The installer also installs the libcamera and v4l2loopback dependencies and,
+The installer also builds and installs the C camera bridge, installs the
+libcamera and v4l2loopback dependencies and,
 when run from a logged-in desktop session, enables the named **Surface Camera
 (front)** and **Surface Camera (back)** V4L2 endpoints for applications that
 enumerate camera devices directly.

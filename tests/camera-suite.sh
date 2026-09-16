@@ -80,7 +80,8 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task19-camera-controller-static.sh \
 			"$ROOT"/tests/task20-adaptive-polling-static.sh \
 			"$ROOT"/tests/task21-filler-pipeline-static.sh \
-			"$ROOT"/tests/task22-wireplumber-static.sh; do
+			"$ROOT"/tests/task22-wireplumber-static.sh \
+			"$ROOT"/tests/task23-cbridge-integration-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
