@@ -379,10 +379,15 @@ static int video_release(struct file *file)
 	mutex_lock(&av->isys->mutex);
 
 	if (!--av->isys->video_opened) {
-		ipu_fw_isys_close(av->isys);
-		if (av->isys->fwcom) {
-			av->isys->reset_needed = true;
-			ret = -EIO;
+		if (av->isys->reset_needed) {
+			dev_warn(&av->isys->adev->dev,
+				 "skipping ISYS device close after firmware lifecycle failure\n");
+		} else {
+			ret = ipu_fw_isys_close(av->isys);
+			if (ret) {
+				av->isys->reset_needed = true;
+				ret = -EIO;
+			}
 		}
 	}
 
@@ -979,6 +984,13 @@ static void put_stream_handle(struct ipu_isys_video *av)
 	av->isys->pipes[ip->stream_handle] = NULL;
 	ip->stream_handle = -1;
 	spin_unlock_irqrestore(&av->isys->lock, flags);
+}
+
+static void mark_stream_reset_needed(struct ipu_isys_video *av)
+{
+	mutex_lock(&av->isys->mutex);
+	av->isys->reset_needed = true;
+	mutex_unlock(&av->isys->mutex);
 }
 
 static int get_external_facing_format(struct ipu_isys_pipeline *ip,
@@ -1640,6 +1652,7 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 	struct v4l2_subdev *be_sd = NULL;
 	struct media_pad *source_pad = media_pad_remote_pad_first(&av->pad);
 	int rval, rvalout, tout;
+	bool close_failed = false;
 
 	rval = get_external_facing_format(ip, &source_fmt);
 	if (rval)
@@ -1783,7 +1796,7 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 		msg = ipu_get_fw_msg_buf(ip);
 		if (!msg) {
 			rval = -ENOMEM;
-			goto out_put_stream_opened;
+			goto out_stream_close;
 		}
 		buf = to_frame_msg_buf(msg);
 	}
@@ -1796,7 +1809,7 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 		rval = ipu_isys_req_prepare(&av->isys->media_dev,
 					    ireq, ip, buf);
 		if (rval)
-			goto out_put_stream_opened;
+			goto out_stream_close;
 	}
 
 	reinit_completion(&ip->stream_start_completion);
@@ -1849,12 +1862,14 @@ out_stream_close:
 					 IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE);
 	if (rvalout < 0) {
 		dev_dbg(dev, "can't close stream (%d)\n", rvalout);
+		close_failed = true;
 		goto out_put_stream_opened;
 	}
 
 	tout = wait_for_completion_timeout(&ip->stream_close_completion,
 					   IPU_LIB_CALL_TIMEOUT_JIFFIES);
 	if (!tout) {
+		close_failed = true;
 		dev_err(dev,
 			"stream close time out (source=%u handle=%d vc=%u stream_id=%u)\n",
 			ip->source, ip->stream_handle, ip->vc, ip->stream_id);
@@ -1862,12 +1877,15 @@ out_stream_close:
 			ipu_isys_csi2_error(ip->csi2);
 		ipu_isys_log_csi2_state(dev, ip, "stream close timeout state");
 	} else if (ip->error) {
+		close_failed = true;
 		dev_err(dev, "stream close error: %d\n", ip->error);
 	} else {
 		dev_dbg(dev, "stream close complete\n");
 	}
 
 out_put_stream_opened:
+	if (close_failed)
+		mark_stream_reset_needed(av);
 	put_stream_opened(av);
 
 out_put_stream_handle:
@@ -1875,7 +1893,13 @@ out_put_stream_handle:
 	return rval;
 }
 
-static void stop_streaming_firmware(struct ipu_isys_video *av)
+enum ipu_isys_stop_streaming_result {
+	IPU_ISYS_STOP_STREAMING_SUCCESS,
+	IPU_ISYS_STOP_STREAMING_FAILED,
+};
+
+static enum ipu_isys_stop_streaming_result
+stop_streaming_firmware(struct ipu_isys_video *av)
 {
 	struct ipu_isys_pipeline *ip =
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
@@ -1895,7 +1919,8 @@ static void stop_streaming_firmware(struct ipu_isys_video *av)
 
 	if (rval < 0) {
 		dev_err(dev, "can't stop stream (%d)\n", rval);
-		return;
+		mark_stream_reset_needed(av);
+		return IPU_ISYS_STOP_STREAMING_FAILED;
 	}
 
 	tout = wait_for_completion_timeout(&ip->stream_stop_completion,
@@ -1908,11 +1933,24 @@ static void stop_streaming_firmware(struct ipu_isys_video *av)
 		if (ip->csi2)
 			ipu_isys_csi2_error(ip->csi2);
 		ipu_isys_log_csi2_state(dev, ip, "stream stop timeout state");
+		mark_stream_reset_needed(av);
+		return IPU_ISYS_STOP_STREAMING_FAILED;
 	} else if (ip->error) {
 		dev_err(dev, "stream stop error: %d\n", ip->error);
+		mark_stream_reset_needed(av);
+		return IPU_ISYS_STOP_STREAMING_FAILED;
 	} else {
 		dev_dbg(dev, "stop stream: complete\n");
 	}
+
+	return IPU_ISYS_STOP_STREAMING_SUCCESS;
+}
+
+/* Release software stream ownership without issuing STREAM_CLOSE. */
+static void release_streaming_firmware(struct ipu_isys_video *av)
+{
+	put_stream_opened(av);
+	put_stream_handle(av);
 }
 
 static void close_streaming_firmware(struct ipu_isys_video *av)
@@ -1921,6 +1959,7 @@ static void close_streaming_firmware(struct ipu_isys_video *av)
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
 	struct device *dev = &av->isys->adev->dev;
 	int rval, tout;
+	bool close_failed = false;
 
 	reinit_completion(&ip->stream_close_completion);
 
@@ -1928,12 +1967,14 @@ static void close_streaming_firmware(struct ipu_isys_video *av)
 				      IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE);
 	if (rval < 0) {
 		dev_err(dev, "can't close stream (%d)\n", rval);
-		return;
+		close_failed = true;
+		goto out_release_stream;
 	}
 
 	tout = wait_for_completion_timeout(&ip->stream_close_completion,
 					   IPU_LIB_CALL_TIMEOUT_JIFFIES);
 	if (!tout) {
+		close_failed = true;
 		dev_err(dev,
 			"stream close time out (source=%u handle=%d vc=%u stream_id=%u)\n",
 			ip->source, ip->stream_handle, ip->vc, ip->stream_id);
@@ -1941,11 +1982,15 @@ static void close_streaming_firmware(struct ipu_isys_video *av)
 			ipu_isys_csi2_error(ip->csi2);
 		ipu_isys_log_csi2_state(dev, ip, "stream close timeout state");
 	} else if (ip->error) {
+		close_failed = true;
 		dev_err(dev, "stream close error: %d\n", ip->error);
 	} else {
 		dev_dbg(dev, "close stream: complete\n");
 	}
 
+out_release_stream:
+	if (close_failed)
+		mark_stream_reset_needed(av);
 	put_stream_opened(av);
 	put_stream_handle(av);
 }
@@ -2117,6 +2162,29 @@ turn_off_skew_cal:
 	return rval;
 }
 
+static void stop_external_sensor(struct device *dev,
+				 struct ipu_isys_pipeline *ip,
+				 struct v4l2_subdev *esd)
+{
+	/* Stop the sensor only when this pipeline owns the CSI stream. */
+	dev_err(dev, "s_stream %s (ext)\n", ip->external->entity->name);
+
+	if (ip->csi2) {
+		dev_dbg(dev,
+			"stream off ext: %s stream_count=%u remote_streams=%u\n",
+			ip->external->entity->name, ip->csi2->stream_count,
+			ip->csi2->remote_streams);
+		if (ip->csi2->stream_count == 1) {
+#if defined(CONFIG_VIDEO_INTEL_IPU4) || defined(CONFIG_VIDEO_INTEL_IPU4P)
+			ipu_isys_csi2_wait_last_eof(ip->csi2);
+#endif
+			v4l2_subdev_call(esd, video, s_stream, 0);
+		}
+	} else {
+		v4l2_subdev_call(esd, video, s_stream, 0);
+	}
+}
+
 int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				 unsigned int state,
 				 struct ipu_isys_buffer_list *bl)
@@ -2129,6 +2197,8 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	struct ipu_isys_pipeline *ip =
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
 	struct v4l2_subdev *sd, *esd;
+	bool external_sensor_start_attempted = false;
+	bool close_stream = true;
 	int rval = 0;
 
 	dev_dbg(dev, "set stream: %d\n", state);
@@ -2149,25 +2219,14 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	}
 
 	if (!state) {
-		stop_streaming_firmware(av);
+		if (stop_streaming_firmware(av) !=
+		    IPU_ISYS_STOP_STREAMING_SUCCESS) {
+			release_streaming_firmware(av);
+			close_stream = false;
+		}
 
 		/* stop external sub-device now. */
-		dev_err(dev, "s_stream %s (ext)\n", ip->external->entity->name);
-
-		if (ip->csi2) {
-			dev_dbg(dev,
-				"stream off ext: %s stream_count=%u remote_streams=%u\n",
-			ip->external->entity->name, ip->csi2->stream_count,
-			ip->csi2->remote_streams);
-			if (ip->csi2->stream_count == 1) {
-#if defined(CONFIG_VIDEO_INTEL_IPU4) || defined(CONFIG_VIDEO_INTEL_IPU4P)
-				ipu_isys_csi2_wait_last_eof(ip->csi2);
-#endif
-				v4l2_subdev_call(esd, video, s_stream, state);
-			}
-		} else {
-			v4l2_subdev_call(esd, video, s_stream, state);
-		}
+		stop_external_sensor(dev, ip, esd);
 	}
 
 	mutex_lock(&mdev->graph_mutex);
@@ -2239,11 +2298,13 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				"stream on ext: calling s_stream(1) for %s (remote_streams=%u stream_count=%u)\n",
 				ip->external->entity->name,
 				ip->csi2->remote_streams, ip->csi2->stream_count);
+			external_sensor_start_attempted = true;
 			rval = v4l2_subdev_call(esd, video, s_stream, state);
 		} else if (!ip->csi2) {
 			dev_dbg(dev,
 				"stream on ext: calling s_stream(1) for non-csi2 path %s\n",
 				ip->external->entity->name);
+			external_sensor_start_attempted = true;
 			rval = v4l2_subdev_call(esd, video, s_stream, state);
 		} else {
 			dev_warn(dev,
@@ -2271,7 +2332,8 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 			goto out_media_entity_stop_streaming_firmware;
 
 	} else {
-		close_streaming_firmware(av);
+		if (close_stream)
+			close_streaming_firmware(av);
 		av->ip.stream_id = 0;
 		av->ip.vc = 0;
 	}
@@ -2285,16 +2347,28 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	return 0;
 
 out_media_entity_stop_streaming_firmware:
-	stop_streaming_firmware(av);
+	if (stop_streaming_firmware(av) == IPU_ISYS_STOP_STREAMING_SUCCESS)
+		close_streaming_firmware(av);
+	else
+		release_streaming_firmware(av);
 
 out_media_entity_stop_streaming:
+	/*
+	 * Stop the external sensor before unwinding internal sub-devices.
+	 * CSI2 s_stream(0) decrements stream_count, so the ownership check
+	 * must observe the pre-unwind count.
+	 */
+	if (state && external_sensor_start_attempted) {
+		stop_external_sensor(dev, ip, esd);
+		external_sensor_start_attempted = false;
+	}
+
 	mutex_lock(&mdev->graph_mutex);
 
 	media_graph_walk_start(&ip->graph,
 				      &av->vdev.entity);
 
-	while (state && (entity2 = media_graph_walk_next(&ip->graph)) &&
-	       entity2 != entity) {
+	while (state && (entity2 = media_graph_walk_next(&ip->graph))) {
 		sd = media_entity_to_v4l2_subdev(entity2);
 
 		if (!media_entity_enum_test(&entities, entity2))

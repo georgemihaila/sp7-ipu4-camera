@@ -494,7 +494,8 @@ static int isys_register_subdevices(struct ipu_isys *isys)
 				    media_create_pad_link(&isys->csi2[i].asd.sd.
 								  entity, j,
 								  &isys->csi2_be_soc.
-								  asd.sd.entity, k, 0);
+								  asd.sd.entity, k,
+								  MEDIA_LNK_FL_DYNAMIC);
 				if (rval) {
 					dev_info(&isys->adev->dev,
 						 "can't create link csi2->be_soc\n");
@@ -522,7 +523,7 @@ static int isys_register_subdevices(struct ipu_isys *isys)
 						  TPG_PAD_SOURCE,
 						  &isys->csi2_be_soc.asd.sd.
 						  entity, k,
-						  0);
+						  MEDIA_LNK_FL_DYNAMIC);
 			if (rval) {
 				dev_info(&isys->adev->dev,
 					 "can't create link tpg->be_soc\n");

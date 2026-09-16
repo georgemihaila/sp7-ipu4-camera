@@ -203,12 +203,16 @@ bounce at all, the rest typically 1-6.
 
 ## libcamera / PipeWire integration
 
-The repository does not contain a libcamera source tree, pipeline handler, or
-IPA. `libcamera/` holds only a downstream patch and a rebuild helper for an
-external Fedora libcamera 0.5.2 source package; it is not a completed
-integration. `wireplumber/50-sp7-ipu4.conf` is likewise only session policy
-for hiding raw V4L2 nodes. See `docs/task8-camera-contract.md` for the exact
-kernel capability contract and the external integration checklist.
+Fedora libcamera 0.7.1 already supports this IPU4P through its `intel-ipu6`
+Simple-pipeline entry with SoftISP; no local pipeline patch is needed. The
+version-aware helper under `libcamera/` validates and can rebuild the unmodified
+Fedora source package. Hardware testing through `cam` enumerated both sensors
+and captured processed frames from front and rear. The rear image is near-black
+at its low initial exposure/gain, with automatic exposure ramping slowly in
+the uncalibrated Simple IPA fallback. GNOME Snapshot's GUI/PipeWire/portal
+startup path remains a separate validation item. `wireplumber/50-sp7-ipu4.conf`
+is session policy for hiding raw V4L2 nodes. See `docs/task8-camera-contract.md`
+for the exact kernel capability contract and external integration checklist.
 
 The driver is expected to appear before normal camera enumeration through its
 PCI modalias. No repository systemd loader or user-session refresh unit is

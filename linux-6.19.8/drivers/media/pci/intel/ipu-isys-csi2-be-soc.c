@@ -97,6 +97,37 @@ static const struct v4l2_subdev_video_ops csi2_be_soc_sd_video_ops = {
 	.s_stream = set_stream,
 };
 
+/*
+ * Each BE SOC sink pad is a hardware input mux.  The media core documents
+ * that only one link targeting a sink pad may be enabled, but leaves the
+ * enforcement to the entity's link_setup callback.
+ */
+static int csi2_be_soc_link_setup(struct media_entity *entity,
+				  const struct media_pad *local,
+				  const struct media_pad *remote, u32 flags)
+{
+	struct media_link *link;
+
+	if (!(local->flags & MEDIA_PAD_FL_SINK) ||
+	    !(flags & MEDIA_LNK_FL_ENABLED))
+		return 0;
+
+	for_each_media_entity_data_link(entity, link) {
+		if (link->sink != local ||
+		    !(link->flags & MEDIA_LNK_FL_ENABLED) ||
+		    link->source == remote)
+			continue;
+
+		dev_dbg(entity->graph_obj.mdev->dev,
+			"rejecting conflicting BE SOC input %s:%u -> %s:%u\n",
+			remote->entity->name, remote->index,
+			local->entity->name, local->index);
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
 static int
 __subdev_link_validate(struct v4l2_subdev *sd, struct media_link *link,
 		       struct v4l2_subdev_format *source_fmt,
@@ -179,6 +210,7 @@ static struct v4l2_subdev_ops csi2_be_soc_sd_ops = {
 };
 
 static struct media_entity_operations csi2_be_soc_entity_ops = {
+	.link_setup = csi2_be_soc_link_setup,
 	.link_validate = v4l2_subdev_link_validate,
 };
 
@@ -361,7 +393,7 @@ int ipu_isys_csi2_be_soc_init(struct ipu_isys_csi2_be_soc *csi2_be_soc,
 					   &csi2_be_soc->asd.sd.entity,
 					   CSI2_BE_SOC_PAD_SOURCE(i),
 					   MEDIA_PAD_FL_SINK,
-					   0);
+					   MEDIA_LNK_FL_DYNAMIC);
 		if (rval) {
 			dev_info(&isys->adev->dev, "can't init video node\n");
 			goto fail;

@@ -24,6 +24,11 @@ $(find "$ROOT/linux-6.19.8/drivers/media/pci/intel" -type f -name '*.ko' -print)
 EOF
 [ "$found" -eq 1 ] || { printf '%s\n' 'error: no built .ko files found; run scripts/build-modules.sh first' >&2; exit 2; }
 
-install -D -m 0644 "$FIRMWARE" /lib/firmware/ipu4p_cpd.bin
+FIRMWARE_TARGET=/lib/firmware/ipu4p_cpd.bin
+if [ "$FIRMWARE" -ef "$FIRMWARE_TARGET" ]; then
+	printf 'firmware already installed at %s\n' "$FIRMWARE_TARGET"
+else
+	install -D -m 0644 "$FIRMWARE" "$FIRMWARE_TARGET"
+fi
 depmod -a "$KREL"
-printf 'installed modules in %s and firmware in /lib/firmware/ipu4p_cpd.bin\n' "$MODDIR"
+printf 'installed modules in %s and firmware in %s\n' "$MODDIR" "$FIRMWARE_TARGET"

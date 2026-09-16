@@ -14,6 +14,10 @@ else
     SENSOR_RE='ov8865'; RES=3264x2448
 fi
 FMT=SBGGR10_1X10
+# media-ctl 1.32 passes the requested link flags to MEDIA_IOC_SETUP_LINK
+# verbatim.  These links are registered with MEDIA_LNK_FL_DYNAMIC (0x4), so
+# retain that bit while enabling them (0x4 | MEDIA_LNK_FL_ENABLED = 5).
+DYNAMIC_ENABLED=5
 HERE=$(dirname "$(readlink -f "$0")")
 OUTPUT_DIR=${OUTPUT_DIR:-"$HERE/captures"}
 CAPTURE_TIMEOUT=${CAPTURE_TIMEOUT:-30}
@@ -46,8 +50,8 @@ media-ctl -d "$MEDIA_DEVICE" -V "\"$SENSOR\":0 [fmt:$FMT/$RES]"
 media-ctl -d "$MEDIA_DEVICE" -V "\"Intel IPU4 CSI-2 $PORT\":0 [fmt:$FMT/$RES]"
 media-ctl -d "$MEDIA_DEVICE" -V "\"Intel IPU4 CSI-2 $PORT\":1 [fmt:$FMT/$RES]"
 media-ctl -d "$MEDIA_DEVICE" -l "\"$SENSOR\":0 -> \"Intel IPU4 CSI-2 $PORT\":0 [1]"
-media-ctl -d "$MEDIA_DEVICE" -l "\"Intel IPU4 CSI-2 $PORT\":1 -> \"Intel IPU4 CSI2 BE SOC\":0 [1]"
-media-ctl -d "$MEDIA_DEVICE" -l "\"Intel IPU4 CSI2 BE SOC\":8 -> \"Intel IPU4 BE SOC capture 0\":0 [1]"
+media-ctl -d "$MEDIA_DEVICE" -l "\"Intel IPU4 CSI-2 $PORT\":1 -> \"Intel IPU4 CSI2 BE SOC\":0 [${DYNAMIC_ENABLED}]"
+media-ctl -d "$MEDIA_DEVICE" -l "\"Intel IPU4 CSI2 BE SOC\":8 -> \"Intel IPU4 BE SOC capture 0\":0 [${DYNAMIC_ENABLED}]"
 media-ctl -d "$MEDIA_DEVICE" -V "\"Intel IPU4 CSI2 BE SOC\":0 [fmt:$FMT/$RES]"
 media-ctl -d "$MEDIA_DEVICE" -V "\"Intel IPU4 CSI2 BE SOC\":8 [fmt:$FMT/$RES]"
 

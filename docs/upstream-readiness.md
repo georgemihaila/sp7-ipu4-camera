@@ -11,7 +11,7 @@ upstream camera stack. Use this status when reviewing or submitting changes.
 | SP7 DMI timing behavior | Hardware-validated on that SP7; static checks elsewhere | The quirk is restricted by DMI, IPU4P PCI ID, source/lane identity, CPD date `0x20191030`, and CSS release `0x20181222`; generic mismatches fail closed. |
 | CSI-2 error/queue/PM paths | Compile/static validation plus targeted hardware runs where recorded | `tests/task9-csi2-static.sh`, `tests/task10-production-static.sh`, and the reports under `reports/`. |
 | Build metadata and module discovery | Static/mechanical validation; compile depends on external KDIR | `scripts/build-modules.sh` and `docs/external-kernel-integration.md`. |
-| libcamera, IPA, PipeWire, portal | Not complete in this repository | `libcamera/` contains only a downstream patch/helper; no pipeline handler or IPA source is present. |
+| libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
 

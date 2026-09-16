@@ -6,6 +6,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 DRIVERS="$ROOT/linux-6.19.8/drivers/media"
 IPU="$DRIVERS/pci/intel"
 SENSOR="$DRIVERS/i2c/ov5693.c"
+CAPTURE="$ROOT/test-capture.sh"
 
 has() {
 	pattern=$1; shift
@@ -20,6 +21,7 @@ test -s "$IPU/ipu-isys.c"
 test -s "$IPU/ipu-isys-csi2.c"
 test -s "$IPU/ipu-isys-video.c"
 test -s "$IPU/ipu4/ipu4p-isys-csi2.c"
+test -x "$CAPTURE"
 
 # Normal discovery: PCI alias, firmware request, and module soft dependencies.
 if ! grep -q '8a19' "$IPU/ipu.h"; then exit 1; fi
@@ -40,6 +42,18 @@ grep -q 'enum_frame_interval' "$SENSOR"
 grep -q 'IPU_ISYS_CSI2_FATAL_ERRORS' "$IPU/ipu-isys-csi2.h"
 grep -q 'ipu_isys_csi2_reset_errors' "$IPU/ipu-isys-csi2.c"
 grep -q 'dev_warn_ratelimited' "$IPU/ipu-isys-queue.c"
+
+# The BE SOC mux and capture edges are dynamic by contract; the entity-local
+# callback still rejects two enabled inputs targeting the same mux sink.
+grep -q 'MEDIA_LNK_FL_DYNAMIC' "$IPU/ipu-isys.c"
+grep -q 'MEDIA_LNK_FL_DYNAMIC' "$IPU/ipu-isys-csi2-be-soc.c"
+grep -q 'csi2_be_soc_link_setup' "$IPU/ipu-isys-csi2-be-soc.c"
+
+# media-ctl 1.32 must retain MEDIA_LNK_FL_DYNAMIC when enabling the dynamic
+# CSI2-BE-SOC edges, and the canonical helper must select their linked node.
+grep -q 'DYNAMIC_ENABLED=5' "$CAPTURE"
+grep -Fq '[${DYNAMIC_ENABLED}]' "$CAPTURE"
+grep -q 'Intel IPU4 BE SOC capture 0' "$CAPTURE"
 for forbidden in csi2_fw_src csi2_csettle csi2_dsettle phy_bb_extra phy_afe_extra \
 	phy_jsl_bits windows_bscan_late windows_source7_mipi_timing; do
 	! has "$forbidden" "$IPU"/*.c "$IPU"/*/*.c "$SENSOR"
