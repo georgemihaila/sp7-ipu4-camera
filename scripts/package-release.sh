@@ -99,8 +99,9 @@ This archive contains prebuilt modules for this exact kernel release. It does
 not contain firmware. Obtain the Microsoft-signed ipu4p_cpd.bin from an
 authorized source before installing.
 
-The named camera bridge also needs Fedora's libcamera-gstreamer package and
-the RPM Fusion Free akmod-v4l2loopback and v4l2loopback packages.
+The named camera bridge also needs Fedora's libcamera-gstreamer and
+gstreamer1-plugins-good packages, plus the RPM Fusion Free
+akmod-v4l2loopback and v4l2loopback packages.
 
 1. Extract this archive.
 2. Install the modules and your firmware file:

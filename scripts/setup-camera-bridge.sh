@@ -19,7 +19,7 @@ TARGET_HOME=$(getent passwd "$TARGET_USER" | cut -d: -f6)
 RUNTIME_DIR=/run/user/$TARGET_UID
 [ -S "$RUNTIME_DIR/bus" ] || fail "no active user session bus at $RUNTIME_DIR/bus; log in as $TARGET_USER and rerun setup"
 
-for package in libcamera-gstreamer akmod-v4l2loopback v4l2loopback; do
+for package in libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback; do
 	rpm -q "$package" >/dev/null 2>&1 || fail "missing package $package; install it with DNF first (akmod-v4l2loopback is from RPM Fusion Free)"
 done
 command -v v4l2-ctl >/dev/null 2>&1 || fail 'v4l2-ctl is required to verify the virtual camera devices'

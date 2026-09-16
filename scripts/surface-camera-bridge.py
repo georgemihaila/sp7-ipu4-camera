@@ -111,6 +111,7 @@ def device_format(camera_key: str) -> str:
 def output_caps(format_name: str) -> list[str]:
     if format_name in ("MJPG", "JPEG"):
         return [
+            "!", f"video/x-raw,format=I420,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
             "!", "jpegenc", "quality=85", "!", "jpegparse", "!",
             f"image/jpeg,parsed=true,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
         ]
@@ -122,13 +123,20 @@ def output_caps(format_name: str) -> list[str]:
 
 def pipeline_for(camera_key: str) -> list[str]:
     camera = CAMERAS[camera_key]
+    format_name = device_format(camera_key)
+    if format_name in ("MJPG", "JPEG"):
+        # v4l2sink tries to renegotiate S_FMT after the consumer has started
+        # streaming. v4l2loopback rejects that for compressed formats, which
+        # leaves libcamerasrc blocked. filesink writes each complete JPEG
+        # buffer to the already configured loopback without another ioctl.
+        sink = ["filesink", f"location={camera['device']}"]
+    else:
+        sink = ["v4l2sink", f"device={camera['device']}", "sync=false"]
     return [
         "/usr/bin/gst-launch-1.0", "-e", "libcamerasrc",
         f"camera-name={camera['camera_id']}", "ae-enable=true", "!",
-        f"video/x-raw,width={VIDEO_WIDTH},height={VIDEO_HEIGHT},framerate={VIDEO_FRAMERATE}",
-        "!", "videoflip", "method=rotate-180", "!", "videoconvert",
-        *output_caps(device_format(camera_key)), "!", "v4l2sink",
-        f"device={camera['device']}", "sync=false",
+        "videoflip", "method=rotate-180", "!", "videoconvert", "!", "videoscale",
+        *output_caps(format_name), "!", *sink,
     ]
 
 

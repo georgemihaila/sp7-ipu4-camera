@@ -26,7 +26,7 @@ installation, install the GStreamer libcamera source and RPM Fusion loopback
 module, then build the module for the running kernel:
 
 ```sh
-sudo dnf install libcamera-gstreamer akmod-v4l2loopback v4l2loopback
+sudo dnf install libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback
 sudo akmods --force --kernels "$(uname -r)"
 ```
 

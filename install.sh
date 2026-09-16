@@ -47,7 +47,8 @@ printf 'Installing build tools for kernel %s...\n' "$KREL"
 dnf -y install \
 	ca-certificates curl dnf-plugins-core elfutils-libelf-devel gcc git make \
 	msitools openssl-devel perl python3 bc dwarves flex bison kmod util-linux \
-	libcamera-gstreamer akmod-v4l2loopback v4l2loopback v4l-utils
+	libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback \
+	v4l2loopback v4l-utils
 
 KDIR=${KDIR:-/lib/modules/$KREL/build}
 kernel_tree_release() {
