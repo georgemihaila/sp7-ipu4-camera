@@ -1,0 +1,14 @@
+[Unit]
+Description=Surface Pro 7 named camera bridge
+After=pipewire.service wireplumber.service
+ConditionPathExists=/dev/video60
+ConditionPathExists=/dev/video61
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/sp7-camera-bridge
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

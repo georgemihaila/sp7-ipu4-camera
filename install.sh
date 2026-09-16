@@ -46,7 +46,8 @@ trap 'exit 143' TERM
 printf 'Installing build tools for kernel %s...\n' "$KREL"
 dnf -y install \
 	ca-certificates curl dnf-plugins-core elfutils-libelf-devel gcc git make \
-	msitools openssl-devel perl python3 bc dwarves flex bison kmod util-linux
+	msitools openssl-devel perl python3 bc dwarves flex bison kmod util-linux \
+	libcamera-gstreamer akmod-v4l2loopback v4l2loopback v4l-utils
 
 KDIR=${KDIR:-/lib/modules/$KREL/build}
 kernel_tree_release() {
@@ -131,9 +132,18 @@ fi
 printf '%s\n' 'Installing verified modules and firmware...'
 FIRMWARE="$FIRMWARE_PATH" KREL="$KREL" "$ROOT/scripts/install-modules.sh"
 
+printf '%s\n' 'Installing named Surface Camera endpoints...'
+if [ -n "${SUDO_USER:-}" ] && TARGET_UID=$(id -u "$SUDO_USER" 2>/dev/null) && \
+	[ -S "/run/user/$TARGET_UID/bus" ]; then
+	"$ROOT/scripts/setup-camera-bridge.sh"
+else
+	printf '%s\n' 'No active desktop user session was found; run sudo ./scripts/setup-camera-bridge.sh after logging in.'
+fi
+
 cat <<EOF
 
-Installation complete for kernel $KREL.
+Installation complete for kernel $KREL. Surface Camera (front) and Surface Camera (back)
+will be available to V4L2 applications after the desktop user service starts.
 Reboot to load the modules. Secure Boot may require signing them with a key
 trusted by this system before they can load.
 EOF

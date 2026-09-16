@@ -80,6 +80,13 @@ EOF
 mkdir -p "$STAGE/scripts"
 cp -p "$ROOT/scripts/install-modules.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/uninstall-modules.sh" "$STAGE/scripts/"
+cp -p "$ROOT/scripts/setup-camera-bridge.sh" "$STAGE/scripts/"
+cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
+cp -p "$ROOT/scripts/surface-camera-bridge.py" "$STAGE/scripts/"
+mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
+cp -p "$ROOT/modprobe.d/98-v4l2loopback.conf" "$STAGE/modprobe.d/"
+cp -p "$ROOT/wireplumber/50-sp7-ipu4.conf" "$STAGE/wireplumber/"
+cp -p "$ROOT/systemd/user/sp7-camera-bridge.service" "$STAGE/systemd/user/"
 
 cat > "$STAGE/INSTALL.txt" <<EOF
 Surface Pro 7 IPU4P camera modules
@@ -92,12 +99,20 @@ This archive contains prebuilt modules for this exact kernel release. It does
 not contain firmware. Obtain the Microsoft-signed ipu4p_cpd.bin from an
 authorized source before installing.
 
+The named camera bridge also needs Fedora's libcamera-gstreamer package and
+the RPM Fusion Free akmod-v4l2loopback and v4l2loopback packages.
+
 1. Extract this archive.
 2. Install the modules and your firmware file:
 
    FIRMWARE=/absolute/path/to/ipu4p_cpd.bin sudo -E ./scripts/install-modules.sh
 
-3. Reboot so the kernel loads the installed modules at boot.
+3. Install the named Surface Camera (front) and Surface Camera (back)
+   endpoints while logged into the desktop session:
+
+   sudo ./scripts/setup-camera-bridge.sh
+
+4. Reboot so the kernel loads the installed modules at boot.
 
 To remove the installed modules later, run:
 

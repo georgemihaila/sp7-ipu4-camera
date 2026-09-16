@@ -50,6 +50,11 @@ The project has been hardware-validated with the linux-surface kernel
 `6.19.8-3.surface.fc43.x86_64` on Fedora 43; other kernel releases need a
 matching prepared build tree and may need additional kernel integration.
 
+The installer also installs the libcamera and v4l2loopback dependencies and,
+when run from a logged-in desktop session, enables the named **Surface Camera
+(front)** and **Surface Camera (back)** V4L2 endpoints for applications that
+enumerate camera devices directly.
+
 The required camera firmware is not bundled with this repository. If
 `/lib/firmware/ipu4p_cpd.bin` is absent, the script downloads Microsoft's
 [official Surface Pro 7 driver package](https://www.microsoft.com/en-us/download/details.aspx?id=100419)
@@ -185,6 +190,12 @@ Live checks require the camera tools, firmware, permissions, and a usable
 media graph. They do not install, load, unload, or reload modules. A quick
 manual capture is also available with `sudo ./test-capture.sh front` or
 `sudo ./test-capture.sh rear`.
+
+## Named Surface Cameras
+
+For Zoom and other V4L2 applications, see
+[`docs/surface-cameras.md`](docs/surface-cameras.md) for the named front and
+rear camera bridge. The driver install flow enables it automatically.
 
 ## Credits and licensing
 

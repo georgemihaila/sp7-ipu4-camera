@@ -61,8 +61,10 @@ done
 
 # Production entry points must not contain the removed bring-up service/knob path.
 if [ -d "$ROOT/systemd" ] && [ -n "$(find "$ROOT/systemd" -type f -print 2>/dev/null)" ]; then
-	echo 'task11-static: removed systemd bring-up files remain' >&2
-	exit 1
+	if [ -n "$(find "$ROOT/systemd" -type f ! -path "$ROOT/systemd/user/sp7-camera-bridge.service" -print 2>/dev/null)" ]; then
+		echo 'task11-static: removed systemd bring-up files remain' >&2
+		exit 1
+	fi
 fi
 if grep -R -q 'enable-link.py\|/dev/media0\|fuser -k\|systemctl.*restart' \
 	"$ROOT/tests/task8-camera-static.sh" "$ROOT/tests/task9-csi2-static.sh" \
