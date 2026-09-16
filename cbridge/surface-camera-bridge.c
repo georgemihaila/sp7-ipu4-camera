@@ -408,8 +408,8 @@ static int initialize_context(LiveContext *context)
 		CAMERA_REAR_DEVICE,
 	};
 	const char *camera_ids[CAMERA_COUNT] = {
-		"\\\\_SB_.PCI0.I2C2.CAMF",
-		"\\\\_SB_.PCI0.I2C3.CAMR",
+		"\\_SB_.PCI0.I2C2.CAMF",
+		"\\_SB_.PCI0.I2C3.CAMR",
 	};
 
 	memset(context, 0, sizeof(*context));
