@@ -11,12 +11,10 @@ MODE=static
 PM_SAFE=0
 TIMEOUT=${CAMERA_TEST_TIMEOUT:-20}
 REPEATS=${CAMERA_TEST_REPEATS:-2}
-LOGDIR=$(mktemp -d "${TMPDIR:-/tmp}/sp7-camera-suite.XXXXXX")
-trap 'rm -rf "$LOGDIR"' EXIT HUP INT TERM
-
 say() { printf '%s\n' "$*"; }
 pass() { say "PASS [$1] $2"; }
 skip() { say "SKIP [$1] $2"; }
+FAILED=0
 fail() { say "FAIL [$1] $2 (diagnostics: $LOGDIR)"; FAILED=$((FAILED + 1)); }
 run() {
 	stage=$1; shift
@@ -29,7 +27,6 @@ run() {
 	return 1
 }
 
-FAILED=0
 while [ "$#" -gt 0 ]; do
 	case $1 in
 		--static) MODE=static ;;
@@ -42,12 +39,58 @@ while [ "$#" -gt 0 ]; do
 	shift
 done
 
+case $REPEATS in
+	''|*[!0-9]*) say "invalid CAMERA_TEST_REPEATS: $REPEATS (expected a positive integer)" >&2; exit 2 ;;
+esac
+while [ "${REPEATS#0}" != "$REPEATS" ]; do REPEATS=${REPEATS#0}; done
+if [ -z "$REPEATS" ] || ! [ "$REPEATS" -gt 0 ] 2>/dev/null; then
+	say "invalid CAMERA_TEST_REPEATS: ${CAMERA_TEST_REPEATS:-2} (expected a positive integer)" >&2
+	exit 2
+fi
+
+LOGDIR=$(mktemp -d "${TMPDIR:-/tmp}/sp7-camera-suite.XXXXXX")
+cleanup() {
+	status=$?
+	trap - EXIT HUP INT TERM
+	if [ "$FAILED" -gt 0 ]; then
+		say "diagnostics retained: $LOGDIR"
+	else
+		rm -rf "$LOGDIR"
+	fi
+	exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+capture_is_valid() {
+	cam=$1
+	raw=$2
+	case $cam in
+		front) width=2592; height=1944 ;;
+		rear) width=3264; height=2448 ;;
+		*) return 1 ;;
+	esac
+	[ -s "$raw" ] || return 1
+	bytes=$(wc -c < "$raw" | tr -d '[:space:]')
+	case $bytes in ''|*[!0-9]*) return 1 ;; esac
+	minimum=$((width * height * 2 * 3))
+	[ "$bytes" -ge "$minimum" ] || return 1
+	# BG10 is unpacked 16-bit Bayer data. Count nonzero bytes across the full
+	# three-frame output so a nonzero header or first page cannot mask bad data.
+	nonzero=$(LC_ALL=C tr -d '\000' < "$raw" | wc -c | tr -d '[:space:]')
+	case $nonzero in ''|*[!0-9]*) return 1 ;; esac
+	[ "$nonzero" -gt 0 ]
+}
+
 if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 	for test in "$ROOT"/tests/task8-camera-static.sh \
 		"$ROOT"/tests/task9-csi2-static.sh \
 		"$ROOT"/tests/task10-production-static.sh \
 		"$ROOT"/tests/task11-static.sh \
-		"$ROOT"/tests/task12-libcamera-static.sh; do
+		"$ROOT"/tests/task12-libcamera-static.sh \
+		"$ROOT"/tests/task13-hardening-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
@@ -104,16 +147,39 @@ if [ "$MODE" = live ] || [ "$MODE" = all ]; then
 			done
 
 			if [ "${EUID:-$(id -u)}" -ne 0 ]; then skip stream "root privileges may be required for graph setup/capture"; else
+				RECOVERY_CAPTURE_OK=0
 				for sensor in ov5693 ov8865; do
 					grep -q "$sensor" "$GRAPH" || continue
 					cam=$([ "$sensor" = ov5693 ] && echo front || echo rear)
+					SENSOR_CAPTURE_OK=1
 					for n in $(seq 1 "$REPEATS"); do
+						rm -f "$LOGDIR/$cam.raw"
 						if run "stream-$cam-$n" env OUTPUT_DIR="$LOGDIR" CAPTURE_TIMEOUT="$TIMEOUT" "$ROOT/test-capture.sh" "$cam"; then
-							raw="$LOGDIR/$cam.raw"; if [ -s "$raw" ] && dd if="$raw" bs=4096 count=1 2>/dev/null | od -An -tu1 | grep -q '[1-9]'; then pass "frame-$cam-$n" "nonzero capture"; else fail frame "$cam capture is empty or all zero"; fi
-						else :; fi
+							raw="$LOGDIR/$cam.raw"
+							if capture_is_valid "$cam" "$raw"; then
+								pass "frame-$cam-$n" "three-frame capture has sufficient size and nonzero image data"
+							else
+								fail "frame-$cam-$n" "$cam capture is short, empty, or all zero"
+								SENSOR_CAPTURE_OK=0
+							fi
+						else SENSOR_CAPTURE_OK=0; fi
 					done
-					done
-				pass recovery "re-open/re-capture path completed after bounded stream cycles"
+					[ "$SENSOR_CAPTURE_OK" -eq 1 ] || continue
+					rm -f "$LOGDIR/$cam.raw"
+					if run "recovery-capture-$cam" env OUTPUT_DIR="$LOGDIR" CAPTURE_TIMEOUT="$TIMEOUT" "$ROOT/test-capture.sh" "$cam"; then
+						if capture_is_valid "$cam" "$LOGDIR/$cam.raw"; then
+							pass "recovery-$cam" "re-capture completed after the bounded stream cycles"
+							RECOVERY_CAPTURE_OK=1
+						else
+							fail "recovery-$cam" "$cam recovery capture is short, empty, or all zero"
+						fi
+					fi
+				done
+				if [ "$RECOVERY_CAPTURE_OK" -eq 1 ]; then
+					pass recovery "at least one verified capture completed after the bounded stream cycles"
+				else
+					skip recovery "no verified capture completed after the bounded stream cycles"
+				fi
 			fi
 			if [ "$PM_SAFE" -eq 1 ]; then
 				found=0; for p in /sys/bus/intel-ipu4-bus/devices/*/power/control; do [ -r "$p" ] || continue; found=1; say "PASS [runtime-pm] $(dirname "$p")=$(cat "$p")"; done
