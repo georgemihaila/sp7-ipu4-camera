@@ -744,7 +744,7 @@ static int isys_runtime_pm_resume(struct device *dev)
 		return 0;
 	}
 
-	dev_info(dev, "trace isys runtime resume: begin\n");
+	dev_dbg(dev, "trace isys runtime resume: begin\n");
 
 	ipu_trace_restore(dev);
 
@@ -764,7 +764,7 @@ static int isys_runtime_pm_resume(struct device *dev)
 		mutex_unlock(&isys->short_packet_tracing_mutex);
 	}
 	isys_setup_hw(isys);
-	dev_info(dev, "trace isys runtime resume: complete\n");
+	dev_dbg(dev, "trace isys runtime resume: complete\n");
 
 	return 0;
 }
@@ -780,7 +780,7 @@ static int isys_runtime_pm_suspend(struct device *dev)
 		return 0;
 	}
 
-	dev_info(dev, "trace isys runtime suspend: begin\n");
+	dev_dbg(dev, "trace isys runtime suspend: begin\n");
 
 	spin_lock_irqsave(&isys->power_lock, flags);
 	isys->power = 0;
@@ -789,7 +789,7 @@ static int isys_runtime_pm_suspend(struct device *dev)
 	ipu_trace_stop(dev);
 
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
-	dev_info(dev, "trace isys runtime suspend: complete\n");
+	dev_dbg(dev, "trace isys runtime suspend: complete\n");
 
 	return 0;
 }
