@@ -127,6 +127,7 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 {
 	GstElement *pipeline;
 	GstElement *source;
+	GstElement *source_caps_filter;
 	GstElement *convert;
 	GstElement *scale;
 	GstElement *caps_filter;
@@ -144,18 +145,26 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		config->kind == MEDIA_PIPELINE_CAMERA ? "libcamerasrc" : "videotestsrc",
 		config->kind == MEDIA_PIPELINE_CAMERA ? "camera-source" : "filler-source",
 		error, error_size);
+	source_caps_filter = NULL;
 	convert = NULL;
 	scale = NULL;
 	if (source == NULL)
 		goto fail;
 	if (config->kind == MEDIA_PIPELINE_CAMERA) {
+		source_caps_filter = make_element(pipeline, "capsfilter", "camera-caps",
+			error, error_size);
 		convert = make_element(pipeline, "videoconvert", "convert", error,
 			error_size);
 		scale = make_element(pipeline, "videoscale", "scale", error, error_size);
-		if (convert == NULL || scale == NULL)
+		if (source_caps_filter == NULL || convert == NULL || scale == NULL)
 			goto fail;
 		g_object_set(source, "camera-name", config->camera_id, "ae-enable", TRUE,
 			NULL);
+		caps = video_caps("video/x-raw", NULL, error, error_size);
+		if (caps == NULL)
+			goto fail;
+		g_object_set(source_caps_filter, "caps", caps, NULL);
+		gst_caps_unref(caps);
 	} else {
 		g_object_set(source, "is-live", TRUE, "pattern", 2, NULL);
 	}
@@ -190,8 +199,8 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 			g_object_set(sink, "device", config->device, "sync", FALSE, NULL);
 		gst_caps_unref(caps);
 		if ((config->kind == MEDIA_PIPELINE_CAMERA &&
-			!gst_element_link_many(source, convert, scale, caps_filter, jpegenc,
-				jpegparse, sink, NULL)) ||
+			!gst_element_link_many(source, source_caps_filter, convert, scale,
+				caps_filter, jpegenc, jpegparse, sink, NULL)) ||
 			(config->kind == MEDIA_PIPELINE_FILLER &&
 			!gst_element_link_many(source, caps_filter, jpegenc, jpegparse, sink,
 				NULL))) {
@@ -212,8 +221,8 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		gst_caps_unref(caps);
 		g_object_set(sink, "device", config->device, "sync", FALSE, NULL);
 		if ((config->kind == MEDIA_PIPELINE_CAMERA &&
-			!gst_element_link_many(source, convert, scale, caps_filter, sink,
-				NULL)) ||
+			!gst_element_link_many(source, source_caps_filter, convert, scale,
+				caps_filter, sink, NULL)) ||
 			(config->kind == MEDIA_PIPELINE_FILLER &&
 			!gst_element_link_many(source, caps_filter, sink, NULL))) {
 			set_error(error, error_size, "could not link YUYV GStreamer pipeline");
