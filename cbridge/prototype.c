@@ -20,9 +20,9 @@ static void request_stop(int signal_number)
 static const char *camera_id_for(const char *camera)
 {
 	if (strcmp(camera, "front") == 0)
-		return "\\_SB_.PCI0.I2C2.CAMF";
+		return "\\\\_SB_.PCI0.I2C2.CAMF";
 	if (strcmp(camera, "rear") == 0)
-		return "\\_SB_.PCI0.I2C3.CAMR";
+		return "\\\\_SB_.PCI0.I2C3.CAMR";
 	return NULL;
 }
 
@@ -79,6 +79,7 @@ int main(int argc, char **argv)
 			.camera_id = camera_id_for(camera),
 			.device = device,
 			.format = format,
+			.kind = MEDIA_PIPELINE_CAMERA,
 		};
 		MediaBackend *backend = media_backend_new();
 		gint64 deadline;

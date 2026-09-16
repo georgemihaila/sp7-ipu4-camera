@@ -8,10 +8,16 @@ typedef enum {
 	MEDIA_FORMAT_MJPEG,
 } MediaFormat;
 
+typedef enum {
+	MEDIA_PIPELINE_CAMERA,
+	MEDIA_PIPELINE_FILLER,
+} MediaPipelineKind;
+
 typedef struct {
 	const char *camera_id;
 	const char *device;
 	MediaFormat format;
+	MediaPipelineKind kind;
 } MediaBackendConfig;
 
 typedef struct MediaBackend MediaBackend;

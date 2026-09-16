@@ -140,15 +140,21 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 		set_error(error, error_size, "could not allocate GStreamer pipeline");
 		return NULL;
 	}
-	source = make_element(pipeline, "libcamerasrc", "camera-source", error,
-		error_size);
+	source = make_element(pipeline,
+		config->kind == MEDIA_PIPELINE_CAMERA ? "libcamerasrc" : "videotestsrc",
+		config->kind == MEDIA_PIPELINE_CAMERA ? "camera-source" : "filler-source",
+		error, error_size);
 	convert = make_element(pipeline, "videoconvert", "convert", error,
 		error_size);
 	scale = make_element(pipeline, "videoscale", "scale", error, error_size);
 	if (source == NULL || convert == NULL || scale == NULL)
 		goto fail;
-	g_object_set(source, "camera-name", config->camera_id, "ae-enable", TRUE,
-		NULL);
+	if (config->kind == MEDIA_PIPELINE_CAMERA) {
+		g_object_set(source, "camera-name", config->camera_id, "ae-enable", TRUE,
+			NULL);
+	} else {
+		g_object_set(source, "is-live", TRUE, "pattern", 2, NULL);
+	}
 
 	if (config->format == MEDIA_FORMAT_MJPEG) {
 		caps_filter = make_element(pipeline, "capsfilter", "raw-caps", error,
@@ -157,8 +163,9 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 			error_size);
 		jpegparse = make_element(pipeline, "jpegparse", "jpeg-parser", error,
 			error_size);
-		sink = make_element(pipeline, "filesink", "loopback-sink", error,
-			error_size);
+		sink = make_element(pipeline,
+			config->kind == MEDIA_PIPELINE_CAMERA ? "filesink" : "v4l2sink",
+			"loopback-sink", error, error_size);
 		if (caps_filter == NULL || jpegenc == NULL || jpegparse == NULL ||
 			sink == NULL)
 			goto fail;
@@ -173,7 +180,10 @@ static GstElement *build_pipeline(const MediaBackendConfig *config,
 			goto fail;
 		gst_caps_set_simple(caps, "parsed", G_TYPE_BOOLEAN, TRUE, NULL);
 		/* The compressed sink path deliberately avoids v4l2sink renegotiation. */
-		g_object_set(sink, "location", config->device, NULL);
+		if (config->kind == MEDIA_PIPELINE_CAMERA)
+			g_object_set(sink, "location", config->device, NULL);
+		else
+			g_object_set(sink, "device", config->device, "sync", FALSE, NULL);
 		gst_caps_unref(caps);
 		if (!gst_element_link_many(source, convert, scale, caps_filter,
 			jpegenc, jpegparse, sink, NULL)) {

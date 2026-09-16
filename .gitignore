@@ -35,3 +35,5 @@ Module.symvers
 /cbridge/*.o
 /cbridge/*.d
 /cbridge/sp7-camera-backend-prototype
+/cbridge/sp7-camera-bridge
+/cbridge/controller-test

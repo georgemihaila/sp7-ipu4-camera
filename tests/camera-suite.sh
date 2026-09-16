@@ -76,7 +76,8 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task15-csi2-init-static.sh \
 			"$ROOT"/tests/task16-camera-bridge-format-static.sh \
 			"$ROOT"/tests/task17-installer-static.sh \
-			"$ROOT"/tests/task18-cbridge-static.sh; do
+			"$ROOT"/tests/task18-cbridge-static.sh \
+			"$ROOT"/tests/task19-camera-controller-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
