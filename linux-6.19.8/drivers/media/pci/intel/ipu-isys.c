@@ -568,7 +568,8 @@ static int isys_notifier_bound(struct v4l2_async_notifier *notifier,
 	ret = ipu_isys_csi2_fw_port_to_index(s_asd->csi2.port,
 					     isys->pdata->ipdata->csi2.nports);
 	if (ret < 0) {
-		dev_err(&isys->adev->dev, "invalid csi2 fw port %u\n",
+		dev_err(&isys->adev->dev,
+			"invalid csi2 fw port %u (receiver count %u)\n",
 			s_asd->csi2.port, isys->pdata->ipdata->csi2.nports);
 		return -EINVAL;
 	}

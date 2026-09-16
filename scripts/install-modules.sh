@@ -3,7 +3,7 @@
 # No module loading, service changes, or initramfs rebuild is performed here.
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT=${MODULE_SOURCE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 KREL=${KREL:-$(uname -r)}
 MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 FIRMWARE=${FIRMWARE:-}
@@ -35,10 +35,19 @@ source_for() {
 }
 
 file_hash() { sha256sum "$1" | awk '{print $1}'; }
+module_release() {
+	vermagic=$(modinfo -F vermagic "$1" 2>/dev/null) || return 1
+	printf '%s\n' "${vermagic%% *}"
+}
 manifest_hash() {
 	[ -f "$MANIFEST" ] || return 1
 	awk -v module="$1" '$1 == module { print $2; found++ } END { if (found != 1) exit 1 }' "$MANIFEST"
 }
+
+if ! command -v modinfo >/dev/null 2>&1; then
+	printf '%s\n' 'error: modinfo is required to verify module vermagic' >&2
+	exit 2
+fi
 
 if [ -e "$MANIFEST" ]; then
 	[ -f "$MANIFEST" ] || { printf 'error: module manifest is not a regular file: %s\n' "$MANIFEST" >&2; exit 2; }
@@ -64,6 +73,13 @@ while IFS= read -r name; do
 	[ -n "$name" ] || continue
 	source=$(source_for "$name") || { printf 'error: module is not allowlisted: %s\n' "$name" >&2; exit 2; }
 	[ -f "$source" ] || { printf 'error: required module not built: %s\n' "$source" >&2; exit 2; }
+	vermagic_release=$(module_release "$source") || {
+		printf 'error: unable to read vermagic from module: %s\n' "$source" >&2; exit 2;
+	}
+	[ "$vermagic_release" = "$KREL" ] || {
+		printf 'error: %s vermagic release %s does not match target KREL %s\n' \
+			"$name" "${vermagic_release:-unknown}" "$KREL" >&2; exit 2;
+	}
 	target="$MODDIR/$name"
 	if [ -e "$target" ] || [ -L "$target" ]; then
 		owned_hash=$(manifest_hash "$name") || {
