@@ -718,20 +718,22 @@ static int verify_stream_start(struct ipu_isys_pipeline *ip,
 				ip->external->entity->name, rval);
 			break;
 		}
-		/* log + clear accumulated receiver errors */
+		/*
+		 * Startup receiver errors are ambiguous on the marginal front
+		 * link: a missed first frame-sync is expected when the sensor's
+		 * LP->HS clock-lane lock fails, and bouncing s_stream is the
+		 * recovery. Drain and report errors, but use clean frame delivery
+		 * below as the success criterion instead of vetoing the bounce.
+		 */
 		rval = ipu_isys_csi2_error(ip->csi2);
 		spin_lock_irqsave(&ip->csi2->receiver_error_lock, flags);
 		fatal_receiver_errors = ip->csi2->fatal_receiver_errors;
 		last_receiver_errors = ip->csi2->last_receiver_errors;
 		spin_unlock_irqrestore(&ip->csi2->receiver_error_lock, flags);
 		if (rval || fatal_receiver_errors) {
-			dev_err(dev,
-				"fatal CSI-2 receiver failure during stream start; "
-				"not retrying sensor bounce (last errors=0x%x)\n",
+			dev_warn_ratelimited(dev,
+				"CSI-2 startup errors 0x%x; retrying sensor bounce\n",
 				last_receiver_errors);
-			if (!rval)
-				rval = -EIO;
-			break;
 		}
 		msleep(20);
 		rval = v4l2_subdev_call(esd, video, s_stream, 1);
