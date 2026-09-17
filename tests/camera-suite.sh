@@ -86,7 +86,8 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task25-cbridge-live-static.sh \
 			"$ROOT"/tests/task26-cbridge-parent-death-static.sh \
 			"$ROOT"/tests/task27-cbridge-exclusive-caps-static.sh \
-			"$ROOT"/tests/task28-native-inventory-static.sh; do
+			"$ROOT"/tests/task28-native-inventory-static.sh \
+			"$ROOT"/tests/task29-stream-lifecycle-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi

@@ -239,7 +239,7 @@ void ipu_isys_buffer_list_queue(struct ipu_isys_buffer_list *bl,
 
 			av = ipu_isys_queue_to_video(aq);
 			spin_lock_irqsave(&aq->lock, flags);
-			list_del(&ib->head);
+			list_del_init(&ib->head);
 			/*
 			 * A buffer completed to vb2 is owned by user space
 			 * again and must NOT stay linked on a driver list:
@@ -295,46 +295,39 @@ void ipu_isys_buffer_list_queue(struct ipu_isys_buffer_list *bl,
 /*
  * flush_firmware_streamon_fail() - Flush in cases where requests may
  * have been queued to firmware and the *firmware streamon fails for a
- * reason or another.
+ * reason or another.  The caller supplies QUEUED for a vb2 start callback
+ * failure and ERROR when a running stream's deferred submission fails.
  */
-static void flush_firmware_streamon_fail(struct ipu_isys_pipeline *ip)
+static void flush_firmware_streamon_fail(struct ipu_isys_pipeline *ip,
+					 enum vb2_buffer_state state)
 {
 	struct ipu_isys_video *pipe_av =
 	    container_of(ip, struct ipu_isys_video, ip);
+	struct ipu_isys_buffer_list bl;
 	struct ipu_isys_queue *aq;
 	unsigned long flags;
 
 	lockdep_assert_held(&pipe_av->mutex);
 
+	INIT_LIST_HEAD(&bl.head);
+	bl.nbufs = 0;
+
 	list_for_each_entry(aq, &ip->queues, node) {
-		struct ipu_isys_video *av = ipu_isys_queue_to_video(aq);
 		struct ipu_isys_buffer *ib, *ib_safe;
 
 		spin_lock_irqsave(&aq->lock, flags);
 		list_for_each_entry_safe(ib, ib_safe, &aq->active, head) {
-			struct vb2_buffer *vb =
-			    ipu_isys_buffer_to_vb2_buffer(ib);
-
-			list_del(&ib->head);
-			if (av->streaming) {
-				dev_dbg(&av->isys->adev->dev,
-					"%s: queue buffer %u back to incoming\n",
-					av->vdev.name,
-					vb->index);
-				/* Queue already streaming, return to driver. */
-				list_add(&ib->head, &aq->incoming);
-				continue;
-			}
-			/* Queue not yet streaming, return to user. */
-			dev_dbg(&av->isys->adev->dev,
-				"%s: return %u back to videobuf2\n",
-				av->vdev.name,
-				vb->index);
-			vb2_buffer_done(ipu_isys_buffer_to_vb2_buffer(ib),
-					VB2_BUF_STATE_QUEUED);
+			list_move_tail(&ib->head, &bl.head);
+			bl.nbufs++;
 		}
 		spin_unlock_irqrestore(&aq->lock, flags);
 	}
+
+	/* Complete detached buffers once, outside the queue spinlocks. */
+	if (bl.nbufs)
+		ipu_isys_buffer_list_queue(&bl,
+					   IPU_ISYS_BUFFER_LIST_FL_SET_STATE,
+					   state);
 }
 
 /*
@@ -773,6 +766,8 @@ static int ipu_isys_stream_start(struct ipu_isys_pipeline *ip,
 	struct ipu_isys_request *ireq = NULL;
 	unsigned int frames_done_before_start = atomic_read(&ip->frames_done);
 	bool stream_started = false;
+	enum vb2_buffer_state buffer_state = error ? VB2_BUF_STATE_ERROR :
+		VB2_BUF_STATE_QUEUED;
 	int rval;
 
 	mutex_lock(&pipe_av->isys->stream_mutex);
@@ -901,14 +896,12 @@ out_requeue:
 		stop_rval = ipu_isys_video_set_streaming(pipe_av, 0, NULL);
 		mutex_unlock(&pipe_av->isys->stream_mutex);
 		if (stop_rval) {
-			/* Keep STREAMON successful if teardown left the pipeline live. */
 			dev_err(&pipe_av->isys->adev->dev,
 				"failed to stop pipeline after stream-start error: %d\n",
 				stop_rval);
-			rval = 0;
-		} else {
-			ip->streaming = 0;
 		}
+		/* A failed start must never leave the software pipeline streaming. */
+		ip->streaming = 0;
 	}
 
 	/* The selected request was removed from isys->requests already. */
@@ -921,9 +914,8 @@ out_requeue:
 					   (error ?
 					    IPU_ISYS_BUFFER_LIST_FL_SET_STATE :
 					    0),
-					   error ? VB2_BUF_STATE_ERROR :
-					   VB2_BUF_STATE_QUEUED);
-	flush_firmware_streamon_fail(ip);
+					   buffer_state);
+	flush_firmware_streamon_fail(ip, buffer_state);
 
 	return rval;
 }
@@ -1327,6 +1319,7 @@ static void stop_streaming(struct vb2_queue *q)
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
 	struct ipu_isys_video *pipe_av =
 	    container_of(ip, struct ipu_isys_video, ip);
+	int rval = 0;
 
 	if (pipe_av != av) {
 		mutex_unlock(&av->mutex);
@@ -1334,14 +1327,23 @@ static void stop_streaming(struct vb2_queue *q)
 	}
 
 	mutex_lock(&av->isys->stream_mutex);
-	if (ip->nr_streaming == ip->nr_queues && ip->streaming)
-		ipu_isys_video_set_streaming(av, 0, NULL);
+	if (ip->nr_streaming == ip->nr_queues && ip->streaming) {
+		rval = ipu_isys_video_set_streaming(av, 0, NULL);
+		if (rval)
+			dev_err(&av->isys->adev->dev,
+				"failed to stop pipeline during streamoff: %d\n",
+				rval);
+	}
 	if (ip->nr_streaming == 1)
 		ipu_isys_video_prepare_streaming(av, 0);
 	mutex_unlock(&av->isys->stream_mutex);
 
-	ip->nr_streaming--;
-	list_del(&aq->node);
+	if (ip->nr_streaming > 0)
+		ip->nr_streaming--;
+	else
+		WARN_ON(1);
+	if (!list_empty(&aq->node))
+		list_del_init(&aq->node);
 	ip->streaming = 0;
 
 	if (pipe_av != av) {
