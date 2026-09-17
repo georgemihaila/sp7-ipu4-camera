@@ -2,8 +2,8 @@ CC ?= cc
 PKG_CONFIG ?= pkg-config
 CFLAGS ?= -O2
 CFLAGS += -std=c11 -D_GNU_SOURCE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
-CPPFLAGS += $(shell $(PKG_CONFIG) --cflags gstreamer-1.0 glib-2.0)
-LDLIBS += $(shell $(PKG_CONFIG) --libs gstreamer-1.0 glib-2.0)
+CPPFLAGS += $(shell $(PKG_CONFIG) --cflags gstreamer-1.0 gstreamer-app-1.0 glib-2.0)
+LDLIBS += $(shell $(PKG_CONFIG) --libs gstreamer-1.0 gstreamer-app-1.0 glib-2.0)
 
 PROGRAM := sp7-camera-backend-prototype
 SOURCES := prototype.c media-backend.c
