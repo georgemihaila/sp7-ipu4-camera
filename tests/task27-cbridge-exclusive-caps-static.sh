@@ -14,14 +14,11 @@ grep -Fq 'v4l2_format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;' "$SOURCE"
 grep -Fq 'capture_errno = errno;' "$SOURCE"
 grep -Fq 'v4l2_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;' "$SOURCE"
 grep -Fq 'VIDEO_OUTPUT fallback' "$SOURCE"
-grep -Eq 'exclusive_caps=1,1,1[[:space:]]*$' "$MODULE_OPTIONS"
-if grep -Fq 'exclusive_caps=1,0,0' "$MODULE_OPTIONS"; then
-	echo 'task27: named Surface endpoints must remain exclusive by default' >&2
-	exit 1
-fi
-grep -Fq 'front/rear endpoints use `exclusive_caps=1`' "$DOC"
-grep -Fq 'falls back to `VIDEO_OUTPUT` while an' "$DOC"
-grep -Fq 'ExecStartPost` readiness barrier' "$DOC"
+grep -Eq 'exclusive_caps=1,0,0[[:space:]]*$' "$MODULE_OPTIONS"
+grep -Fq 'endpoint remains `exclusive_caps=1`' "$DOC"
+grep -Fq 'endpoints use `exclusive_caps=0`' "$DOC"
+grep -Fq 'PipeWire before the bridge producer opens them' "$DOC"
+grep -Fq 'readiness' "$DOC"
 
 # The exclusive producer must be ready before WirePlumber's V4L2 scan.
 grep -Fq 'Wants=wireplumber.service' "$UNIT"

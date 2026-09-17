@@ -13,16 +13,14 @@ supplies two stable V4L2 names backed by the existing libcamera cameras:
 The IPU4P shares a backend capture route between the sensors. The user service
 keeps both virtual devices capturable with an idle black signal, watches for an
 application opening one, and starts only that sensor's GStreamer pipeline. It
-releases the route when the virtual device is no longer in use. The named
-front/rear endpoints use `exclusive_caps=1`, so they report `OUTPUT` until the
-bridge opens each producer and then report `CAPTURE` for camera applications.
-The RPM Fusion OBS virtual camera remains exclusive with `exclusive_caps=1`.
-The bridge unit starts after PipeWire and before WirePlumber, and its bounded
-`ExecStartPost` readiness barrier checks both `Device Caps` blocks for
-`Video Capture`; a timeout fails the service instead of allowing WirePlumber to
-cache the initial output-only state. The check uses `v4l2-ctl --all` because
-`--list-formats-ext` can print a capture format while the device capabilities
-still advertise `Video Output` only.
+releases the route when the virtual device is no longer in use. The OBS
+endpoint remains `exclusive_caps=1`, but the two Surface Camera
+endpoints use `exclusive_caps=0` so they advertise capture capability to
+PipeWire before the bridge producer opens them. This lets applications such as
+GNOME Snapshot enumerate the bridge-backed cameras while preserving the
+bridge's single-sensor ownership model. The bridge unit still starts after
+PipeWire and before WirePlumber, and its bounded `ExecStartPost` readiness
+barrier checks both `Device Caps` blocks for `Video Capture`.
 
 ## Install
 
@@ -75,12 +73,11 @@ backend itself.
 
 ## Application limitation
 
-This is the fallback bridge mode, not the native PipeWire camera mode. Because
-the installed policy disables the physical libcamera monitor, GNOME Snapshot
-and other clients that require native PipeWire/libcamera sources can report
-that no camera was found even while V4L2 clients use the named bridge devices
-successfully. That result is expected under the default policy and does not
-show that the kernel cameras are absent.
+This is the fallback bridge mode, not the native PipeWire/libcamera camera
+mode. The installed policy disables the physical libcamera monitor, but the
+Surface endpoints are advertised as ordinary V4L2 capture sources so GNOME
+Snapshot can enumerate the bridge-backed cameras. This does not qualify the
+native libcamera path or change the bridge's fallback status.
 
 The native profile in
 [`docs/native-pipewire.md`](native-pipewire.md) is an explicit opt-in
