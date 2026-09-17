@@ -10,6 +10,11 @@ NATIVE_DOC="$ROOT/docs/native-pipewire.md"
 
 grep -Fq 'device.name = "~v4l2_device.*intel-ipu60.*"' "$RULE"
 grep -Fq 'device.disabled = true' "$RULE"
+grep -Fq 'api.v4l2.path = "/dev/video60"' "$RULE"
+grep -Fq 'api.v4l2.path = "/dev/video61"' "$RULE"
+grep -Fq 'node.pause-on-idle = true' "$RULE"
+[ "$(grep -Fc 'api.v4l2.path = ' "$RULE")" -eq 2 ]
+! grep -Eq 'api\.v4l2\.path[[:space:]]*=[[:space:]]*"~' "$RULE"
 grep -Fq 'monitor.libcamera = disabled' "$RULE"
 grep -Fq 'GNOME Snapshot' "$BRIDGE_DOC"
 grep -Fq 'native PipeWire/libcamera camera' "$BRIDGE_DOC"

@@ -69,7 +69,9 @@ with an `/etc` configuration that keeps the OBS virtual camera and adds the
 two SP7 devices. It also installs a WirePlumber policy that hides the raw
 `ipu4p` nodes and disables the physical libcamera monitor. This leaves
 WirePlumber serving the named loopback devices without opening the shared
-backend itself.
+backend itself. The two named Surface loopbacks remain enumerable, but their
+WirePlumber nodes pause when idle; only the endpoint actively consumed by an
+application keeps the shared IPU4 route in use.
 
 ## Application limitation
 
