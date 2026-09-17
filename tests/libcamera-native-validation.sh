@@ -204,4 +204,3 @@ if [ "$KEEP" -eq 1 ]; then
 else
 	say "RESULT: PASS (native cameras validated; temporary reports removed)"
 fi
-
