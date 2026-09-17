@@ -3,8 +3,9 @@
 The installed C controller owns the named-camera service and supervises one
 short-lived worker process per active pipeline. Each worker uses the C
 GStreamer API, queries the selected loopback endpoint with `VIDIOC_G_FMT`
-(`VIDEO_CAPTURE` first, then `VIDEO_OUTPUT` for an unopened exclusive-caps
-producer), sets `camera-name` as a native GStreamer property, and reports bus errors,
+(`VIDEO_CAPTURE` first, then `VIDEO_OUTPUT` for an explicitly overridden,
+unopened exclusive-caps producer), sets `camera-name` as a native GStreamer
+property, and reports bus errors,
 warnings, EOS, and state changes. Process isolation bounds libcamera teardown
 failures and ensures the service reaps every media worker.
 
