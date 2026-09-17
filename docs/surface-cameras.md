@@ -73,6 +73,21 @@ two SP7 devices. It also installs a WirePlumber policy that hides the raw
 WirePlumber serving the named loopback devices without opening the shared
 backend itself.
 
+## Application limitation
+
+This is the fallback bridge mode, not the native PipeWire camera mode. Because
+the installed policy disables the physical libcamera monitor, GNOME Snapshot
+and other clients that require native PipeWire/libcamera sources can report
+that no camera was found even while V4L2 clients use the named bridge devices
+successfully. That result is expected under the default policy and does not
+show that the kernel cameras are absent.
+
+The native profile in
+[`docs/native-pipewire.md`](native-pipewire.md) is an explicit opt-in
+qualification path. It must not be enabled as an enumeration-only workaround:
+the current native PipeWire result is known-bad (black frames), although
+direct `cam` captures remain valid.
+
 Restart applications that were already open so they rescan the new V4L2
 devices. Choose **Surface Camera (front)** or **Surface Camera (back)**. The
 bridge streams only the selected camera. It opens the selected physical sensor

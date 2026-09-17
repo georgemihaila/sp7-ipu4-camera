@@ -10,8 +10,12 @@ The code has been hardware-validated on one Surface Pro 7 running Fedora 43
 with the linux-surface kernel `6.19.8-3.surface.fc43.x86_64`. V4L2 raw capture
 has succeeded from the front OV5693 and rear OV8865 cameras. Fedora's existing
 libcamera Simple pipeline with SoftISP has also produced processed captures
-from both cameras. The GNOME Snapshot and portal startup path has not been
-qualified.
+from both cameras. The default full installation uses the named V4L2 bridge,
+intentionally disables WirePlumber's physical libcamera monitor, and therefore
+does not expose a native camera to GNOME Snapshot; the app can report that no
+camera was found while bridge-backed applications continue to work. The
+opt-in native PipeWire path remains unqualified and is currently known to
+produce black frames, so enabling it is not yet a fix for that symptom.
 
 ## Support and project scope
 
