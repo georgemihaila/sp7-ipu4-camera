@@ -13,10 +13,12 @@ supplies two stable V4L2 names backed by the existing libcamera cameras:
 The IPU4P shares a backend capture route between the sensors. The user service
 keeps both virtual devices capturable with an idle black signal, watches for an
 application opening one, and starts only that sensor's GStreamer pipeline. It
-releases the route when the virtual device is no longer in use. Leave
-`exclusive_caps=0` for these two devices so applications can enumerate them
-before the real camera producer starts. The RPM Fusion OBS virtual camera stays on
-`/dev/video55` with its existing exclusive-caps behavior.
+releases the route when the virtual device is no longer in use. The two named
+devices use `exclusive_caps=1`, so applications see a capture-only endpoint
+after the bridge's producer opens it. Before that happens, the bridge reads the
+loopback's `VIDEO_OUTPUT` format as a fallback because `VIDEO_CAPTURE` is not
+available in the exclusive-caps output state. The RPM Fusion OBS virtual camera
+also keeps its existing exclusive-caps behavior.
 
 ## Install
 
@@ -74,7 +76,13 @@ directly while WirePlumber remains active for the application's PipeWire
 loopback target. The two physical sensors cannot be captured simultaneously
 through this backend.
 
-The bridge reads each loopback endpoint’s current V4L2 format before starting a producer. It emits packed YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG. This keeps consumers such as Zoom from leaving the producer with a `not-negotiated` pipeline.
+The bridge reads each loopback endpoint’s current V4L2 `VIDEO_CAPTURE` format
+before starting a producer and falls back to `VIDEO_OUTPUT` for an unopened
+exclusive-caps endpoint. It emits packed YUYV through `videoconvert` when the
+endpoint is set to YUYV, and encodes the same 1280x720 stream with `jpegenc`
+when an application has selected MJPG/JPEG. This keeps consumers such as Zoom
+and Snapshot on one fixed capture format instead of an unfixed PipeWire caps
+set.
 
 To remove the bridge and restore RPM Fusion's default OBS module options:
 

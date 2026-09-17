@@ -48,6 +48,8 @@ int media_backend_query_format(const char *device, MediaFormat *format,
 	char *error, unsigned error_size)
 {
 	struct v4l2_format v4l2_format = { 0 };
+	int capture_errno;
+	int output_errno;
 	int fd;
 
 	if (device == NULL || format == NULL) {
@@ -61,10 +63,23 @@ int media_backend_query_format(const char *device, MediaFormat *format,
 	}
 	v4l2_format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl_retry(fd, VIDIOC_G_FMT, &v4l2_format) < 0) {
-		set_error(error, error_size, "VIDIOC_G_FMT %s: %s", device,
-			strerror(errno));
-		(void)close(fd);
-		return -1;
+		capture_errno = errno;
+		/*
+		 * v4l2loopback with exclusive_caps=1 exposes only OUTPUT until a
+		 * producer opens it. Query that side without losing the preferred
+		 * CAPTURE result when a producer is already active.
+		 */
+		v4l2_format = (struct v4l2_format){ 0 };
+		v4l2_format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
+		if (ioctl_retry(fd, VIDIOC_G_FMT, &v4l2_format) < 0) {
+			output_errno = errno;
+			set_error(error, error_size,
+				"VIDIOC_G_FMT capture %s: %s; VIDEO_OUTPUT fallback %s: %s",
+				device, strerror(capture_errno), device,
+				strerror(output_errno));
+			(void)close(fd);
+			return -1;
+		}
 	}
 	(void)close(fd);
 	if (v4l2_format.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
