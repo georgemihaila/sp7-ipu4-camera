@@ -192,6 +192,20 @@ media graph. They do not install, load, unload, or reload modules. A quick
 manual capture is also available with `sudo ./test-capture.sh front` or
 `sudo ./test-capture.sh rear`.
 
+The read-only native Phase 0 inventory can be run independently. It discovers
+current media, video, and sub-device identities dynamically and records graph,
+V4L2, module/firmware, libcamera, and PipeWire status; missing hardware or
+tools are reported as skips:
+
+```sh
+NATIVE_INVENTORY_DIR="$PWD/reports/native-inventory" \
+    ./tests/native-inventory.sh --live
+```
+
+This inventory is not a substitute for proving advancing non-black frames or
+preview/capture in a named application. The C bridge and `v4l2loopback` remain
+fallback/test tooling while native qualification is incomplete.
+
 ## Named Surface Cameras
 
 For Zoom and other V4L2 applications, see

@@ -38,6 +38,7 @@ for other systems, and the limitations in step 4 need their own work.
 | CSI-2 error/queue/PM paths | Compile/static validation plus targeted hardware runs where recorded | `tests/task9-csi2-static.sh`, `tests/task10-production-static.sh`, and the reports under `reports/`. |
 | Build metadata and module discovery | Static/mechanical validation; compile depends on external KDIR | `scripts/build-modules.sh` and `docs/external-kernel-integration.md`. |
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
+| Native Phase 0 inventory | Static contract automated; live inventory safely gated | `tests/native-inventory.sh --live` dynamically resolves media/video/sub-device identities and records graph, V4L2, module/firmware, libcamera, and PipeWire state. It reports missing tools/hardware as `SKIP`; stream correctness, image quality, and application preview remain hardware-only. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
 
@@ -90,3 +91,15 @@ git diff --check
 The default suite is hardware-independent. `--live` only inspects currently
 available hardware and performs bounded captures; it does not install,
 unload/reload, reboot, or modify services.
+
+For a report without the capture portion, run:
+
+```sh
+NATIVE_INVENTORY_DIR="$PWD/reports/native-inventory" \
+    ./tests/native-inventory.sh --live
+```
+
+The report uses the current sysfs/media graph and must not be interpreted as a
+successful native camera qualification unless the separate hardware-only
+stream, image, PipeWire, and application checks also pass. The C bridge and
+`v4l2loopback` are fallback/test paths during this qualification period.

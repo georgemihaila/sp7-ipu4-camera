@@ -396,6 +396,29 @@ specification.
 **Exit gate:** the graph and format inventory are reproducible after reboot,
 with no hard-coded minor-number assumptions.
 
+#### Phase 0 repository implementation
+
+The repository provides `tests/native-inventory.sh --live`, also invoked by
+`tests/camera-suite.sh --live`. It creates a report directory and dynamically
+walks `/dev/media*` and `/sys/class/video4linux/` rather than assuming any
+`videoN`, `mediaN`, or `v4l-subdevN` minor. For each discovered node it records
+the sysfs identity, udev properties when available, V4L2 capabilities and
+formats, sub-device controls and media-bus codes, media-controller graphs,
+loaded-module metadata, module firmware requests and standard firmware-file
+presence. It also records read-only `cam`, GStreamer `libcamerasrc`, PipeWire,
+and WirePlumber status when those tools are installed. Missing hardware or
+tools are reported as `SKIP`; the inventory never loads modules, changes graph
+links, restarts services, or claims a usable image.
+
+The static contract is covered by
+`tests/task28-native-inventory-static.sh` and the existing shell suite. The
+inventory does not replace the hardware-only gates: clean advancing frames,
+non-black scene data, controls, suspend/resume, native libcamera preview,
+PipeWire portal access, and named-application preview/capture still require a
+prepared Surface Pro 7. The project C bridge and `v4l2loopback` remain
+explicitly supported as fallback/test tooling until those native gates pass;
+they are not evidence that the no-bridge target is complete.
+
 ### Phase 1 — Make the kernel driver production-safe
 
 1. Rebase the overlay against the exact target kernel and separate generic

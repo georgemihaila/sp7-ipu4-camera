@@ -85,12 +85,14 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task24-kernel-maintenance-static.sh \
 			"$ROOT"/tests/task25-cbridge-live-static.sh \
 			"$ROOT"/tests/task26-cbridge-parent-death-static.sh \
-			"$ROOT"/tests/task27-cbridge-exclusive-caps-static.sh; do
+			"$ROOT"/tests/task27-cbridge-exclusive-caps-static.sh \
+			"$ROOT"/tests/task28-native-inventory-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
 
 if [ "$MODE" = live ] || [ "$MODE" = all ]; then
+	if ! run native-inventory env NATIVE_INVENTORY_DIR="$LOGDIR/native-inventory" "$ROOT/tests/native-inventory.sh" --live; then :; fi
 	if ! command -v media-ctl >/dev/null 2>&1 || ! command -v v4l2-ctl >/dev/null 2>&1 ||
 		! command -v timeout >/dev/null 2>&1; then
 		skip autoload "media-ctl, v4l2-ctl, and timeout are required"
