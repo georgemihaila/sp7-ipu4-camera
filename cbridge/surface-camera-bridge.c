@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -83,13 +84,45 @@ static int write_worker_status(int fd, char status)
 	return written == (ssize_t)sizeof(status) ? 0 : -1;
 }
 
-static void worker_process(const MediaBackendConfig *config, int status_fd)
+static int configure_worker_parent_death(pid_t parent_pid)
+{
+	if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0) {
+		int saved_errno = errno;
+
+		(void)fprintf(stderr, "worker could not set parent-death signal: %s\n",
+			strerror(saved_errno));
+		return -1;
+	}
+	/*
+	 * The supervisor may exit between fork() and prctl(). Reject that race
+	 * before initializing GStreamer/libcamera; otherwise no signal is sent for
+	 * a parent death that happened before PR_SET_PDEATHSIG was armed.
+	 */
+	if (getppid() != parent_pid) {
+		(void)fprintf(stderr,
+			"worker parent exited before media initialization\n");
+		return -1;
+	}
+	return 0;
+}
+
+static void worker_process(const MediaBackendConfig *config, int status_fd,
+	pid_t parent_pid)
 {
 	MediaBackend *backend;
 	char error[512];
 	int result;
 
+	if (configure_worker_parent_death(parent_pid) != 0) {
+		(void)write_worker_status(status_fd, 'F');
+		(void)close(status_fd);
+		_exit(EXIT_FAILURE);
+	}
 	if (setpgid(0, 0) != 0) {
+		int saved_errno = errno;
+
+		(void)fprintf(stderr, "worker could not create process group: %s\n",
+			strerror(saved_errno));
 		(void)write_worker_status(status_fd, 'F');
 		(void)close(status_fd);
 		_exit(EXIT_FAILURE);
@@ -517,6 +550,7 @@ static int backend_start(void *opaque, CameraKey camera, bool filler,
 	LiveBackendHandle *live_handle;
 	MediaBackendConfig config;
 	int status_pipe[2];
+	pid_t parent_pid;
 	pid_t worker_pid;
 
 	if (handle == NULL || endpoint == NULL || !endpoint->present) {
@@ -534,6 +568,7 @@ static int backend_start(void *opaque, CameraKey camera, bool filler,
 	config.device = endpoint->device;
 	config.format = format;
 	config.kind = filler ? MEDIA_PIPELINE_FILLER : MEDIA_PIPELINE_CAMERA;
+	parent_pid = getpid();
 	if (pipe2(status_pipe, O_CLOEXEC) != 0) {
 		set_error(error, error_size, "could not create media worker status pipe");
 		free(live_handle);
@@ -549,7 +584,7 @@ static int backend_start(void *opaque, CameraKey camera, bool filler,
 	}
 	if (worker_pid == 0) {
 		(void)close(status_pipe[0]);
-		worker_process(&config, status_pipe[1]);
+		worker_process(&config, status_pipe[1], parent_pid);
 		_exit(EXIT_FAILURE);
 	}
 	(void)close(status_pipe[1]);
