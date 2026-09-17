@@ -38,6 +38,7 @@ for other systems, and the limitations in step 4 need their own work.
 | CSI-2 error/queue/PM paths | CSI-2 and queue lifecycle static validation; hardware stream restart and cleanup-error behavior remain unvalidated | `tests/task9-csi2-static.sh`, `tests/task10-production-static.sh`, `tests/task29-stream-lifecycle-static.sh`, and the reports under `reports/`. The Phase 1 boundary now guarantees that failed startup does not return `STREAMON` success, active buffers are detached and returned exactly once with vb2's context-appropriate `QUEUED` or `ERROR` state, and software pipeline counters/list membership are reset or guarded; it does not yet prove firmware teardown after a live hardware failure. |
 | Build metadata and module discovery | Static/mechanical validation; compile depends on external KDIR | `scripts/build-modules.sh` and `docs/external-kernel-integration.md`. |
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
+| Native processed libcamera validation | Read-only hardware-gated check implemented | `tests/libcamera-native-validation.sh --live` parses `cam -l` dynamically, validates changing/non-black processed frames for every selectable camera, and repeats a release/reopen capture. This qualifies the installed Simple + SoftISP path; it does not provide or prove a project-owned pipeline handler or IPA. |
 | Native Phase 0 inventory | Static contract automated; live inventory safely gated | `tests/native-inventory.sh --live` dynamically resolves media/video/sub-device identities and records graph, V4L2, module/firmware, libcamera, and PipeWire state. It reports missing tools/hardware as `SKIP`; stream correctness, image quality, and application preview remain hardware-only. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
@@ -103,3 +104,16 @@ The report uses the current sysfs/media graph and must not be interpreted as a
 successful native camera qualification unless the separate hardware-only
 stream, image, PipeWire, and application checks also pass. The C bridge and
 `v4l2loopback` are fallback/test paths during this qualification period.
+
+The native processed-stream qualification is separate:
+
+```sh
+LIBCAMERA_VALIDATION_DIR="$PWD/reports/native-libcamera" \
+    ./tests/libcamera-native-validation.sh --live
+```
+
+It uses only the installed `cam` CLI and camera IDs parsed from `cam -l`.
+It does not install or unload modules, alter media links or services, or
+implement a project-owned libcamera pipeline handler/IPA. A passing result is
+therefore evidence for the installed distribution pipeline, not upstream
+readiness of a repository-owned libcamera integration.
