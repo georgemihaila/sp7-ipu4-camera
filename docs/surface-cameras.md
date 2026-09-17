@@ -18,9 +18,11 @@ front/rear endpoints use `exclusive_caps=1`, so they report `OUTPUT` until the
 bridge opens each producer and then report `CAPTURE` for camera applications.
 The RPM Fusion OBS virtual camera remains exclusive with `exclusive_caps=1`.
 The bridge unit starts after PipeWire and before WirePlumber, and its bounded
-`ExecStartPost` readiness barrier waits for both named endpoints to enumerate
+`ExecStartPost` readiness barrier checks both `Device Caps` blocks for
 `Video Capture`; a timeout fails the service instead of allowing WirePlumber to
-cache the initial output-only state.
+cache the initial output-only state. The check uses `v4l2-ctl --all` because
+`--list-formats-ext` can print a capture format while the device capabilities
+still advertise `Video Output` only.
 
 ## Install
 
