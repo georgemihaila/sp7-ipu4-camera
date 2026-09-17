@@ -192,6 +192,43 @@ media graph. They do not install, load, unload, or reload modules. A quick
 manual capture is also available with `sudo ./test-capture.sh front` or
 `sudo ./test-capture.sh rear`.
 
+The Phase 5 V4L2 compliance gate is separate and read-only:
+
+```sh
+V4L2_COMPLIANCE_DIR="$PWD/reports/v4l2-compliance" \
+    ./tests/v4l2-compliance-validation.sh --live
+```
+
+It dynamically follows each `/sys/class/video4linux/video*` node to its
+sysfs driver/module identity, records that node's capabilities, formats,
+module metadata, and requested firmware, and runs `v4l2-compliance` only on
+module-backed physical capture queues. Virtual, `v4l2loopback`, and
+application-bridge identities are excluded from the discovered sysfs identity;
+no video minor is assumed. If `v4l2-compliance`, `v4l2-ctl`, `timeout`, usable
+hardware, or an eligible capture node is missing, the result is `SKIP`. A
+non-zero compliance result for a node that was actually tested is `FAIL`.
+This is ABI evidence only: it does not prove advancing/non-black frames,
+power/lifetime correctness, PipeWire behavior, or application support. The
+current validation host does not have `v4l2-compliance`, so no compliance
+pass is claimed here.
+
+For kernel readiness, use the exact prepared target `KDIR` and run a warning-
+enabled module build, checkpatch on the actual patch series, and sparse at
+the normal `C=1`/`C=2` levels:
+
+```sh
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" W=1 modules
+scripts/checkpatch.pl --strict <patch-series.patch
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" \
+    W=1 C=1 CHECK=sparse CF='-D__CHECK_ENDIAN__' modules
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" \
+    W=1 C=2 CHECK=sparse modules
+```
+
+Run the equivalent smatch configuration when supplied by the target kernel
+tree. These checks depend on kernel-tree integration and are not implied by
+the repository's shell/static suite or an out-of-tree module build alone.
+
 The read-only native Phase 0 inventory can be run independently. It discovers
 current media, video, and sub-device identities dynamically and records graph,
 V4L2, module/firmware, libcamera, and PipeWire status; missing hardware or

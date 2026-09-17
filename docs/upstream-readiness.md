@@ -45,6 +45,7 @@ for other systems, and the limitations in step 4 need their own work.
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
 | Native processed libcamera validation | Read-only hardware-gated check implemented | `tests/libcamera-native-validation.sh --live` parses `cam -l` dynamically, validates changing/non-black processed frames for every selectable camera, and repeats a release/reopen capture. This qualifies the installed Simple + SoftISP path; it does not provide or prove a project-owned pipeline handler or IPA. |
 | Native Phase 0 inventory | Static contract automated; live inventory safely gated | `tests/native-inventory.sh --live` dynamically resolves media/video/sub-device identities and records graph, V4L2, module/firmware, libcamera, and PipeWire state. It reports missing tools/hardware as `SKIP`; stream correctness, image quality, and application preview remain hardware-only. |
+| Native V4L2 compliance | Read-only gate implemented; no compliance pass claimed on the current host | `tests/v4l2-compliance-validation.sh --live` discovers `/sys/class/video4linux/video*`, records per-node capabilities/formats plus module/firmware provenance, excludes virtual loopback/application-bridge identities from sysfs, and runs `v4l2-compliance` only on remaining capture queues. The current validation host has no `v4l2-compliance` executable, so the live result is `SKIP`; a future pass still does not qualify frame content, power/lifetime behavior, PipeWire, or applications. |
 | Native application qualification | No application is qualified | [`docs/application-qualification.md`](application-qualification.md) defines the per-application package, physical-camera, moving-preview/capture, frame-rate, lens/content, switching, lifecycle, portal, and log evidence. Current rows remain `NOT TESTED`; enumeration and bridge/loopback results cannot produce `PASS`. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
@@ -98,6 +99,23 @@ git diff --check
 The default suite is hardware-independent. `--live` only inspects currently
 available hardware and performs bounded captures; it does not install,
 unload/reload, reboot, or modify services.
+
+The Phase 5 V4L2 compliance gate is also read-only:
+
+```sh
+V4L2_COMPLIANCE_DIR="$PWD/reports/v4l2-compliance" \
+    ./tests/v4l2-compliance-validation.sh --live
+```
+
+It requires the installed `v4l2-compliance`, `v4l2-ctl`, and `timeout` tools.
+It resolves each `/sys/class/video4linux/video*` node and its driver/module
+links, records capabilities and formats, then tests only a module-backed,
+non-virtual node whose discovered capabilities include video capture. Nodes
+identified as virtual, `v4l2loopback`, or the application bridge are skipped;
+no video minor is hard-coded. Missing tools, hardware, permissions, or
+eligible nodes produce `SKIP`. A non-zero result from `v4l2-compliance` on a
+node that was actually tested produces `FAIL`. The check does not load or
+unload modules, change media links or services, or prove valid image content.
 
 For a report without the capture portion, run:
 
