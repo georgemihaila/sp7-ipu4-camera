@@ -206,13 +206,21 @@ This inventory is not a substitute for proving advancing non-black frames or
 preview/capture in a named application. The C bridge and `v4l2loopback` remain
 fallback/test tooling while native qualification is incomplete.
 
+Application support remains unclaimed. The reproducible Phase 4 matrix in
+[`docs/application-qualification.md`](docs/application-qualification.md) must
+show moving preview, usable capture, lifecycle and front/rear-switch evidence,
+package/sandbox provenance, portal results, and kernel/PipeWire logs for each
+named application. Enumeration, direct-node access, or the C bridge does not
+qualify Snapshot, Chromium/WebRTC, Zoom, Discord, or another application.
+
 The native PipeWire phase is separately gated and currently unqualified. See
 [`docs/native-pipewire.md`](docs/native-pipewire.md) for the opt-in WirePlumber
 profile, activation/rollback, and the read-only `pipewiresrc` preview check.
 
 ## Named Surface Cameras
 
-For Zoom and other V4L2 applications, see
+For the fallback named endpoints used while native qualification is incomplete,
+see
 [`docs/surface-cameras.md`](docs/surface-cameras.md) for the named front and
 rear camera bridge. The driver install flow enables it automatically.
 

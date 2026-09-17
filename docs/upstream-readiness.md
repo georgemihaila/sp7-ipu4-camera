@@ -26,6 +26,11 @@ remain separate goals.
    unverified. Do not claim those paths or other IPU4P systems are supported
    until their own source and hardware checks pass.
 
+Application support remains unclaimed. Use the reproducible Phase 4 matrix in
+[`docs/application-qualification.md`](application-qualification.md) for each
+named client; enumeration, direct-node access, and the C bridge/`v4l2loopback`
+fallback are not application qualification evidence.
+
 Readiness means steps 1–3 pass for the stated SP7 target. Upstreaming, support
 for other systems, and the limitations in step 4 need their own work.
 
@@ -40,6 +45,7 @@ for other systems, and the limitations in step 4 need their own work.
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
 | Native processed libcamera validation | Read-only hardware-gated check implemented | `tests/libcamera-native-validation.sh --live` parses `cam -l` dynamically, validates changing/non-black processed frames for every selectable camera, and repeats a release/reopen capture. This qualifies the installed Simple + SoftISP path; it does not provide or prove a project-owned pipeline handler or IPA. |
 | Native Phase 0 inventory | Static contract automated; live inventory safely gated | `tests/native-inventory.sh --live` dynamically resolves media/video/sub-device identities and records graph, V4L2, module/firmware, libcamera, and PipeWire state. It reports missing tools/hardware as `SKIP`; stream correctness, image quality, and application preview remain hardware-only. |
+| Native application qualification | No application is qualified | [`docs/application-qualification.md`](application-qualification.md) defines the per-application package, physical-camera, moving-preview/capture, frame-rate, lens/content, switching, lifecycle, portal, and log evidence. Current rows remain `NOT TESTED`; enumeration and bridge/loopback results cannot produce `PASS`. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
 
@@ -104,6 +110,10 @@ The report uses the current sysfs/media graph and must not be interpreted as a
 successful native camera qualification unless the separate hardware-only
 stream, image, PipeWire, and application checks also pass. The C bridge and
 `v4l2loopback` are fallback/test paths during this qualification period.
+
+The application gate is separate and remains unclaimed until the rows in
+[`docs/application-qualification.md`](application-qualification.md) have
+application-visible moving preview and capture evidence.
 
 The native processed-stream qualification is separate:
 

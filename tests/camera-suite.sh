@@ -89,7 +89,8 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task28-native-inventory-static.sh \
 			"$ROOT"/tests/task29-stream-lifecycle-static.sh \
 			"$ROOT"/tests/task30-libcamera-native-static.sh \
-			"$ROOT"/tests/task31-native-pipewire-static.sh; do
+			"$ROOT"/tests/task31-native-pipewire-static.sh \
+			"$ROOT"/tests/task32-application-qualification-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi

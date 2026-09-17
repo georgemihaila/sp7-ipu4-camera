@@ -486,19 +486,25 @@ desktop-application success is implied.
 
 ### Phase 4 — Application qualification
 
-For each application, record package/version, sandbox permissions, selected
-camera, preview result, frame rate, switching, close/reopen, relaunch, and
-kernel/PipeWire logs:
+The concrete, repeatable contract is in
+[`docs/application-qualification.md`](application-qualification.md). Execute
+it separately for GNOME Snapshot, Chromium/WebRTC, Zoom Linux, Discord Linux,
+a direct V4L2 client, and a native `cam` client. The record must identify the
+exact package/runtime and sandbox state, the selected physical camera by
+stable graph/libcamera identity, preview movement and measured frame rate,
+lens-cover/content behavior, front/rear switching, close/reopen, relaunch,
+portal permission results, and bounded kernel/PipeWire logs.
 
-1. GNOME Snapshot.
-2. Chromium or another browser using WebRTC.
-3. Zoom Linux client.
-4. Discord Linux client.
-5. A direct V4L2 client (`v4l2src` or FFmpeg) and a native libcamera client.
+Every row has one explicit result: `PASS`, `FAIL`, `NOT TESTED`, or
+`ENUMERATED-ONLY`. Only `PASS` is application qualification. Enumeration, device
+open, raw capture, a PipeWire node, or a C-bridge/`v4l2loopback` result can
+populate evidence or a diagnostic row, but cannot promote an application to
+`PASS`.
 
-**Exit gate:** only the applications with observed preview and capture are
-listed as supported. “Enumerates” and “opens the device” are intermediate
-results, not product success.
+**Exit gate:** the release support statement names only applications whose
+own row has observed moving preview and capture with the required lifecycle,
+camera-switching, permission, and log evidence. The current repository has no
+application `PASS` claim.
 
 ### Phase 5 — Packaging and upstream readiness
 
