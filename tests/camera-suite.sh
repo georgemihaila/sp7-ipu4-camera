@@ -88,13 +88,15 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task27-cbridge-exclusive-caps-static.sh \
 			"$ROOT"/tests/task28-native-inventory-static.sh \
 			"$ROOT"/tests/task29-stream-lifecycle-static.sh \
-			"$ROOT"/tests/task30-libcamera-native-static.sh; do
+			"$ROOT"/tests/task30-libcamera-native-static.sh \
+			"$ROOT"/tests/task31-native-pipewire-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi
 
 if [ "$MODE" = live ] || [ "$MODE" = all ]; then
 	if ! run native-libcamera env LIBCAMERA_VALIDATION_DIR="$LOGDIR/native-libcamera" "$ROOT/tests/libcamera-native-validation.sh" --live; then :; fi
+	if ! run native-pipewire env NATIVE_PIPEWIRE_VALIDATION_DIR="$LOGDIR/native-pipewire" "$ROOT/tests/native-pipewire-validation.sh" --live; then :; fi
 	if ! run native-inventory env NATIVE_INVENTORY_DIR="$LOGDIR/native-inventory" "$ROOT/tests/native-inventory.sh" --live; then :; fi
 	if ! command -v media-ctl >/dev/null 2>&1 || ! command -v v4l2-ctl >/dev/null 2>&1 ||
 		! command -v timeout >/dev/null 2>&1; then

@@ -206,6 +206,10 @@ This inventory is not a substitute for proving advancing non-black frames or
 preview/capture in a named application. The C bridge and `v4l2loopback` remain
 fallback/test tooling while native qualification is incomplete.
 
+The native PipeWire phase is separately gated and currently unqualified. See
+[`docs/native-pipewire.md`](docs/native-pipewire.md) for the opt-in WirePlumber
+profile, activation/rollback, and the read-only `pipewiresrc` preview check.
+
 ## Named Surface Cameras
 
 For Zoom and other V4L2 applications, see

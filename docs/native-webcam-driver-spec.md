@@ -468,6 +468,22 @@ switching, release/reopen, and concurrent-resource failures are deterministic.
    source stop/start and WirePlumber restart, and produces image content—not
    merely a listed node.
 
+#### Phase 3 repository implementation
+
+The repository provides an opt-in native profile at
+`wireplumber/60-sp7-ipu4-native.conf` and a read-only check at
+`tests/native-pipewire-validation.sh`. The check discovers current
+`Video/Source` nodes with libcamera properties through `pw-dump`, requests a
+bounded `pipewiresrc` preview with common RGB caps, and requires nonzero,
+changing frame data. It reports `SKIP` when the PipeWire tools, libcamera
+monitor, or native nodes are unavailable, and `FAIL` when a discovered source
+cannot preview or emits black/static frames. It never changes services, links,
+modules, or the bridge/loopback fallback. The optional profile hides only raw
+debug V4L2 nodes and enables the physical libcamera monitor; it is not installed
+by the default bridge flow. On the validated host, native PipeWire preview is
+still unqualified and has previously produced black frames, so no portal or
+desktop-application success is implied.
+
 ### Phase 4 — Application qualification
 
 For each application, record package/version, sandbox permissions, selected
