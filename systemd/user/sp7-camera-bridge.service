@@ -1,12 +1,18 @@
 [Unit]
 Description=Surface Pro 7 named camera bridge
-After=pipewire.service wireplumber.service
+Wants=wireplumber.service
+After=pipewire.service
+Before=wireplumber.service
 ConditionPathExists=/dev/video60
 ConditionPathExists=/dev/video61
 
 [Service]
 Type=simple
 ExecStart=/usr/local/libexec/sp7-camera-bridge
+# exclusive_caps=1 reports OUTPUT until a producer opens each endpoint. Keep
+# WirePlumber from caching that initial state by waiting for both endpoints to
+# enumerate Video Capture before allowing wireplumber.service to start.
+ExecStartPost=/bin/sh -c 'for i in $(seq 1 30); do if /usr/bin/v4l2-ctl --device /dev/video60 --list-formats-ext 2>/dev/null | grep -q "Video Capture" && /usr/bin/v4l2-ctl --device /dev/video61 --list-formats-ext 2>/dev/null | grep -q "Video Capture"; then exit 0; fi; sleep 1; done; echo "timed out waiting for Surface Camera loopbacks to enumerate Video Capture" >&2; exit 1'
 Restart=on-failure
 RestartSec=2
 

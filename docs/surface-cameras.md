@@ -14,12 +14,13 @@ The IPU4P shares a backend capture route between the sensors. The user service
 keeps both virtual devices capturable with an idle black signal, watches for an
 application opening one, and starts only that sensor's GStreamer pipeline. It
 releases the route when the virtual device is no longer in use. The named
-front/rear endpoints use `exclusive_caps=0` by default, so WirePlumber and
-camera applications can enumerate them as capture sources before the bridge's
-producer opens them. The RPM Fusion OBS virtual camera remains exclusive with
-`exclusive_caps=1`. The C bridge still falls back to `VIDEO_OUTPUT` for an
-unopened exclusive-caps endpoint if a local override enables that mode; this is
-optional robustness and not part of the default configuration.
+front/rear endpoints use `exclusive_caps=1`, so they report `OUTPUT` until the
+bridge opens each producer and then report `CAPTURE` for camera applications.
+The RPM Fusion OBS virtual camera remains exclusive with `exclusive_caps=1`.
+The bridge unit starts after PipeWire and before WirePlumber, and its bounded
+`ExecStartPost` readiness barrier waits for both named endpoints to enumerate
+`Video Capture`; a timeout fails the service instead of allowing WirePlumber to
+cache the initial output-only state.
 
 ## Install
 
@@ -78,12 +79,12 @@ loopback target. The two physical sensors cannot be captured simultaneously
 through this backend.
 
 The bridge reads each loopback endpoint’s current V4L2 `VIDEO_CAPTURE` format
-before starting a producer. For an explicitly overridden exclusive-caps
-endpoint, it falls back to `VIDEO_OUTPUT` when capture is not yet available. It
-emits packed YUYV through `videoconvert` when the endpoint is set to YUYV, and
-encodes the same 1280x720 stream with `jpegenc` when an application has
-selected MJPG/JPEG. This keeps consumers such as Zoom and Snapshot on one fixed
-capture format instead of an unfixed PipeWire caps set.
+before starting a producer and falls back to `VIDEO_OUTPUT` while an
+exclusive-caps endpoint is still in its unopened producer state. It emits packed
+YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the
+same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG.
+This keeps consumers such as Zoom and Snapshot on one fixed capture format
+instead of an unfixed PipeWire caps set.
 
 To remove the bridge and restore RPM Fusion's default OBS module options:
 
