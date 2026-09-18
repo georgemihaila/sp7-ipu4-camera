@@ -81,12 +81,16 @@ than a PHY guess. It does not establish that the Windows mode descriptor's
 ## Evidence boundary
 
 Demonstrated: the original binary contains and executes attributable OV7251
-register tables with 648x488 modes and the values above.
+register tables with 648x488 modes and the values above. Applying the 30-fps
+sequence to a temporary Linux module changed the live sensor readback as
+expected, but produced zero payload bytes and a source-6 stream timeout; the
+controlled result is recorded in
+`docs/ov7251-windows-648x488-experiment.md`.
 
 Hypothesis: the Linux 640x480 geometry/timing or its associated PLL choice is
-the remaining sensor-side mismatch that prevents IPU4P source-6 payload.
+not sufficient to explain the remaining IPU4P source-6 blocker. The test does
+not distinguish sensor-side MIPI electrical state from receiver configuration
+or platform sequencing.
 
-Untested: applying this sequence on Linux, changing the IPU4P receiver
-metadata, and obtaining a frame. The experiment is isolated to a temporary
-module and can be rolled back without rebooting or overwriting the installed
-distribution module.
+Untested: a known-good Windows source-6 receiver trace, physical lane
+measurement, and obtaining a frame through any alternate receiver sequence.
