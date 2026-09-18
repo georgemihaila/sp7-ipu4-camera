@@ -3,7 +3,10 @@
 # own nested .gitignore negations defeat a parent unignore chain)
 /linux-6.19.8/
 /linux-6.19.8.tar.xz
-
+captures/
+*.png
+*.jpg
+*.raw
 # Kernel build artifacts
 *.o
 *.o.d
