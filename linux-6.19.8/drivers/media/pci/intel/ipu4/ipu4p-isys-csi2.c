@@ -64,6 +64,52 @@ static bool ipu4p_csi2_apply_source7_mipi_timing(struct ipu_isys_csi2 *csi2)
 	return true;
 }
 
+/*
+ * The source-6 failure is now beyond the sensor probe and generic receiver
+ * timing layers.  Record the surrounding IPU4P GPREG state without changing
+ * it so a Linux start can be compared with the original Windows sequence.
+ * Keep this diagnostic scoped to the OV7251 source and do not perturb RGB.
+ */
+static void ipu4p_csi2_log_source6_platform_state(
+	struct ipu_isys_csi2 *csi2, const char *tag)
+{
+	void __iomem *isys_base;
+	void __iomem *isp_base;
+	u32 legacy_hpll, legacy_isclk, legacy_override, legacy_port;
+	u32 combo_hpll, combo_isclk, combo_override, combo_port;
+	u32 bscan;
+
+	if (csi2->asd.source != IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
+		return;
+
+	isys_base = csi2->isys->pdata->base;
+	isp_base = csi2->isys->adev->isp->base;
+	legacy_hpll = readl(isys_base + IPU_GPOFFSET +
+				    CSI2_REG_CSI_GPREG_HPLL_FREQ);
+	legacy_isclk = readl(isys_base + IPU_GPOFFSET +
+				     CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+	legacy_override = readl(isys_base + IPU_GPOFFSET +
+					CSI2_REG_CSI_GPREG_HPLL_FREQ_ISCLK_RATIO_OVERRIDE);
+	legacy_port = readl(isys_base + IPU_GPOFFSET +
+				    CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
+	combo_hpll = readl(isys_base + IPU_COMBO_GPOFFSET +
+				   CSI2_REG_CSI_GPREG_HPLL_FREQ);
+	combo_isclk = readl(isys_base + IPU_COMBO_GPOFFSET +
+				    CSI2_REG_CSI_GPREG_ISCLK_RATIO);
+	combo_override = readl(isys_base + IPU_COMBO_GPOFFSET +
+					 CSI2_REG_CSI_GPREG_HPLL_FREQ_ISCLK_RATIO_OVERRIDE);
+	combo_port = readl(isys_base + IPU_COMBO_GPOFFSET +
+				   CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
+	bscan = readl(isp_base + BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
+
+	dev_info(&csi2->isys->adev->dev,
+		 "source-6 %s platform: legacy hpll=0x%x isclk=0x%x "
+		 "override=0x%x port=0x%x combo hpll=0x%x isclk=0x%x "
+		 "override=0x%x port=0x%x bscan=0x%x\n",
+		 tag, legacy_hpll, legacy_isclk, legacy_override, legacy_port,
+		 combo_hpll, combo_isclk, combo_override, combo_port, bscan);
+}
+
 
 static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 {
@@ -246,6 +292,7 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 	}
 
 	ipu4p_csi2_ev_correction_params(csi2, nlanes);
+	ipu4p_csi2_log_source6_platform_state(csi2, "before timing");
 
 	writel(timing.ctermen,
 		   csi2->base + CSI2_REG_CSI_RX_DLY_CNT_TERMEN_CLANE);

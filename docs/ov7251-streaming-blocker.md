@@ -65,6 +65,11 @@ records the IPU4P source-6 receiver registers together with OV7251 clock,
 reset, power, `0x0100`, and data-lane state during the same start. A usable
 IR image, illumination behavior, and preview client remain unproven.
 
+The synchronized Linux platform-register trace is recorded in
+`docs/ov7251-source6-platform-register-trace.md`. It confirms the live
+source-6 GPREG/BSCAN state but does not supply the missing known-good Windows
+values or produce a frame.
+
 ## Current safe state
 
 - The signed/distribution OV7251 module is selected; the experimental
