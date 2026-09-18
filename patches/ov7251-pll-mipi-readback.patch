@@ -1,0 +1,69 @@
+--- a/drivers/media/i2c/ov7251.c
++++ b/drivers/media/i2c/ov7251.c
+@@ -805,6 +805,58 @@
+ 	return 0;
+ }
+ 
++static void ov7251_trace_pll_mipi(struct ov7251 *ov7251)
++{
++	static const u16 pll_regs[] = {
++		OV7251_PLL1_PIX_DIV_REG,
++		OV7251_PLL1_DIVIDER_REG,
++		OV7251_PLL1_MULT_REG,
++		OV7251_PLL1_PRE_DIV_REG,
++		OV7251_PLL1_MIPI_DIV_REG,
++		OV7251_PLL2_PRE_DIV_REG,
++		OV7251_PLL2_MULT_REG,
++		OV7251_PLL2_SYS_DIV_REG,
++		OV7251_PLL2_ADC_DIV_REG,
++		OV7251_PLL2_DIVIDER_REG,
++	};
++	static const u16 mipi_regs[] = {
++		0x4801,
++		0x4806,
++		0x4819,
++		0x4823,
++		0x4837,
++	};
++	u8 pll_values[ARRAY_SIZE(pll_regs)] = {};
++	u8 mipi_values[ARRAY_SIZE(mipi_regs)] = {};
++	int pll_rets[ARRAY_SIZE(pll_regs)];
++	int mipi_rets[ARRAY_SIZE(mipi_regs)];
++	unsigned int i;
++
++	for (i = 0; i < ARRAY_SIZE(pll_regs); i++)
++		pll_rets[i] = ov7251_read_reg(ov7251, pll_regs[i], &pll_values[i]);
++	for (i = 0; i < ARRAY_SIZE(mipi_regs); i++)
++		mipi_rets[i] = ov7251_read_reg(ov7251, mipi_regs[i], &mipi_values[i]);
++
++	dev_info(ov7251->dev,
++		 "IRTRACE pll-readback "
++		 "30b0=%d/0x%02x 30b1=%d/0x%02x 30b3=%d/0x%02x "
++		 "30b4=%d/0x%02x 30b5=%d/0x%02x 3098=%d/0x%02x "
++		 "3099=%d/0x%02x 309a=%d/0x%02x 309b=%d/0x%02x "
++		 "309d=%d/0x%02x\n",
++		 pll_rets[0], pll_values[0], pll_rets[1], pll_values[1],
++		 pll_rets[2], pll_values[2], pll_rets[3], pll_values[3],
++		 pll_rets[4], pll_values[4], pll_rets[5], pll_values[5],
++		 pll_rets[6], pll_values[6], pll_rets[7], pll_values[7],
++		 pll_rets[8], pll_values[8], pll_rets[9], pll_values[9]);
++	dev_info(ov7251->dev,
++		 "IRTRACE mipi-readback "
++		 "4801=%d/0x%02x 4806=%d/0x%02x 4819=%d/0x%02x "
++		 "4823=%d/0x%02x 4837=%d/0x%02x\n",
++		 mipi_rets[0], mipi_values[0], mipi_rets[1], mipi_values[1],
++		 mipi_rets[2], mipi_values[2], mipi_rets[3], mipi_values[3],
++		 mipi_rets[4], mipi_values[4]);
++}
++
+ static int ov7251_pll_configure(struct ov7251 *ov7251)
+ {
+ 	const struct ov7251_pll_cfgs *configs;
+@@ -1402,6 +1454,7 @@
+ 		dev_info(ov7251->dev,
+ 			 "IRTRACE stream mode-select read ret=%d value=0x%02x\n",
+ 			 read_ret, mode_select);
++		ov7251_trace_pll_mipi(ov7251);
+ 	} else {
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
+ 				       OV7251_SC_MODE_SELECT_SW_STANDBY);

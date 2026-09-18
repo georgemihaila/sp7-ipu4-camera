@@ -24,6 +24,8 @@ mkdir -p "$work_dir/drivers/media/i2c"
 cp "$source_c" "$work_dir/drivers/media/i2c/ov7251.c"
 cp "$repo_root/patches/ov7251-stream-diagnostics.patch" "$work_dir/ov7251-stream-diagnostics.patch"
 patch -d "$work_dir" -p1 < "$work_dir/ov7251-stream-diagnostics.patch"
+cp "$repo_root/patches/ov7251-pll-mipi-readback.patch" "$work_dir/ov7251-pll-mipi-readback.patch"
+patch -d "$work_dir" -p1 < "$work_dir/ov7251-pll-mipi-readback.patch"
 printf '%s\n' 'obj-m += ov7251.o' > "$work_dir/drivers/media/i2c/Makefile"
 
 make -C "$build_dir" M="$work_dir/drivers/media/i2c" modules
