@@ -47,6 +47,13 @@ event. It is not a frame or payload indication.
    experiment was rolled back without rebooting; see
    `docs/ov7251-windows-648x488-experiment.md`.
 
+6. A synchronized Linux trace then recorded the source-6 receiver and OV7251
+   stream sequence on the same monotonic timeline. Source 6 opened with one
+   lane and RAW10, the receiver sampled `hs=0`/`lp=0` and reported `0x4000`
+   before the sensor `s_stream(1)` call, and the sensor subsequently reached
+   `0x0100=0x01`, but no payload arrived after 31 attempts. See
+   `docs/ov7251-synchronized-source6-trace.md`.
+
 All experiments used the dynamically discovered route:
 
 ```text
@@ -67,13 +74,12 @@ source-6 IPU4P clock/PHY configuration, or an ordering/resource interaction.
 Per the execution plan, no further speculative PHY or timing mutation is
 retained after these evidence-backed failures.
 
-The next required evidence is still a source-backed source-6 receiver
-sequence: a known-good Windows/firmware trace or a narrowly instrumented test
-that records the IPU4P source-6 receiver registers together with OV7251
-clock, reset, power, `0x0100`, and data-lane state during the same start. The
-Windows sensor-side sequence did not supply that missing receiver evidence.
-A usable IR image, illumination behavior, and preview client remain
-unproven.
+The narrowly instrumented Linux trace now supplies the synchronized receiver
+and sensor evidence, but not physical proof at the CSI pins. The next required
+evidence is therefore either a known-good Windows/firmware source-6 trace or
+physical measurement of the OV7251 clock/reset/power and CSI clock/data lanes
+during the same Linux start. A usable IR image, illumination behavior, and
+preview client remain unproven.
 
 The synchronized Linux platform-register trace is recorded in
 `docs/ov7251-source6-platform-register-trace.md`. It confirms the live
