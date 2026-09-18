@@ -78,6 +78,11 @@ static void ipu4p_csi2_log_source6_platform_state(
 	u32 legacy_hpll, legacy_isclk, legacy_override, legacy_port;
 	u32 combo_hpll, combo_isclk, combo_override, combo_port;
 	u32 bscan;
+	u32 bb4_cphy, bb4_dphy, bb4_afe;
+	u32 bb6_cphy, bb6_dphy, bb6_afe;
+	u32 bb10_cphy, bb10_dphy, bb10_afe;
+	u32 bb12_cphy, bb12_dphy, bb12_afe;
+	u32 bb14_cphy, bb14_dphy, bb14_afe;
 
 	if (csi2->asd.source != IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
 		return;
@@ -101,13 +106,35 @@ static void ipu4p_csi2_log_source6_platform_state(
 	combo_port = readl(isys_base + IPU_COMBO_GPOFFSET +
 				   CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
 	bscan = readl(isp_base + BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
+	bb4_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(4));
+	bb4_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(4));
+	bb4_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(4));
+	bb6_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(6));
+	bb6_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(6));
+	bb6_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(6));
+	bb10_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(10));
+	bb10_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(10));
+	bb10_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(10));
+	bb12_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(12));
+	bb12_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(12));
+	bb12_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(12));
+	bb14_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(14));
+	bb14_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(14));
+	bb14_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(14));
 
 	dev_info(&csi2->isys->adev->dev,
 		 "source-6 %s platform: legacy hpll=0x%x isclk=0x%x "
 		 "override=0x%x port=0x%x combo hpll=0x%x isclk=0x%x "
 		 "override=0x%x port=0x%x bscan=0x%x\n",
-		 tag, legacy_hpll, legacy_isclk, legacy_override, legacy_port,
-		 combo_hpll, combo_isclk, combo_override, combo_port, bscan);
+		tag, legacy_hpll, legacy_isclk, legacy_override, legacy_port,
+		combo_hpll, combo_isclk, combo_override, combo_port, bscan);
+	dev_info(&csi2->isys->adev->dev,
+		 "source-6 %s PHY readback: bb4=(0x%x,0x%x,0x%x) "
+		 "bb6=(0x%x,0x%x,0x%x) bb10=(0x%x,0x%x,0x%x) "
+		 "bb12=(0x%x,0x%x,0x%x) bb14=(0x%x,0x%x,0x%x)\n",
+		tag, bb4_cphy, bb4_dphy, bb4_afe, bb6_cphy, bb6_dphy, bb6_afe,
+		bb10_cphy, bb10_dphy, bb10_afe, bb12_cphy, bb12_dphy, bb12_afe,
+		bb14_cphy, bb14_dphy, bb14_afe);
 }
 
 

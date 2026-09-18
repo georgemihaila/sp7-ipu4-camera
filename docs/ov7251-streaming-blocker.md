@@ -76,6 +76,11 @@ the current Linux source is recorded in
 index-to-source-6 mapping and the shared BSCAN value, but does not recover the
 missing source-6 runtime PHY/clock values.
 
+The subsequent read-only hot-loaded trace is recorded in
+`docs/ov7251-source6-phy-readback.md`. It confirms Linux's live BB/AFE
+readback during source-6 start, but still produces zero payload bytes and does
+not recover the Windows source-6 building-block selection.
+
 ## Current safe state
 
 - The signed/distribution OV7251 module is selected; the experimental
