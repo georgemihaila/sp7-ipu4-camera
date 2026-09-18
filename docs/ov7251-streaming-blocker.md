@@ -70,6 +70,12 @@ The synchronized Linux platform-register trace is recorded in
 source-6 GPREG/BSCAN state but does not supply the missing known-good Windows
 values or produce a frame.
 
+The delegated static comparison of the original Windows camera binaries with
+the current Linux source is recorded in
+`docs/ov7251-windows-binary-source6-analysis.md`. It confirms the compact
+index-to-source-6 mapping and the shared BSCAN value, but does not recover the
+missing source-6 runtime PHY/clock values.
+
 ## Current safe state
 
 - The signed/distribution OV7251 module is selected; the experimental
