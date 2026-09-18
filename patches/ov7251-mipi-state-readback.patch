@@ -1,0 +1,35 @@
+--- a/drivers/media/i2c/ov7251.c
++++ b/drivers/media/i2c/ov7251.c
+@@ -858,5 +858,27 @@ static void ov7251_trace_pll_mipi(struct ov7251 *ov7251)
+ }
+ 
++static void ov7251_trace_mipi_state(struct ov7251 *ov7251)
++{
++	static const u16 regs[] = {
++		0x4805, 0x4806, 0x4837, 0x4838, 0x483a, 0x4865,
++	};
++	u8 values[ARRAY_SIZE(regs)] = {};
++	int rets[ARRAY_SIZE(regs)];
++	unsigned int i;
++
++	for (i = 0; i < ARRAY_SIZE(regs); i++)
++		rets[i] = ov7251_read_reg(ov7251, regs[i], &values[i]);
++
++	dev_info(ov7251->dev,
++		 "IRTRACE mipi-state "
++		 "4805=%d/0x%02x 4806=%d/0x%02x "
++		 "4837=%d/0x%02x 4838=%d/0x%02x "
++		 "483a=%d/0x%02x 4865=%d/0x%02x\n",
++		 rets[0], values[0], rets[1], values[1],
++		 rets[2], values[2], rets[3], values[3],
++		 rets[4], values[4], rets[5], values[5]);
++}
++
+ static int ov7251_pll_configure(struct ov7251 *ov7251)
+ {
+ 	const struct ov7251_pll_cfgs *configs;
+@@ -1457,3 +1457,4 @@ static int ov7251_s_stream(struct v4l2_subdev *subdev, int enable)
+ 		ov7251_trace_pll_mipi(ov7251);
++		ov7251_trace_mipi_state(ov7251);
+ 	} else {
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
