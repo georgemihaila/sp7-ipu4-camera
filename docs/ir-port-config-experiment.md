@@ -40,7 +40,7 @@ running kernel by its loaded-module hash and the sysfs parameter value
 | Configuration | Result |
 | --- | --- |
 | Default `0x3895` | `VIDIOC_STREAMON` returned `-1 (Connection timed out)`; output size was 0 bytes |
-| Test `0x2e95` | `VIDIOC_STREAMON` returned `-1 (Connection timed out)`; output size was 0 bytes |
+| Test `0x2e95` in both banks | `VIDIOC_STREAMON` returned `-1 (Connection timed out)`; output size was 0 bytes |
 
 Both attempts produced the same receiver behavior:
 
@@ -56,6 +56,31 @@ No data-lane HS/SOF/EOF evidence or valid payload was observed. The
 `vdda` regulator was disabled again after the failed attempt. The test did
 not reach raw-frame validation, packing analysis, 120-frame capture, or
 preview qualification.
+
+## Asymmetric Windows-reconstructed follow-up
+
+The historical static AddInput reconstruction identifies a different pair
+that had not been tested on this IR path: legacy bank `0x38b4`, combo bank
+`0x2e95`. A two-parameter module was built from the same source tree and
+loaded with:
+
+```text
+options intel_ipu4p_isys csi2_legacy_port_config=0x38b4 csi2_combo_port_config=0x2e95
+```
+
+The loaded module hash was
+`2128f6cc5b410027cf219f71f6ad464a9a251897cbd943ce9c6f1acdbb317520` and
+the live sysfs values were `14516` (`0x38b4`) and `11925` (`0x2e95`). The
+same dynamic BE SOC route and `Y10 ` 640x480 format were used. The result
+was again:
+
+- `VIDIOC_STREAMON returned -1 (Connection timed out)`;
+- `/tmp/ir-asymmetric-1789734282.raw` remained 0 bytes;
+- receiver status was `0x4000` with no clean frames after 30 retries;
+- stream stop timed out and cleanup returned `-5`.
+
+This tests the remaining known static port-config discrepancy and is also
+negative for IR capture. It does not justify further port-config mutation.
 
 ## Rollback proof
 
@@ -78,8 +103,9 @@ After reboot:
 
 ## Interpretation
 
-The `0x2e95` change is a demonstrated negative result for this IR capture
-path. It does not explain the missing CSI data and is not retained as a live
-configuration. The remaining no-frame blocker is unresolved; further PHY or
-receiver mutations require a new source-backed discrepancy rather than this
-experiment's result.
+Both the symmetric `0x2e95` test and the asymmetric
+`0x38b4`/`0x2e95` test are demonstrated negative results for this IR capture
+path. Neither explains the missing CSI data, and neither is retained as a
+live configuration. The remaining no-frame blocker is unresolved; further
+PHY or receiver mutations require a new source-backed discrepancy rather
+than these experiments' results.
