@@ -98,7 +98,8 @@ After reboot:
 - `modprobe --show-depends intel_ipu4p_isys` selected the normal module path
   without a test parameter;
 - `99-sp7-ipu4p-port-config.conf` was absent from `/etc/modprobe.d` and was
-  retained as `/tmp/99-sp7-ipu4p-port-config.conf.rolledback`;
+  moved out of `/etc/modprobe.d` before reboot (the volatile `/tmp` copy was
+  cleared by the subsequent reboot);
 - `sp7-camera-bridge.service` was active again.
 
 ## Interpretation
