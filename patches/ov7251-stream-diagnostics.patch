@@ -1,0 +1,111 @@
+--- a/drivers/media/i2c/ov7251.c
++++ b/drivers/media/i2c/ov7251.c
+@@ -911,10 +911,15 @@
+ 	int ret;
+ 	u32 wait_us;
+ 
++	dev_info(ov7251->dev, "IRTRACE power-on begin xclk=%u\n",
++		 ov7251->xclk_freq);
++
+ 	ret = ov7251_regulators_enable(ov7251);
+ 	if (ret < 0)
+ 		return ret;
+ 
++	dev_info(ov7251->dev, "IRTRACE power-on regulators enabled\n");
++
+ 	ret = clk_prepare_enable(ov7251->xclk);
+ 	if (ret < 0) {
+ 		dev_err(ov7251->dev, "clk prepare enable failed\n");
+@@ -929,6 +934,9 @@
+ 	/* wait at least 65536 external clock cycles */
+ 	wait_us = DIV_ROUND_UP(65536 * 1000,
+ 			       DIV_ROUND_UP(ov7251->xclk_freq, 1000));
++	dev_info(ov7251->dev,
++		 "IRTRACE power-on reset asserted gpio=%d wait_us=%u\n",
++		 gpiod_get_value_cansleep(ov7251->enable_gpio), wait_us);
+ 	usleep_range(wait_us, wait_us + 1000);
+ 
+ 	ret = ov7251_set_register_array(ov7251,
+@@ -942,6 +950,8 @@
+ 		return ret;
+ 	}
+ 
++	dev_info(ov7251->dev, "IRTRACE power-on global-init complete\n");
++
+ 	return ret;
+ }
+ 
+@@ -951,9 +961,12 @@
+ 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+ 	struct ov7251 *ov7251 = to_ov7251(sd);
+ 
++	dev_info(ov7251->dev, "IRTRACE power-off begin\n");
+ 	clk_disable_unprepare(ov7251->xclk);
+ 	gpiod_set_value_cansleep(ov7251->enable_gpio, 0);
+ 	ov7251_regulators_disable(ov7251);
++	dev_info(ov7251->dev, "IRTRACE power-off complete gpio=%d\n",
++		 gpiod_get_value_cansleep(ov7251->enable_gpio));
+ 
+ 	return 0;
+ }
+@@ -1337,12 +1350,19 @@
+ static int ov7251_s_stream(struct v4l2_subdev *subdev, int enable)
+ {
+ 	struct ov7251 *ov7251 = to_ov7251(subdev);
++	u8 mode_select = 0;
++	int read_ret;
+ 	int ret;
+ 
+ 	mutex_lock(&ov7251->lock);
++	dev_info(ov7251->dev,
++		 "IRTRACE stream begin enable=%d mode=%ux%u link_freq_idx=%u\n",
++		 enable, ov7251->current_mode->width, ov7251->current_mode->height,
++		 ov7251->link_freq_idx);
+ 
+ 	if (enable) {
+ 		ret = pm_runtime_resume_and_get(ov7251->dev);
++		dev_info(ov7251->dev, "IRTRACE stream power resume ret=%d\n", ret);
+ 		if (ret) {
+ 			mutex_unlock(&ov7251->lock);
+ 			return ret;
+@@ -1353,6 +1373,7 @@
+ 			dev_err(ov7251->dev, "error configuring PLLs\n");
+ 			goto err_power_down;
+ 		}
++		dev_info(ov7251->dev, "IRTRACE stream pll configured\n");
+ 
+ 		ret = ov7251_set_register_array(ov7251,
+ 					ov7251->current_mode->data,
+@@ -1363,6 +1384,7 @@
+ 				ov7251->current_mode->height);
+ 			goto err_power_down;
+ 		}
++		dev_info(ov7251->dev, "IRTRACE stream mode registers complete\n");
+ 		ret = __v4l2_ctrl_handler_setup(&ov7251->ctrls);
+ 		if (ret < 0) {
+ 			dev_err(ov7251->dev, "could not sync v4l2 controls\n");
+@@ -1370,11 +1392,25 @@
+ 		}
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
+ 				       OV7251_SC_MODE_SELECT_STREAMING);
++		dev_info(ov7251->dev, "IRTRACE stream mode-select write ret=%d\n",
++			 ret);
+ 		if (ret)
+ 			goto err_power_down;
++
++		read_ret = ov7251_read_reg(ov7251, OV7251_SC_MODE_SELECT,
++					   &mode_select);
++		dev_info(ov7251->dev,
++			 "IRTRACE stream mode-select read ret=%d value=0x%02x\n",
++			 read_ret, mode_select);
+ 	} else {
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
+ 				       OV7251_SC_MODE_SELECT_SW_STANDBY);
++		dev_info(ov7251->dev, "IRTRACE stream standby write ret=%d\n", ret);
++		read_ret = ov7251_read_reg(ov7251, OV7251_SC_MODE_SELECT,
++					   &mode_select);
++		dev_info(ov7251->dev,
++			 "IRTRACE stream standby read ret=%d value=0x%02x\n",
++			 read_ret, mode_select);
+ 		pm_runtime_put(ov7251->dev);
+ 	}
