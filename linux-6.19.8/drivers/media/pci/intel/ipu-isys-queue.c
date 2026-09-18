@@ -1766,8 +1766,6 @@ out_list_empty:
 
 struct vb2_ops ipu_isys_queue_ops = {
 	.queue_setup = queue_setup,
-	.wait_prepare = ipu_isys_queue_unlock,
-	.wait_finish = ipu_isys_queue_lock,
 	.buf_init = buf_init,
 	.buf_prepare = buf_prepare,
 	.buf_finish = buf_finish,
@@ -1787,6 +1785,8 @@ int ipu_isys_queue_init(struct ipu_isys_queue *aq)
 	aq->vbq.drv_priv = aq;
 //	aq->vbq.allow_requests = true;
 	aq->vbq.ops = &ipu_isys_queue_ops;
+	/* vb2 core now drops this lock while waiting (was wait_prepare/finish). */
+	aq->vbq.lock = &ipu_isys_queue_to_video(aq)->mutex;
 	aq->vbq.mem_ops = &vb2_dma_contig_memops;
 	aq->vbq.timestamp_flags = (wall_clock_ts_on) ?
 	    V4L2_BUF_FLAG_TIMESTAMP_UNKNOWN : V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;

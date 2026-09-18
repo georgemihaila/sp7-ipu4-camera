@@ -1102,6 +1102,15 @@ static long ipu_buttress_clk_round_rate(struct clk_hw *hw,
 	return round_rate;
 }
 
+/* clk_ops.round_rate was removed from the kernel; determine_rate replaces it. */
+static int ipu_buttress_clk_determine_rate(struct clk_hw *hw,
+					   struct clk_rate_request *req)
+{
+	req->rate = ipu_buttress_clk_round_rate(hw, req->rate,
+						&req->best_parent_rate);
+	return 0;
+}
+
 static unsigned long
 ipu_buttress_clk_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 {
@@ -1141,7 +1150,7 @@ static const struct clk_ops ipu_buttress_clk_sensor_ops_parent = {
 	.disable = ipu_buttress_clk_pll_disable,
 	.prepare = ipu_buttress_clk_pll_prepare,
 	.unprepare = ipu_buttress_clk_pll_unprepare,
-	.round_rate = ipu_buttress_clk_round_rate,
+	.determine_rate = ipu_buttress_clk_determine_rate,
 	.recalc_rate = ipu_buttress_clk_recalc_rate,
 	.set_rate = ipu_buttress_clk_set_rate,
 };
