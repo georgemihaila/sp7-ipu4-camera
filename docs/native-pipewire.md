@@ -18,11 +18,11 @@ static frames. A pass is only a bounded source-level result; it does not prove
 portal permissions, Flatpak access, or preview/capture in Snapshot, Zoom,
 Discord, or another desktop application.
 
-The default install still disables the physical libcamera monitor, but the
-Surface bridge endpoints are configured as ordinary V4L2 capture sources so
-PipeWire clients can enumerate the bridge-backed cameras. This is a
-compatibility path, not native libcamera integration; do not treat it as a
-native qualification result or use it to bypass this profile's validator.
+This also explains the default-install symptom: the bridge policy disables the
+physical libcamera monitor, so `wpctl` shows only the named V4L2 bridge devices
+and GNOME Snapshot can report that no camera was found. Do not treat enabling
+this profile as a complete application fix until the validator passes with
+non-black, advancing frames.
 
 ## Activation
 

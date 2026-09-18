@@ -31,9 +31,9 @@ The complete C controller is installed by the normal setup script as the
 selects a requested camera after debounce, applies the close grace period,
 retries failed capture and filler starts independently, bounds WirePlumber
 operations, and adapts the `/proc` consumer scan interval between 200 ms while
-active and 1000 ms while stable and idle. Idle fillers cache one black YUYV or
-MJPEG payload at startup and reuse it through a native live source; camera
-capture keeps the conversion and scaling stages. Its live entrypoint is:
+active and 1000 ms while stable and idle. Idle `videotestsrc` fillers link
+directly to their negotiated caps; camera capture keeps the conversion and
+scaling stages. Its live entrypoint is:
 
 ```sh
 ./cbridge/sp7-camera-bridge

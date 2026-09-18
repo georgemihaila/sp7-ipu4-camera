@@ -58,10 +58,11 @@ if [ -e "$USER_UNIT_DIR/sp7-zoom-camera-bridge.service" ]; then
 	rm -f "$USER_UNIT_DIR/sp7-zoom-camera-bridge.service"
 fi
 if [ -e "$OPTIONS" ] && ! cmp -s "$ROOT/modprobe.d/98-v4l2loopback.conf" "$OPTIONS"; then
-	# The previous repository release used exclusive_caps=1 for all three
-	# devices. Migrate that exact older configuration; preserve unrelated or
-	# user-owned loopback options instead of overwriting them.
-	if ! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,1,1' "$OPTIONS"; then
+	# Accept only the two repository-managed profiles during migration. The
+	# 1,0,0 profile was an intermediate PipeWire experiment; the installed
+	# configuration is replaced by the proven exclusive profile below.
+	if ! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,1,1' "$OPTIONS" && \
+		! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,0,0' "$OPTIONS"; then
 		fail "$OPTIONS already exists with different contents; review it before replacing"
 	fi
 fi
