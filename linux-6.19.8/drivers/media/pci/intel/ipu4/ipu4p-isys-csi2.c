@@ -88,7 +88,7 @@ static void ipu4p_csi2_log_rx_state(struct ipu_isys_csi2 *csi2, const char *tag)
 	fatal_receiver_errors = csi2->fatal_receiver_errors;
 	spin_unlock_irqrestore(&csi2->receiver_error_lock, flags);
 
-	dev_dbg(&csi2->isys->adev->dev,
+	dev_info(&csi2->isys->adev->dev,
 		"csi %u %s: rx enable=0x%x lanes=%u config=0x%x "
 		"status=0x%x hs=0x%x lp=0x%x "
 		"ctermen=%u csettle=%u d0termen=%u d0settle=%u "

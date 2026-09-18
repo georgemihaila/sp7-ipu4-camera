@@ -379,6 +379,11 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 	if (!cfg || !cfg->nlanes || cfg->nlanes > IPU_ISYS_MAX_CSI2_LANES)
 		return -EINVAL;
 	nlanes = cfg->nlanes;
+	dev_info(&csi2->isys->adev->dev,
+		 "IRTRACE csi2-%u receiver request source=%u external=%s "
+		 "nlanes=%u stream_count=%u remote_streams=%u\n",
+		 csi2->index, csi2->asd.source, ext_sd ? ext_sd->name : "<none>",
+		 nlanes, csi2->stream_count, csi2->remote_streams);
 
 	rval = ipu_isys_csi2_calc_timing(csi2, &timing, CSI2_ACCINV);
 	if (rval)
@@ -388,6 +393,12 @@ static int set_stream(struct v4l2_subdev *sd, int enable)
 	if (rval)
 		return rval;
 	csi2->stream_count++;
+	dev_info(&csi2->isys->adev->dev,
+		 "IRTRACE csi2-%u receiver enabled source=%u nlanes=%u "
+		 "timing=%u/%u/%u/%u stream_count=%u\n",
+		 csi2->index, csi2->asd.source, nlanes, timing.ctermen,
+		 timing.csettle, timing.dtermen, timing.dsettle,
+		 csi2->stream_count);
 
 	dev_dbg(&csi2->isys->adev->dev,
 		"csi2 set_stream(%d): receiver enabled, nlanes=%u stream_count=%u remote_streams=%u\n",

@@ -1757,6 +1757,12 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 		dev_dbg(dev, "Can't get stream_handle\n");
 		return rval;
 	}
+	dev_info(dev,
+		 "IRTRACE fw open request source=%u handle=%d input=%ux%u dt=0x%x "
+		 "output_pins=%u\n",
+		 ip->source, ip->stream_handle, stream_cfg->input_pins[0].input_res.width,
+		 stream_cfg->input_pins[0].input_res.height,
+		 stream_cfg->input_pins[0].dt, stream_cfg->nof_output_pins);
 
 	reinit_completion(&ip->stream_open_completion);
 
@@ -1793,7 +1799,8 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 		rval = -EIO;
 		goto out_put_stream_opened;
 	}
-	dev_dbg(dev, "start stream: open complete\n");
+	dev_info(dev, "IRTRACE fw open complete source=%u handle=%d\n",
+		 ip->source, ip->stream_handle);
 
 	ireq = ipu_isys_next_queued_request(ip);
 
@@ -1818,6 +1825,10 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 	}
 
 	reinit_completion(&ip->stream_start_completion);
+	dev_info(dev,
+		 "IRTRACE fw start request source=%u handle=%d mode=%s\n",
+		 ip->source, ip->stream_handle,
+		 (bl || ireq) ? "start-and-capture" : "start-only");
 
 	if (bl || ireq) {
 		ipu_fw_isys_dump_frame_buff_set(dev, buf,
@@ -1854,7 +1865,8 @@ static int start_stream_firmware(struct ipu_isys_video *av,
 		rval = -EIO;
 		goto out_stream_close;
 	}
-	dev_dbg(dev, "start stream: complete\n");
+	dev_info(dev, "IRTRACE fw start complete source=%u handle=%d\n",
+		 ip->source, ip->stream_handle);
 	ipu_isys_log_csi2_state(dev, ip, "start stream complete state");
 
 	return 0;
@@ -2326,7 +2338,7 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	/* Oh crap */
 	if (state) {
 		if (ip->csi2)
-			dev_dbg(dev,
+			dev_info(dev,
 				"stream on pre-fw: source=%u stream_count=%u remote_streams=%u vc=%u stream_id=%u\n",
 				ip->source, ip->csi2->stream_count,
 				ip->csi2->remote_streams, ip->vc, ip->stream_id);
@@ -2354,7 +2366,7 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 					"fatal CSI-2 receiver error before sensor start\n");
 				goto out_media_entity_stop_streaming_firmware;
 			}
-			dev_dbg(dev,
+			dev_info(dev,
 				"stream on ext: calling s_stream(1) for %s (remote_streams=%u stream_count=%u)\n",
 				ip->external->entity->name,
 				ip->csi2->remote_streams, ip->csi2->stream_count);
@@ -2381,7 +2393,7 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				rval = -EIO;
 		}
 		if (!rval) {
-			dev_dbg(dev,
+			dev_info(dev,
 				"stream on ext: s_stream(1) succeeded for %s\n",
 				ip->external->entity->name);
 		} else {

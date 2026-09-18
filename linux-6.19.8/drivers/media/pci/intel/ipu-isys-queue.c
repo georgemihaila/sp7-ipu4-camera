@@ -774,11 +774,17 @@ static int ipu_isys_stream_start(struct ipu_isys_pipeline *ip,
 	/* Remember the request start_stream_firmware may dequeue on failure. */
 	ireq = ipu_isys_find_queued_request(ip, false);
 
+	dev_info(&pipe_av->isys->adev->dev,
+		 "IRTRACE pipeline stream begin source=%u frames_done=%u\n",
+		 ip->source, frames_done_before_start);
 	rval = ipu_isys_video_set_streaming(pipe_av, 1, bl);
 	if (rval) {
 		mutex_unlock(&pipe_av->isys->stream_mutex);
 		goto out_requeue;
 	}
+	dev_info(&pipe_av->isys->adev->dev,
+		 "IRTRACE pipeline stream configured source=%u handle=%d\n",
+		 ip->source, ip->stream_handle);
 
 	ip->streaming = 1;
 	stream_started = true;
