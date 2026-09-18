@@ -32,6 +32,12 @@ event. It is not a frame or payload indication.
 3. The priority INT3472 supply-name fix changes probe from an I2C timeout to
    successful chip identification, but the controlled IR capture still has
    no payload after that probe improvement.
+4. The original Windows binary exposes source-7 receiver timing values of
+   `1155/1269`, but no source-6 trace.  Applying those values to source 6,
+   together with the corrected 319.2 MHz OV7251 PLL, still produced zero
+   bytes, 60 no-frame retries, and 32 `0x4000` receiver errors.  This
+   source-6 timing inference was rolled back; see
+   `docs/ov7251-source6-timing-experiment.md`.
 
 All experiments used the dynamically discovered route:
 
