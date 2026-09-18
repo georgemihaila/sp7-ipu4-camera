@@ -30,3 +30,10 @@ Module.symvers
 /autotest/DONE
 /libcamera-build/
 /dist/
+
+# C bridge build artifacts
+/cbridge/*.o
+/cbridge/*.d
+/cbridge/controller-test
+/cbridge/sp7-camera-backend-prototype
+/cbridge/sp7-camera-bridge
