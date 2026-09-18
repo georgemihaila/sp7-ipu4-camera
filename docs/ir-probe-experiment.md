@@ -53,11 +53,19 @@ disabled and `CONFIG_MODULE_SIG_FORCE` unset, but module loading still
 requires root. Two pre-existing compiler format warnings in the pinned
 source were emitted; neither is in the vdda patch.
 
-The original resident distribution module remains loaded and attributable by
-the baseline record: its compressed-file SHA-256 is
-`00cfa05cbdf46a8d6c55b077d7729fa419a3a072d88bb343b5985d4e3ad4deac` and its
-Fedora signature/vermagic are intact. The experimental module has not been
-loaded, so the fix is not yet hardware-demonstrated.
+The distribution module was not overwritten. For the controlled hardware run,
+the built module was installed at
+`/lib/modules/6.19.8-3.surface.fc43.x86_64/extra/` and selected through the
+temporary `/etc/modprobe.d/99-sp7-int3472-vdda-experiment.conf` install rule.
+Its loaded-file SHA-256 remained
+`e16d4c6630cfa3da8c43b26a3b3122f87552998bc0e6dd86ada6a923cb9796f4` and
+`intel_skl_int3472_discrete` was marked `OE` in `/proc/modules`.
+
+The patched provider resolved an `INT3472:02-vdda` regulator consumer instead
+of the previous `avdd` name. On the same boot, OV7251 reported revision 7 at
+I2C address `0x60`, registered as `ov7251 2-0060`, and advertised
+`Y10_1X10` at 640x480 with 30/60/90 fps intervals. The prior `-110` write of
+register `0x0103` and the `vdda` dummy-regulator message did not recur.
 
 ## Controlled load/retry procedure
 
@@ -143,27 +151,31 @@ use the same desktop user that owns it.
    passes. If any reload or RGB check fails, leave the bridge stopped and do
    not reboot; collect the failure log and request recovery direction.
 
-The `modprobe -r`/reload sequence is not executed by the build script and was
-not executed while preparing this commit. It requires root authority that is
-not available to the current unprivileged session. No hardware result may be
-reported until this sequence is explicitly run and its evidence is captured.
+The procedure above describes the bounded load/retry shape. The actual run
+used the on-disk override and a permitted reboot because the IPU4P stack was
+already resident. After the probe/capture attempts, the exact baseline ISYS
+module was restored and verified live at SHA-256
+`10ec710e00d411cc29b5f192200bd22b28b4e13a0cd131ab93ad9ecbc433e3ce`.
+The temporary modprobe file was moved out of `/etc/modprobe.d`, and
+`sp7-camera-bridge.service` was active again after reboot.
 
 ## Rollback and attribution
 
-Rollback is an in-memory module reload only. The distribution files are not
-overwritten, no `depmod` or initramfs update is needed, and no reboot is part
-of this experiment. If the original module cannot be reloaded, stop before
-starting the bridge and preserve the original module hash, `lsmod`, binding,
-and kernel log for recovery. The RGB baseline and bridge hashes are in
-`docs/ir-baseline.md`.
+The distribution INT3472 module was not overwritten; the temporary override
+is the only provider-selection change. The ISYS test module and its modprobe
+configuration were restored after the run, and the RGB bridge was restarted.
+The front/rear named-camera previews were not requalified during this IR-only
+run; the bridge being active is the demonstrated restoration state. The RGB
+baseline and bridge hashes are in `docs/ir-baseline.md`.
 
 The experiment is one variable: only the INT3472 consumer-name mapping changes.
-The following remain hypotheses until the hardware retry demonstrates them:
+The `vdda` mapping is demonstrated to remove the failed probe boundary on
+this unit and to allow chip identity and media registration. The following
+remain unproven or unresolved:
 
-* the `vdda` mapping is the cause of the first `0x0103` I2C timeout;
-* the physical rail becomes enabled when the `vdda` consumer is acquired;
-* reset polarity and the existing `enable` mapping are correct;
-* the sensor will proceed from chip ID to media registration;
-* the later CSI and monochrome capture path will work.
-
-None of those capabilities is established by this build alone.
+* the physical rail's exact on-time state during the first transaction was not
+  measured independently; it was disabled after the failed capture;
+* reset polarity and the existing `enable` mapping have not had ten
+  independent power-cycle trials;
+* CSI reception, raw monochrome frames, illumination and preview remain
+  unproven.
