@@ -54,6 +54,14 @@ event. It is not a frame or payload indication.
    `0x0100=0x01`, but no payload arrived after 31 attempts. See
    `docs/ov7251-synchronized-source6-trace.md`.
 
+7. A software-only direct CSI packet-tap run then formatted the IPU4P source-6
+   capture node to 640×480 Y10 and started the same source-6 pipeline. Firmware
+   open/start completed, but the direct node returned no completed payload
+   buffer during 26 no-frame retries; its output file remained zero bytes.
+   This strengthens the receiver-side negative result but is not physical proof
+   that the sensor emits no MIPI transitions. The setup failures and rollback
+   are recorded in `docs/ov7251-csi-packet-tap.md`.
+
 All experiments used the dynamically discovered route:
 
 ```text
@@ -78,8 +86,9 @@ The narrowly instrumented Linux trace now supplies the synchronized receiver
 and sensor evidence, but not physical proof at the CSI pins. The next required
 evidence is therefore either a known-good Windows/firmware source-6 trace or
 physical measurement of the OV7251 clock/reset/power and CSI clock/data lanes
-during the same Linux start. A usable IR image, illumination behavior, and
-preview client remain unproven.
+during the same Linux start. The direct software packet tap did not close that
+boundary. A usable IR image, illumination behavior, and preview client remain
+unproven.
 
 The synchronized Linux platform-register trace is recorded in
 `docs/ov7251-source6-platform-register-trace.md`. It confirms the live
