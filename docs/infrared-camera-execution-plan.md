@@ -17,6 +17,7 @@ On the research date, checkout `main` was clean at `d8bb67f`; the running kernel
 - Current-boot logs identify `INT347E:00` as a supported sensor, then record dummy `vdddo`, `vddd`, and `vdda` regulators and `ov7251_write_reg: write reg error -110: reg=103, val=1`, followed by `error during global init` and failed probe.
 - The I2C device `/sys/bus/i2c/devices/i2c-INT347E:00` exists but has no bound-driver symlink. The media graph has the RGB sensors and no OV7251 sensor entity. Generic IPU video nodes are not proof of an IR sensor.
 - `modinfo ov7251` resolves to the distribution module under `/lib/modules/6.19.8-3.surface.fc43.x86_64/kernel/drivers/media/i2c/ov7251.ko.xz`. The repository module manifest contains IPU modules, not OV7251.
+- Live sysfs also confirms `INT3472:02` is bound to `int3472-discrete` and exposes an `INT3472:02-avdd` regulator, currently disabled. This strengthens the supply-name mismatch hypothesis; disabled state alone is not causal proof after a failed probe.
 - `sp7-camera-bridge.service` was active. This research did not stop it, reprobe sensors, load modules, alter power controls, or capture images.
 - `linux-6.19.8/drivers/media/pci/intel/ipu-bridge.c` contains `IPU_SENSOR_CONFIG("INT347E", 1, 319200000)`. Here `1` is the number of listed link frequencies, **not a measured CSI lane count**. Lane count and port must be established from firmware and the generated endpoints.
 - The shared Intel source already handles `MEDIA_BUS_FMT_Y10_1X10`: inspect `ipu-isys-csi2.c`, `ipu-isys-csi2-be-soc.c`, `ipu-isys-video.c`, and `ipu-isys-subdev.c`. Different capture paths have different storage descriptions; existing entries do not prove correct end-to-end packing.
@@ -38,6 +39,8 @@ Important naming trap: [upstream INT3472 discrete.c](https://github.com/torvalds
 ## Highest-priority experiment: the newly published supply-name fix
 
 An [August 31 patch](https://lkml.iu.edu/2608.3/13473.html), [reported committed to media.git/next on September 5](https://www.mail-archive.com/linuxtv-commits@linuxtv.org/msg49522.html), maps INT347E POWER_ENABLE to regulator consumer `vdda` instead of the generic `avdd`. Its author reports working probe, illumination and 640×480/30 fps on Surface Pro 7+ (IPU6). This is strong adjacent-hardware evidence, **not a tested SP7/IPU4P fix**.
+
+The local historical reference `/home/george/repos/sp7-camera/work/microsoft-sp7/DSDT.dsl` offers a resource-map starting point: CAM3 depends on ICL2, with POWER_ENABLE pin `0x63` and RESET pin `0x4a`. Its provenance/firmware version must be checked against a fresh dump; it is not automatically the current firmware. The sibling kernel source is likewise a reference, not proof of the running module’s source.
 
 Make this the first Stage 1 comparison and, if applicable, the first Stage 3 experiment. Check whether the exact target source already contains the mapping and whether this unit actually has that power-enable resource. If the mapping is absent and the resource matches, backport the small upstream change with attribution into INT3472, preserving RESET-to-`enable`. Build/test the platform module first; an OV7251 sensor-code change may be unnecessary. Resolve and record the actual upstream commit before backporting; do not infer mainline inclusion from a mailing-list announcement.
 
