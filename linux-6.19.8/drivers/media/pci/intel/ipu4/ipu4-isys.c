@@ -243,14 +243,21 @@ static void ipu4p_isys_bb_cfg(struct ipu_isys *isys)
 
 }
 
+/* Default retains the qualified RGB configuration; override only for a
+ * bounded Surface Pro 7 source-6/one-lane receiver experiment. */
+static unsigned int csi2_port_config = 0x3895;
+module_param(csi2_port_config, uint, 0644);
+MODULE_PARM_DESC(csi2_port_config,
+		 "CSI2 GPREG port configuration (experimental)");
+
 static void ipu4p_isys_port_cfg(struct ipu_isys *isys)
 {
 	void __iomem *base = isys->pdata->base;
 	void __iomem *isp_base = isys->adev->isp->base;
 	/* Port config */
-	writel(0x3895, base + IPU_GPOFFSET +
+	writel(csi2_port_config, base + IPU_GPOFFSET +
 	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
-	writel(0x3895, base + IPU_COMBO_GPOFFSET +
+	writel(csi2_port_config, base + IPU_COMBO_GPOFFSET +
 	       CSI2_REG_CSI_GPREG_CR_PORT_CONFIG);
 	writel((0x100 << 1) | (0x100 << 10) | (0x100 << 19), isp_base +
 		   BUTTRESS_REG_CSI_BSCAN_EXCLUDE);
