@@ -1,0 +1,11 @@
+diff --git a/intel_skl_int3472_discrete.c b/intel_skl_int3472_discrete.c
+--- a/intel_skl_int3472_discrete.c
++++ b/intel_skl_int3472_discrete.c
+@@ -159,0 +160,7 @@
++	{ /* ov7251 power enable is the sensor's vdda rail */
++		.hid = "INT347E",
++		.type_from = INT3472_GPIO_TYPE_POWER_ENABLE,
++		.type_to = INT3472_GPIO_TYPE_POWER_ENABLE,
++		.con_id = "vdda",
++		.enable_time_us = GPIO_REGULATOR_ENABLE_TIME,
++	},
