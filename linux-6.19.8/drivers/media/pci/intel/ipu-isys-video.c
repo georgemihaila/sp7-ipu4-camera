@@ -1958,7 +1958,7 @@ static void release_streaming_firmware(struct ipu_isys_video *av)
 	put_stream_handle(av);
 }
 
-static void close_streaming_firmware(struct ipu_isys_video *av)
+static int close_streaming_firmware(struct ipu_isys_video *av)
 {
 	struct ipu_isys_pipeline *ip =
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
@@ -1998,6 +1998,7 @@ out_release_stream:
 		mark_stream_reset_needed(av);
 	put_stream_opened(av);
 	put_stream_handle(av);
+	return close_failed ? (rval ? rval : -EIO) : 0;
 }
 
 void
@@ -2167,10 +2168,12 @@ turn_off_skew_cal:
 	return rval;
 }
 
-static void stop_external_sensor(struct device *dev,
+static int stop_external_sensor(struct device *dev,
 				 struct ipu_isys_pipeline *ip,
 				 struct v4l2_subdev *esd)
 {
+	int rval = 0;
+
 	/* Stop the sensor only when this pipeline owns the CSI stream. */
 	dev_err(dev, "s_stream %s (ext)\n", ip->external->entity->name);
 
@@ -2183,11 +2186,16 @@ static void stop_external_sensor(struct device *dev,
 #if defined(CONFIG_VIDEO_INTEL_IPU4) || defined(CONFIG_VIDEO_INTEL_IPU4P)
 			ipu_isys_csi2_wait_last_eof(ip->csi2);
 #endif
-			v4l2_subdev_call(esd, video, s_stream, 0);
+			rval = v4l2_subdev_call(esd, video, s_stream, 0);
 		}
 	} else {
-		v4l2_subdev_call(esd, video, s_stream, 0);
+		rval = v4l2_subdev_call(esd, video, s_stream, 0);
 	}
+	if (rval && rval != -ENOIOCTLCMD)
+		mark_stream_reset_needed(container_of(ip, struct ipu_isys_video,
+						      ip));
+
+	return rval;
 }
 
 static int ipu_isys_video_subdev_stream(struct ipu_isys_video *av,
@@ -2244,6 +2252,7 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	bool external_sensor_start_attempted = false;
 	bool close_stream = true;
 	u32 fatal_receiver_errors;
+	int cleanup_rval = 0;
 	int rval = 0;
 
 	dev_dbg(dev, "set stream: %d\n", state);
@@ -2266,12 +2275,15 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 	if (!state) {
 		if (stop_streaming_firmware(av) !=
 		    IPU_ISYS_STOP_STREAMING_SUCCESS) {
+			cleanup_rval = -EIO;
 			release_streaming_firmware(av);
 			close_stream = false;
 		}
 
 		/* stop external sub-device now. */
-		stop_external_sensor(dev, ip, esd);
+		rval = stop_external_sensor(dev, ip, esd);
+		if (rval && rval != -ENOIOCTLCMD && !cleanup_rval)
+			cleanup_rval = rval;
 	}
 
 	mutex_lock(&mdev->graph_mutex);
@@ -2296,8 +2308,11 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 
 		dev_dbg(dev, "stream op %s\n", entity->name);
 		rval = ipu_isys_video_subdev_stream(av, sd, ip, state);
-		if (!state)
+		if (!state) {
+			if (rval && rval != -ENOIOCTLCMD && !cleanup_rval)
+				cleanup_rval = rval;
 			continue;
+		}
 		if (rval && rval != -ENOIOCTLCMD) {
 			mutex_unlock(&mdev->graph_mutex);
 			goto out_media_entity_stop_streaming;
@@ -2379,8 +2394,11 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 			goto out_media_entity_stop_streaming_firmware;
 
 	} else {
-		if (close_stream)
-			close_streaming_firmware(av);
+		if (close_stream) {
+			rval = close_streaming_firmware(av);
+			if (rval && !cleanup_rval)
+				cleanup_rval = rval;
+		}
 		av->ip.stream_id = 0;
 		av->ip.vc = 0;
 	}
@@ -2391,7 +2409,7 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 		media_graph_walk_cleanup(&ip->graph);
 	av->streaming = state;
 
-	return 0;
+	return state ? 0 : cleanup_rval;
 
 out_media_entity_stop_streaming_firmware:
 	if (stop_streaming_firmware(av) == IPU_ISYS_STOP_STREAMING_SUCCESS)

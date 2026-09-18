@@ -10,8 +10,12 @@ The code has been hardware-validated on one Surface Pro 7 running Fedora 43
 with the linux-surface kernel `6.19.8-3.surface.fc43.x86_64`. V4L2 raw capture
 has succeeded from the front OV5693 and rear OV8865 cameras. Fedora's existing
 libcamera Simple pipeline with SoftISP has also produced processed captures
-from both cameras. The GNOME Snapshot and portal startup path has not been
-qualified.
+from both cameras. The default full installation uses the named V4L2 bridge,
+intentionally disables WirePlumber's physical libcamera monitor, and therefore
+does not expose a native camera to GNOME Snapshot; the app can report that no
+camera was found while bridge-backed applications continue to work. The
+opt-in native PipeWire path remains unqualified and is currently known to
+produce black frames, so enabling it is not yet a fix for that symptom.
 
 ## Support and project scope
 
@@ -50,7 +54,8 @@ The project has been hardware-validated with the linux-surface kernel
 `6.19.8-3.surface.fc43.x86_64` on Fedora 43; other kernel releases need a
 matching prepared build tree and may need additional kernel integration.
 
-The installer also installs the libcamera and v4l2loopback dependencies and,
+The installer also builds and installs the C camera bridge, installs the
+libcamera and v4l2loopback dependencies and,
 when run from a logged-in desktop session, enables the named **Surface Camera
 (front)** and **Surface Camera (back)** V4L2 endpoints for applications that
 enumerate camera devices directly.
@@ -191,11 +196,80 @@ media graph. They do not install, load, unload, or reload modules. A quick
 manual capture is also available with `sudo ./test-capture.sh front` or
 `sudo ./test-capture.sh rear`.
 
+The Phase 5 V4L2 compliance gate is separate and read-only:
+
+```sh
+V4L2_COMPLIANCE_DIR="$PWD/reports/v4l2-compliance" \
+    ./tests/v4l2-compliance-validation.sh --live
+```
+
+It dynamically follows each `/sys/class/video4linux/video*` node to its
+sysfs driver/module identity, records that node's capabilities, formats,
+module metadata, and requested firmware, and runs `v4l2-compliance` only on
+module-backed physical capture queues. Virtual, `v4l2loopback`, and
+application-bridge identities are excluded from the discovered sysfs identity;
+no video minor is assumed. If `v4l2-compliance`, `v4l2-ctl`, `timeout`, usable
+hardware, or an eligible capture node is missing, the result is `SKIP`. A
+non-zero compliance result for a node that was actually tested is `FAIL`.
+This is ABI evidence only: it does not prove advancing/non-black frames,
+power/lifetime correctness, PipeWire behavior, or application support. The
+current validation host does not have `v4l2-compliance`, so no compliance
+pass is claimed here.
+
+For kernel readiness, use the exact prepared target `KDIR` and run a warning-
+enabled module build, checkpatch on the actual patch series, and sparse at
+the normal `C=1`/`C=2` levels:
+
+```sh
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" W=1 modules
+scripts/checkpatch.pl --strict <patch-series.patch
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" \
+    W=1 C=1 CHECK=sparse CF='-D__CHECK_ENDIAN__' modules
+make -C "$KDIR" M="$PWD/linux-6.19.8/drivers/media/pci/intel" \
+    W=1 C=2 CHECK=sparse modules
+```
+
+Run the equivalent smatch configuration when supplied by the target kernel
+tree. These checks depend on kernel-tree integration and are not implied by
+the repository's shell/static suite or an out-of-tree module build alone.
+
+The read-only native Phase 0 inventory can be run independently. It discovers
+current media, video, and sub-device identities dynamically and records graph,
+V4L2, module/firmware, libcamera, and PipeWire status; missing hardware or
+tools are reported as skips:
+
+```sh
+NATIVE_INVENTORY_DIR="$PWD/reports/native-inventory" \
+    ./tests/native-inventory.sh --live
+```
+
+This inventory is not a substitute for proving advancing non-black frames or
+preview/capture in a named application. The C bridge and `v4l2loopback` remain
+fallback/test tooling while native qualification is incomplete.
+
+Application support remains unclaimed. The reproducible Phase 4 matrix in
+[`docs/application-qualification.md`](docs/application-qualification.md) must
+show moving preview, usable capture, lifecycle and front/rear-switch evidence,
+package/sandbox provenance, portal results, and kernel/PipeWire logs for each
+named application. Enumeration, direct-node access, or the C bridge does not
+qualify Snapshot, Chromium/WebRTC, Zoom, Discord, or another application.
+
+The native PipeWire phase is separately gated and currently unqualified. See
+[`docs/native-pipewire.md`](docs/native-pipewire.md) for the opt-in WirePlumber
+profile, activation/rollback, and the read-only `pipewiresrc` preview check.
+
 ## Named Surface Cameras
 
-For Zoom and other V4L2 applications, see
+For the fallback named endpoints used while native qualification is incomplete,
+see
 [`docs/surface-cameras.md`](docs/surface-cameras.md) for the named front and
 rear camera bridge. The driver install flow enables it automatically.
+
+The source installer supports `sudo ./install.sh --driver-only` when only the
+IPU4P driver and firmware are wanted. The default `--full` mode also installs
+and configures the named-camera bridge. A prebuilt release archive uses
+`scripts/install-modules.sh` directly and does not install compiler or
+development packages.
 
 ## Credits and licensing
 

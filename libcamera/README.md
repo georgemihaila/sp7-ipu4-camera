@@ -51,3 +51,20 @@ issue, not a zero-byte capture failure. No OV8865 tuning file is included.
 These `cam` results do not prove that GNOME Snapshot enters `Playing`; the GUI
 application and its PipeWire/portal startup path still require separate
 validation.
+
+For a repeatable read-only native-stack check, run:
+
+```sh
+LIBCAMERA_VALIDATION_DIR="$PWD/reports/native-libcamera" \
+    ./tests/libcamera-native-validation.sh --live
+```
+
+The validator parses `cam -l` and selects each listed camera by its reported
+entity/id, classifying front/rear from the name or entity when available. It
+captures three 640x480 processed PPM frames, requires a matching nonzero
+payload and changing image checksums, then releases and reopens the camera for
+another capture. Missing tools, cameras, or selectable IDs are `SKIP`; an
+enumerated camera that produces invalid, black, or static frames is `FAIL`.
+This validates the installed distribution Simple + SoftISP path only. It is
+not evidence that this repository contains a project-owned IPU4P libcamera
+pipeline handler or IPA; none is currently included.

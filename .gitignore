@@ -31,9 +31,9 @@ Module.symvers
 /libcamera-build/
 /dist/
 
-# C bridge build artifacts
+# Optional C bridge prototype build outputs
 /cbridge/*.o
 /cbridge/*.d
-/cbridge/controller-test
 /cbridge/sp7-camera-backend-prototype
 /cbridge/sp7-camera-bridge
+/cbridge/controller-test

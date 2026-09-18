@@ -13,17 +13,35 @@ supplies two stable V4L2 names backed by the existing libcamera cameras:
 The IPU4P shares a backend capture route between the sensors. The user service
 keeps both virtual devices capturable with an idle black signal, watches for an
 application opening one, and starts only that sensor's GStreamer pipeline. It
-releases the route when the virtual device is no longer in use. Leave
-`exclusive_caps=0` for these two devices so applications can enumerate them
-before the real camera producer starts. The RPM Fusion OBS virtual camera stays on
-`/dev/video55` with its existing exclusive-caps behavior.
+releases the route when the virtual device is no longer in use. The OBS
+The front/rear endpoints use `exclusive_caps=1`. They report `OUTPUT` until
+the bridge opens each producer and then report
+`CAPTURE` for camera applications. The bridge unit starts after PipeWire and
+before WirePlumber, and its bounded `ExecStartPost` readiness barrier checks
+both `Device Caps` blocks for `Video Capture`; a timeout fails the service
+instead of allowing WirePlumber to cache the initial output-only state. The
+check uses `v4l2-ctl --all` because `--list-formats-ext` can print a capture
+format while the device capabilities still advertise `Video Output` only.
 
 ## Install
 
-On Fedora, the top-level driver installer installs these dependencies and
-enables the bridge automatically. For a release bundle or a bridge-only
-installation, install the GStreamer libcamera source and RPM Fusion loopback
-module, then build the module for the running kernel:
+On Fedora, the top-level installer defaults to a full source installation:
+
+```sh
+sudo ./install.sh --full
+```
+
+To install only the kernel driver and firmware, without bridge packages or
+desktop configuration, use:
+
+```sh
+sudo ./install.sh --driver-only
+```
+
+For a prebuilt release archive, `scripts/install-modules.sh` is the module and
+firmware installer; it does not install compiler or development packages.
+For a bridge-only installation on an already prepared host, install the
+runtime dependencies and build the loopback module first:
 
 ```sh
 sudo dnf install libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback
@@ -36,21 +54,54 @@ From this repository, run:
 sudo ./scripts/setup-camera-bridge.sh
 ```
 
+The setup checks every GStreamer element used by the filler and camera
+pipelines and reports the missing element and package group if a plugin is not
+available. Firmware extraction tooling is installed by `install.sh` only when
+no caller-supplied or standard installed CPD firmware is available.
+
+The source installer builds the C bridge in `cbridge/` and setup installs it as
+`/usr/local/libexec/sp7-camera-bridge`. A prebuilt release archive carries the
+same binary, so bridge setup does not require a compiler or development
+packages. The C executable is the only supported camera bridge.
+
 The setup installs the module labels, loads the loopback nodes, and enables a
 per-user systemd service. It overrides RPM Fusion's same-named modprobe file
 with an `/etc` configuration that keeps the OBS virtual camera and adds the
-two SP7 devices. It also installs the WirePlumber rule that hides the raw
-`ipu4p` nodes from normal application enumeration and lets the bridge release
-the shared backend when needed.
+two SP7 devices. It also installs a WirePlumber policy that hides the raw
+`ipu4p` nodes and disables the physical libcamera monitor. This leaves
+WirePlumber serving the named loopback devices without opening the shared
+backend itself. The bridge owns the physical sensor only while an application
+consumes its corresponding named endpoint.
+
+## Application limitation
+
+This is the fallback bridge mode, not the native PipeWire/libcamera camera
+mode. Because the installed policy disables the physical libcamera monitor,
+GNOME Snapshot and other clients that require native PipeWire/libcamera
+sources can report that no camera was found even while V4L2 clients use the
+named bridge devices successfully. That result is expected under the default
+policy and does not show that the kernel cameras are absent.
+
+The native profile in
+[`docs/native-pipewire.md`](native-pipewire.md) is an explicit opt-in
+qualification path. It must not be enabled as an enumeration-only workaround:
+the current native PipeWire result is known-bad (black frames), although
+direct `cam` captures remain valid.
 
 Restart applications that were already open so they rescan the new V4L2
 devices. Choose **Surface Camera (front)** or **Surface Camera (back)**. The
-bridge streams only the selected camera. While it is active, the bridge
-temporarily stops WirePlumber so the direct libcamera pipeline can own the
-shared IPU4P backend; WirePlumber is restarted when the client closes. The two
-physical sensors cannot be captured simultaneously through this backend.
+bridge streams only the selected camera. It opens the selected physical sensor
+directly while WirePlumber remains active for the application's PipeWire
+loopback target. The two physical sensors cannot be captured simultaneously
+through this backend.
 
-The bridge reads each loopback endpoint’s current V4L2 format before starting a producer. It emits packed YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG. This keeps consumers such as Zoom from leaving the producer with a `not-negotiated` pipeline.
+The bridge reads each loopback endpoint’s current V4L2 `VIDEO_CAPTURE` format
+before starting a producer and falls back to `VIDEO_OUTPUT` while an
+exclusive-caps endpoint is still in its unopened producer state. It emits packed
+YUYV through `videoconvert` when the endpoint is set to YUYV, and encodes the
+same 1280x720 stream with `jpegenc` when an application has selected MJPG/JPEG.
+This keeps consumers such as Zoom and Snapshot on one fixed capture format
+instead of an unfixed PipeWire caps set.
 
 To remove the bridge and restore RPM Fusion's default OBS module options:
 

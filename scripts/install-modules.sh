@@ -9,13 +9,25 @@ MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 FIRMWARE=${FIRMWARE:-}
 FIRMWARE_TARGET=${FIRMWARE_TARGET:-/lib/firmware/ipu4p_cpd.bin}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
+SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 
-MODULES='ipu-bridge.ko
-intel-ipu4p.ko
-intel-ipu4p-isys.ko
-intel-ipu4p-psys.ko
-intel-ipu4p-isys-csslib.ko
-intel-ipu4p-psys-csslib.ko'
+[ -f "$SOURCE_MANIFEST" ] || {
+	printf 'error: source module manifest is missing: %s\n' "$SOURCE_MANIFEST" >&2
+	exit 2
+}
+
+module_entries() {
+	awk -F'|' '
+		NF == 0 || $0 ~ /^[[:space:]]*#/ { next }
+		NF != 2 || $1 == "" || $2 == "" { exit 2 }
+		{ print }
+	' "$SOURCE_MANIFEST" || {
+		printf 'error: malformed source module manifest: %s\n' "$SOURCE_MANIFEST" >&2
+		exit 2
+	}
+}
+module_entries >/dev/null
+MODULES=$(module_entries | awk -F'|' '{ print $2 }')
 
 # Avoid shadowing a bridge already supplied for this exact kernel. Keep the
 # overlay bridge in the install set on kernels that do not have one.
@@ -32,14 +44,9 @@ fi
 [ -f "$FIRMWARE" ] || { printf 'error: firmware not found: %s\n' "$FIRMWARE" >&2; exit 2; }
 
 source_for() {
-	case $1 in
-		ipu-bridge.ko) printf '%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu-bridge.ko" ;;
-		intel-ipu4p-psys-csslib.ko)
-			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4/ipu4p-css/lib2600psys" "$1" ;;
-		intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko)
-			printf '%s/%s\n' "$ROOT/linux-6.19.8/drivers/media/pci/intel/ipu4" "$1" ;;
-		*) return 1 ;;
-	esac
+	awk -F'|' -v module="$1" -v root="$ROOT" \
+		'$2 == module { print root "/" $1; found++ }
+		END { if (found != 1) exit 1 }' "$SOURCE_MANIFEST"
 }
 
 file_hash() { sha256sum "$1" | awk '{print $1}'; }
@@ -61,10 +68,9 @@ if [ -e "$MANIFEST" ]; then
 	[ -f "$MANIFEST" ] || { printf 'error: module manifest is not a regular file: %s\n' "$MANIFEST" >&2; exit 2; }
 	while IFS=' ' read -r name hash extra; do
 		[ -n "$name" ] || continue
-		case $name in
-			ipu-bridge.ko|intel-ipu4p.ko|intel-ipu4p-isys.ko|intel-ipu4p-psys.ko|intel-ipu4p-isys-csslib.ko|intel-ipu4p-psys-csslib.ko|dw9719.ko) ;;
-			*) printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2 ;;
-		esac
+		if ! module_entries | awk -F'|' -v module="$name" '$2 == module { found++ } END { exit found == 1 ? 0 : 1 }'; then
+			[ "$name" = dw9719.ko ] || { printf 'error: unexpected module in manifest: %s\n' "$name" >&2; exit 2; }
+		fi
 		[ -z "${extra:-}" ] && printf '%s\n' "$hash" | grep -Eq '^[0-9a-f]{64}$' || {
 			printf 'error: malformed module manifest entry for %s\n' "$name" >&2; exit 2;
 		}

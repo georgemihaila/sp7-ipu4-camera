@@ -26,6 +26,11 @@ remain separate goals.
    unverified. Do not claim those paths or other IPU4P systems are supported
    until their own source and hardware checks pass.
 
+Application support remains unclaimed. Use the reproducible Phase 4 matrix in
+[`docs/application-qualification.md`](application-qualification.md) for each
+named client; enumeration, direct-node access, and the C bridge/`v4l2loopback`
+fallback are not application qualification evidence.
+
 Readiness means steps 1–3 pass for the stated SP7 target. Upstreaming, support
 for other systems, and the limitations in step 4 need their own work.
 
@@ -35,9 +40,13 @@ for other systems, and the limitations in step 4 need their own work.
 |---|---|---|
 | IPU4P parent/ISYS/PSYS and OV5693 changes | Hardware-validated on one Surface Pro 7 | Fedora 43 linux-surface 6.19.8-3.surface; raw front/rear captures are recorded in `autotest/RESULT.md`. |
 | SP7 DMI timing behavior | Hardware-validated on that SP7; static checks elsewhere | The quirk is restricted by DMI, IPU4P PCI ID, source/lane identity, CPD date `0x20191030`, and CSS release `0x20181222`; generic mismatches fail closed. |
-| CSI-2 error/queue/PM paths | Compile/static validation plus targeted hardware runs where recorded | `tests/task9-csi2-static.sh`, `tests/task10-production-static.sh`, and the reports under `reports/`. |
+| CSI-2 error/queue/PM paths | CSI-2 and queue lifecycle static validation; hardware stream restart and cleanup-error behavior remain unvalidated | `tests/task9-csi2-static.sh`, `tests/task10-production-static.sh`, `tests/task29-stream-lifecycle-static.sh`, and the reports under `reports/`. The Phase 1 boundary now guarantees that failed startup does not return `STREAMON` success, active buffers are detached and returned exactly once with vb2's context-appropriate `QUEUED` or `ERROR` state, and software pipeline counters/list membership are reset or guarded; it does not yet prove firmware teardown after a live hardware failure. |
 | Build metadata and module discovery | Static/mechanical validation; compile depends on external KDIR | `scripts/build-modules.sh` and `docs/external-kernel-integration.md`. |
 | libcamera, IPA, PipeWire, portal | Fedora Simple + SoftISP processed capture validated; GUI app path incomplete | Fedora 0.7.1 matches the IPU4P's `intel-ipu6` media identity and unpacked `BG10` processed format, so this repository carries no libcamera patch. Both cameras produce processed frames; rear output is near-black at low initial exposure and the GUI app path still needs validation. See `libcamera/README.md`. |
+| Native processed libcamera validation | Read-only hardware-gated check implemented | `tests/libcamera-native-validation.sh --live` parses `cam -l` dynamically, validates changing/non-black processed frames for every selectable camera, and repeats a release/reopen capture. This qualifies the installed Simple + SoftISP path; it does not provide or prove a project-owned pipeline handler or IPA. |
+| Native Phase 0 inventory | Static contract automated; live inventory safely gated | `tests/native-inventory.sh --live` dynamically resolves media/video/sub-device identities and records graph, V4L2, module/firmware, libcamera, and PipeWire state. It reports missing tools/hardware as `SKIP`; stream correctness, image quality, and application preview remain hardware-only. |
+| Native V4L2 compliance | Read-only gate implemented; no compliance pass claimed on the current host | `tests/v4l2-compliance-validation.sh --live` discovers `/sys/class/video4linux/video*`, records per-node capabilities/formats plus module/firmware provenance, excludes virtual loopback/application-bridge identities from sysfs, and runs `v4l2-compliance` only on remaining capture queues. The current validation host has no `v4l2-compliance` executable, so the live result is `SKIP`; a future pass still does not qualify frame content, power/lifetime behavior, PipeWire, or applications. |
+| Native application qualification | No application is qualified | [`docs/application-qualification.md`](application-qualification.md) defines the per-application package, physical-camera, moving-preview/capture, frame-rate, lens/content, switching, lifecycle, portal, and log evidence. Current rows remain `NOT TESTED`; enumeration and bridge/loopback results cannot produce `PASS`. |
 | OV8865 | External requirement | The sensor was hardware-tested through an externally available driver; no OV8865 driver source is included here. |
 | IR OV7251 | Known limitation | I2C probe fails on the validated unit and is ignored. |
 
@@ -90,3 +99,49 @@ git diff --check
 The default suite is hardware-independent. `--live` only inspects currently
 available hardware and performs bounded captures; it does not install,
 unload/reload, reboot, or modify services.
+
+The Phase 5 V4L2 compliance gate is also read-only:
+
+```sh
+V4L2_COMPLIANCE_DIR="$PWD/reports/v4l2-compliance" \
+    ./tests/v4l2-compliance-validation.sh --live
+```
+
+It requires the installed `v4l2-compliance`, `v4l2-ctl`, and `timeout` tools.
+It resolves each `/sys/class/video4linux/video*` node and its driver/module
+links, records capabilities and formats, then tests only a module-backed,
+non-virtual node whose discovered capabilities include video capture. Nodes
+identified as virtual, `v4l2loopback`, or the application bridge are skipped;
+no video minor is hard-coded. Missing tools, hardware, permissions, or
+eligible nodes produce `SKIP`. A non-zero result from `v4l2-compliance` on a
+node that was actually tested produces `FAIL`. The check does not load or
+unload modules, change media links or services, or prove valid image content.
+
+For a report without the capture portion, run:
+
+```sh
+NATIVE_INVENTORY_DIR="$PWD/reports/native-inventory" \
+    ./tests/native-inventory.sh --live
+```
+
+The report uses the current sysfs/media graph and must not be interpreted as a
+successful native camera qualification unless the separate hardware-only
+stream, image, PipeWire, and application checks also pass. The C bridge and
+`v4l2loopback` are fallback/test paths during this qualification period.
+
+The application gate is separate and remains unclaimed until the rows in
+[`docs/application-qualification.md`](application-qualification.md) have
+application-visible moving preview and capture evidence.
+
+The native processed-stream qualification is separate:
+
+```sh
+LIBCAMERA_VALIDATION_DIR="$PWD/reports/native-libcamera" \
+    ./tests/libcamera-native-validation.sh --live
+```
+
+It uses only the installed `cam` CLI and camera IDs parsed from `cam -l`.
+It does not install or unload modules, alter media links or services, or
+implement a project-owned libcamera pipeline handler/IPA. A passing result is
+therefore evidence for the installed distribution pipeline, not upstream
+readiness of a repository-owned libcamera integration.

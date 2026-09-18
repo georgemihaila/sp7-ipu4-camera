@@ -3,6 +3,7 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+BRIDGE_BINARY=${BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 fail() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
@@ -24,7 +25,14 @@ for package in libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4
 done
 command -v v4l2-ctl >/dev/null 2>&1 || fail 'v4l2-ctl is required to verify the virtual camera devices'
 command -v gst-launch-1.0 >/dev/null 2>&1 || fail 'GStreamer tools are required'
+command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer plugins'
 command -v runuser >/dev/null 2>&1 || fail 'runuser is required to configure the target user session'
+[ -x "$BRIDGE_BINARY" ] || fail "C camera bridge is missing or not executable: $BRIDGE_BINARY (build it with make -C cbridge all)"
+
+for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
+	gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
+		fail "required GStreamer element is unavailable: $element (install libcamera-gstreamer and gstreamer1-plugins-good)"
+done
 
 KREL=$(uname -r)
 if ! modinfo -k "$KREL" v4l2loopback >/dev/null 2>&1; then
@@ -50,7 +58,13 @@ if [ -e "$USER_UNIT_DIR/sp7-zoom-camera-bridge.service" ]; then
 	rm -f "$USER_UNIT_DIR/sp7-zoom-camera-bridge.service"
 fi
 if [ -e "$OPTIONS" ] && ! cmp -s "$ROOT/modprobe.d/98-v4l2loopback.conf" "$OPTIONS"; then
-	fail "$OPTIONS already exists with different contents; review it before replacing"
+	# Accept only the two repository-managed profiles during migration. The
+	# 1,0,0 profile was an intermediate PipeWire experiment; the installed
+	# configuration is replaced by the proven exclusive profile below.
+	if ! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,1,1' "$OPTIONS" && \
+		! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,0,0' "$OPTIONS"; then
+		fail "$OPTIONS already exists with different contents; review it before replacing"
+	fi
 fi
 
 for dev in /dev/video55 /dev/video60 /dev/video61; do
@@ -84,7 +98,7 @@ for pair in \
 	v4l2-ctl --device "$dev" --all 2>/dev/null | grep -Fq "$label" || fail "expected label '$label' on $dev"
 done
 
-install -D -m 0755 "$ROOT/scripts/surface-camera-bridge.py" /usr/local/libexec/sp7-camera-bridge
+install -D -m 0755 "$BRIDGE_BINARY" /usr/local/libexec/sp7-camera-bridge
 install -d -m 0755 -o "$TARGET_UID" -g "$TARGET_GID" "$USER_UNIT_DIR"
 install -m 0644 -o "$TARGET_UID" -g "$TARGET_GID" \
 	"$ROOT/systemd/user/sp7-camera-bridge.service" \
