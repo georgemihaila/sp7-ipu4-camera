@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/inotify.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -43,6 +44,7 @@ typedef struct {
 	unsigned cached_consumer_mask;
 	unsigned consumer_scans;
 	bool consumer_scan_valid;
+	int consumer_event_fd;
 	char systemd_cgroup[PATH_MAX];
 } LiveContext;
 
@@ -502,11 +504,78 @@ static unsigned scan_consumer_mask(const LiveContext *context)
 	return mask;
 }
 
+static bool drain_consumer_events(LiveContext *context)
+{
+	char buffer[4096];
+	bool changed = false;
+	bool failed = false;
+
+	if (context->consumer_event_fd < 0)
+		return false;
+	for (;;) {
+		ssize_t length = read(context->consumer_event_fd, buffer,
+			sizeof(buffer));
+		if (length < 0) {
+			if (errno == EINTR)
+				continue;
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
+			failed = true;
+			break;
+		}
+		if (length == 0)
+			break;
+		for (ssize_t offset = 0; offset + (ssize_t)sizeof(struct inotify_event) <=
+			length;) {
+			const struct inotify_event *event =
+				(const struct inotify_event *)(buffer + offset);
+			size_t event_size = sizeof(*event) + event->len;
+
+			if (event_size > (size_t)(length - offset)) {
+				failed = true;
+				break;
+			}
+			if ((event->mask & IN_Q_OVERFLOW) != 0U) {
+				fprintf(stderr,
+					"consumer event queue overflowed; reconciling consumers\n");
+				changed = true;
+			}
+			if ((event->mask & (IN_OPEN | IN_CLOSE_NOWRITE |
+				IN_CLOSE_WRITE)) != 0U)
+				changed = true;
+			if ((event->mask & (IN_IGNORED | IN_DELETE_SELF |
+				IN_MOVE_SELF)) != 0U)
+				failed = true;
+			offset += (ssize_t)event_size;
+		}
+		if (failed)
+			break;
+	}
+	if (failed) {
+		fprintf(stderr,
+			"consumer event watch became unavailable; falling back to polling\n");
+		(void)close(context->consumer_event_fd);
+		context->consumer_event_fd = -1;
+		context->consumer_scan_valid = false;
+	}
+	return changed;
+}
+
 static unsigned consumer_mask(void *opaque)
 {
 	LiveContext *context = opaque;
 	uint64_t current = monotonic_ms();
 	unsigned interval = ACTIVE_CONSUMER_SCAN_MS;
+	bool event_changed = drain_consumer_events(context);
+
+	if (context->consumer_event_fd >= 0) {
+		if (context->consumer_scan_valid && !event_changed)
+			return context->cached_consumer_mask;
+		context->cached_consumer_mask = scan_consumer_mask(context);
+		context->consumer_scan_valid = true;
+		context->consumer_scans++;
+		return context->cached_consumer_mask;
+	}
 
 	if (context->controller != NULL &&
 		camera_controller_state(context->controller) == CONTROLLER_IDLE &&
@@ -696,6 +765,7 @@ static int initialize_context(LiveContext *context)
 	};
 
 	memset(context, 0, sizeof(*context));
+	context->consumer_event_fd = -1;
 	context->uid = getuid();
 	if (!read_systemd_cgroup("self", context->systemd_cgroup,
 		sizeof(context->systemd_cgroup))) {
@@ -714,6 +784,25 @@ static int initialize_context(LiveContext *context)
 		context->endpoints[camera].device_number = status.st_rdev;
 		context->endpoints[camera].present = true;
 	}
+	context->consumer_event_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+	if (context->consumer_event_fd >= 0) {
+		uint32_t event_mask = IN_OPEN | IN_CLOSE_NOWRITE | IN_CLOSE_WRITE |
+			IN_DELETE_SELF | IN_MOVE_SELF;
+
+		for (CameraKey camera = CAMERA_FRONT; camera < CAMERA_COUNT; camera++) {
+			if (inotify_add_watch(context->consumer_event_fd,
+				context->endpoints[camera].device, event_mask) < 0) {
+				fprintf(stderr, "could not watch %s for consumer events: %s\n",
+					context->endpoints[camera].device, strerror(errno));
+				(void)close(context->consumer_event_fd);
+				context->consumer_event_fd = -1;
+				break;
+			}
+		}
+	}
+	if (context->consumer_event_fd < 0)
+		fprintf(stderr,
+			"consumer event notifications unavailable; using periodic reconciliation\n");
 	return 0;
 }
 
@@ -762,5 +851,7 @@ int main(void)
 		result = EXIT_FAILURE;
 	}
 	camera_controller_free(controller);
+	if (context.consumer_event_fd >= 0)
+		(void)close(context.consumer_event_fd);
 	return result;
 }

@@ -30,10 +30,12 @@ The complete C controller is installed by the normal setup script as the
 `sp7-camera-bridge.service` user service. It owns the two filler pipelines,
 selects a requested camera after debounce, applies the close grace period,
 retries failed capture and filler starts independently, bounds WirePlumber
-operations, and adapts the `/proc` consumer scan interval between 200 ms while
-active and 1000 ms while stable and idle. Idle `videotestsrc` fillers link
-directly to their negotiated caps; camera capture keeps the conversion and
-scaling stages. Its live entrypoint is:
+operations, and uses endpoint open/close notifications to trigger `/proc`
+consumer reconciliation. If those notifications are unavailable or their
+watch is lost, it falls back to the existing 200 ms active and 1000 ms stable
+idle scan intervals. Idle `videotestsrc` fillers link directly to their
+negotiated caps; camera capture keeps the conversion and scaling stages. Its
+live entrypoint is:
 
 ```sh
 ./cbridge/sp7-camera-bridge

@@ -1,6 +1,9 @@
 # Idle filler optimization evidence
 
-The idle filler path now negotiates `videotestsrc` directly to the requested
+The dormant `appsrc` producer remains an unqualified follow-up experiment;
+the currently installed path retains continuous `videotestsrc` fillers.
+
+The historical idle filler path negotiated `videotestsrc` directly to the requested
 1280x720 caps. Camera capture still uses `videoconvert` and `videoscale`; the
 optimization changes only the two idle pipelines.
 
