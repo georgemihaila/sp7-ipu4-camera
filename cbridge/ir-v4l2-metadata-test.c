@@ -16,6 +16,9 @@ typedef struct {
 	uint32_t flags;
 	uint32_t bytesused;
 	uint32_t data_offset;
+	uint32_t index;
+	uint32_t plane_count;
+	bool custom_buffer_metadata;
 } MockFrame;
 
 static struct {
@@ -23,6 +26,7 @@ static struct {
 	size_t count;
 	size_t next;
 	unsigned qbuf_calls;
+	bool fail_qbuf;
 } mock_stream;
 
 int sp7_camera_ir_test_poll(struct pollfd *fds, nfds_t count, int timeout_ms)
@@ -48,8 +52,8 @@ int sp7_camera_ir_test_ioctl(int fd, unsigned long request, void *argument)
 			return -1;
 		}
 		frame = &mock_stream.frames[mock_stream.next++];
-		buffer->index = 0U;
-		buffer->length = 1U;
+		buffer->index = frame->custom_buffer_metadata ? frame->index : 0U;
+		buffer->length = frame->custom_buffer_metadata ? frame->plane_count : 1U;
 		buffer->flags = frame->flags;
 		buffer->sequence = frame->sequence;
 		buffer->timestamp = frame->timestamp;
@@ -63,6 +67,10 @@ int sp7_camera_ir_test_ioctl(int fd, unsigned long request, void *argument)
 			return -1;
 		}
 		mock_stream.qbuf_calls++;
+		if (mock_stream.fail_qbuf) {
+			errno = EIO;
+			return -1;
+		}
 		buffer->sequence = UINT32_C(0xdeadbeef);
 		buffer->timestamp.tv_sec = 0;
 		buffer->timestamp.tv_usec = 0;
@@ -92,6 +100,7 @@ static void reset_mock(const MockFrame *frames, size_t count)
 	mock_stream.count = count;
 	mock_stream.next = 0U;
 	mock_stream.qbuf_calls = 0U;
+	mock_stream.fail_qbuf = false;
 }
 
 static IrCapture *new_capture(uint8_t *buffer, size_t buffer_length)
@@ -107,12 +116,142 @@ static int next_frame(IrCapture *capture, IrCaptureStats *stats, char *error)
 		error, 256U);
 }
 
+static int test_rejection(uint8_t *raw, MockFrame frame, uint32_t reasons,
+	bool expect_requeue, bool fail_requeue)
+{
+	const uint64_t attempt_id = 77U;
+	IrCaptureStats stats = { 0 };
+	IrCapture *capture;
+	char error[256] = { 0 };
+
+	reset_mock(&frame, 1U);
+	mock_stream.fail_qbuf = fail_requeue;
+	capture = new_capture(raw, 13U);
+	if (check(capture != NULL, "rejection capture construction failed") != 0)
+		return EXIT_FAILURE;
+	ir_capture_set_stream_attempt_id(capture, attempt_id);
+	if (check(next_frame(capture, &stats, error) == -1,
+		"rejected frame did not preserve failure return") != 0 ||
+		check(stats.stream_attempt_id == attempt_id,
+			"stream attempt ID was not preserved") != 0 ||
+		check(stats.last_rejection_reasons == (reasons |
+			(fail_requeue ? IR_CAPTURE_REJECTION_REQUEUE : 0U)),
+			"rejection reason mask is wrong") != 0 ||
+		check(stats.last_rejection_index == frame.index,
+			"rejected index snapshot is wrong") != 0 ||
+		check(stats.last_rejection_plane_count ==
+			(frame.custom_buffer_metadata ? frame.plane_count : 1U),
+			"rejected plane-count snapshot is wrong") != 0 ||
+		check(stats.last_rejection_flags == frame.flags,
+			"rejected flags snapshot is wrong") != 0 ||
+		check(stats.last_rejection_timestamp_flags ==
+			(frame.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK),
+			"rejected timestamp-flags snapshot is wrong") != 0 ||
+		check(stats.last_rejection_bytesused == frame.bytesused &&
+			stats.last_rejection_data_offset == frame.data_offset,
+			"rejected plane snapshot is wrong") != 0 ||
+		check(stats.last_timestamp_seconds ==
+			(uint64_t)frame.timestamp.tv_sec &&
+			stats.last_timestamp_usec == (uint64_t)frame.timestamp.tv_usec,
+			"rejected timestamp snapshot is wrong") != 0 ||
+		check(stats.last_rejection_capacity_available ==
+			(frame.index == 0U),
+			"rejected capacity availability is wrong") != 0 ||
+		check(stats.last_rejection_capacity ==
+			(frame.index == 0U ? 13U : 0U),
+			"rejected capacity snapshot is wrong") != 0 ||
+		check(stats.last_rejection_monotonic_ns != 0U,
+			"rejection timestamp was not recorded") != 0 ||
+		check(stats.rejected_buffers == 1U,
+			"rejected-buffer count is wrong") != 0 ||
+		check((expect_requeue && !fail_requeue) ?
+			(stats.last_requeue_result == IR_CAPTURE_REQUEUE_SUCCEEDED &&
+				stats.requeue_errors == 0U && mock_stream.qbuf_calls == 1U) :
+			(!expect_requeue && !fail_requeue) ?
+			(stats.last_requeue_result == IR_CAPTURE_REQUEUE_NOT_ATTEMPTED &&
+				stats.requeue_errors == 0U && mock_stream.qbuf_calls == 0U) :
+			(stats.last_requeue_result == IR_CAPTURE_REQUEUE_FAILED &&
+				stats.requeue_errors == 1U && mock_stream.qbuf_calls == 1U &&
+				(stats.last_rejection_reasons & IR_CAPTURE_REJECTION_REQUEUE) != 0U),
+			"requeue policy/result accounting is wrong") != 0 ||
+		check((expect_requeue && !fail_requeue) ?
+			stats.last_requeue_monotonic_ns != 0U :
+			fail_requeue ? stats.last_requeue_monotonic_ns != 0U :
+			stats.last_requeue_monotonic_ns == 0U,
+			"requeue timestamp accounting is wrong") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	ir_test_capture_destroy(capture);
+	return EXIT_SUCCESS;
+}
+
+static int test_structured_rejections(uint8_t *raw)
+{
+	const uint32_t valid_timestamp = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	MockFrame frame = { 12U, { 60, 1 }, valid_timestamp, 13U, 4U,
+		0U, 1U, false };
+	const uint32_t invalid_index = 99U;
+
+	frame.flags = valid_timestamp | V4L2_BUF_FLAG_ERROR;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_ERROR_FLAG, true,
+		false) != 0)
+		return EXIT_FAILURE;
+
+	frame.flags = 0U;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS, true,
+		false) != 0)
+		return EXIT_FAILURE;
+
+	frame.custom_buffer_metadata = true;
+	frame.flags = valid_timestamp;
+	frame.index = invalid_index;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_INVALID_INDEX |
+		IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE, false, false) != 0)
+		return EXIT_FAILURE;
+
+	frame.index = 0U;
+	frame.plane_count = 2U;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_INVALID_PLANE_COUNT,
+		false, false) != 0)
+		return EXIT_FAILURE;
+
+	frame.plane_count = 1U;
+	frame.data_offset = 13U;
+	if (test_rejection(raw, frame,
+		IR_CAPTURE_REJECTION_INVALID_PLANE_METADATA, true, false) != 0)
+		return EXIT_FAILURE;
+
+	frame.index = invalid_index;
+	frame.plane_count = 2U;
+	frame.flags = V4L2_BUF_FLAG_ERROR;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_INVALID_INDEX |
+		IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE |
+		IR_CAPTURE_REJECTION_INVALID_PLANE_COUNT |
+		IR_CAPTURE_REJECTION_ERROR_FLAG |
+		IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS, false, false) != 0)
+		return EXIT_FAILURE;
+
+	frame.index = 0U;
+	frame.plane_count = 1U;
+	frame.flags = valid_timestamp | V4L2_BUF_FLAG_ERROR;
+	frame.data_offset = 4U;
+	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_ERROR_FLAG, true,
+		true) != 0)
+		return EXIT_FAILURE;
+
+	return EXIT_SUCCESS;
+}
+
 static int test_consecutive_and_skips(uint8_t *raw)
 {
 	const MockFrame frames[] = {
-		{ 100U, { 10, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
-		{ 101U, { 10, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
-		{ 104U, { 10, 5 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
+		{ 100U, { 10, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+		{ 101U, { 10, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+		{ 104U, { 10, 5 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
 	};
 	IrCaptureStats stats = { 0 };
 	IrCapture *capture;
@@ -148,8 +287,10 @@ static int test_consecutive_and_skips(uint8_t *raw)
 static int test_timestamp_regression(uint8_t *raw)
 {
 	const MockFrame frames[] = {
-		{ 10U, { 20, 100 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
-		{ 11U, { 20, 99 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
+		{ 10U, { 20, 100 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+		{ 11U, { 20, 99 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
 	};
 	IrCaptureStats stats = { 0 };
 	IrCapture *capture;
@@ -178,8 +319,10 @@ static int test_timestamp_regression(uint8_t *raw)
 static int test_wraparound(uint8_t *raw)
 {
 	const MockFrame frames[] = {
-		{ UINT32_MAX, { 30, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
-		{ 0U, { 30, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
+		{ UINT32_MAX, { 30, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+		{ 0U, { 30, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
 	};
 	IrCaptureStats stats = { 0 };
 	IrCapture *capture;
@@ -205,11 +348,14 @@ static int test_wraparound(uint8_t *raw)
 static int test_stream_restart(uint8_t *raw)
 {
 	const MockFrame first_stream[] = {
-		{ 500U, { 40, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
+		{ 500U, { 40, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
 	};
 	const MockFrame second_stream[] = {
-		{ 7U, { 50, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
-		{ 8U, { 50, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U },
+		{ 7U, { 50, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+		{ 8U, { 50, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
 	};
 	IrCaptureStats stats = { 0 };
 	IrCapture *capture;
@@ -251,7 +397,7 @@ int main(void)
 	raw[4] = 0x40U;
 	if (test_consecutive_and_skips(raw) != 0 ||
 		test_timestamp_regression(raw) != 0 || test_wraparound(raw) != 0 ||
-		test_stream_restart(raw) != 0)
+		test_stream_restart(raw) != 0 || test_structured_rejections(raw) != 0)
 		return EXIT_FAILURE;
 	puts("test-ir-metadata: PASS");
 	return EXIT_SUCCESS;
