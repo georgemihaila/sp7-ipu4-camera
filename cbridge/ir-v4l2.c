@@ -43,6 +43,12 @@ struct IrCapture {
 	IrCaptureStats stats;
 };
 
+static void publish_stats(const IrCapture *capture, IrCaptureStats *stats)
+{
+	if (stats != NULL)
+		*stats = capture->stats;
+}
+
 static void set_error(char *error, unsigned error_size, const char *format, ...)
 {
 	va_list args;
@@ -493,16 +499,22 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	descriptor.events = POLLIN | POLLERR;
 	descriptor.revents = 0;
 	result = poll(&descriptor, 1, (int)timeout_ms);
-	if (result == 0)
+	if (result == 0) {
+		publish_stats(capture, stats);
 		return 0;
+	}
 	if (result < 0) {
-		if (errno == EINTR)
+		if (errno == EINTR) {
+			publish_stats(capture, stats);
 			return 0;
+		}
 		set_error(error, error_size, "poll source-6 capture: %s", strerror(errno));
+		publish_stats(capture, stats);
 		return -1;
 	}
 	if ((descriptor.revents & (POLLERR | POLLNVAL)) != 0U) {
 		set_error(error, error_size, "source-6 capture poll reported error");
+		publish_stats(capture, stats);
 		return -1;
 	}
 	buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -510,9 +522,12 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	buffer.length = 1U;
 	buffer.m.planes = &plane;
 	if (ioctl_retry(capture->video_fd, VIDIOC_DQBUF, &buffer) < 0) {
-		if (errno == EAGAIN)
+		if (errno == EAGAIN) {
+			publish_stats(capture, stats);
 			return 0;
+		}
 		set_error(error, error_size, "VIDIOC_DQBUF: %s", strerror(errno));
+		publish_stats(capture, stats);
 		return -1;
 	}
 	can_requeue = buffer.index < capture->buffer_count && buffer.length == 1U;
@@ -520,7 +535,6 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 		(buffer.flags & V4L2_BUF_FLAG_ERROR) != 0U ||
 		(buffer.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK) !=
 		V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) {
-		capture->stats.rejected_buffers++;
 		set_error(error, error_size,
 			"dequeued source-6 buffer metadata/timestamp flags are invalid");
 		goto requeue_fail;
@@ -547,6 +561,7 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 		goto requeue_fail;
 	if (ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
 		set_error(error, error_size, "VIDIOC_QBUF after decode: %s", strerror(errno));
+		publish_stats(capture, stats);
 		return -1;
 	}
 	capture->last_sequence = buffer.sequence;
@@ -555,8 +570,7 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	capture->stats.last_sequence = buffer.sequence;
 	capture->stats.data_offset = plane.data_offset;
 	capture->stats.frames++;
-	if (stats != NULL)
-		*stats = capture->stats;
+	publish_stats(capture, stats);
 	return 1;
 
 requeue_fail:
@@ -569,6 +583,7 @@ requeue_fail:
 		set_error(error, error_size, "%s; VIDIOC_QBUF recovery: %s",
 			previous_error, strerror(errno));
 	}
+	publish_stats(capture, stats);
 	return -1;
 }
 
