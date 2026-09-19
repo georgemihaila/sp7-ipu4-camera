@@ -80,6 +80,7 @@ static void ipu4p_csi2_log_source6_platform_state(
 	u32 bscan;
 	u32 bb4_cphy, bb4_dphy, bb4_afe;
 	u32 bb6_cphy, bb6_dphy, bb6_afe;
+	u32 bb8_cphy, bb8_dphy, bb8_afe;
 	u32 bb10_cphy, bb10_dphy, bb10_afe;
 	u32 bb12_cphy, bb12_dphy, bb12_afe;
 	u32 bb14_cphy, bb14_dphy, bb14_afe;
@@ -112,6 +113,10 @@ static void ipu4p_csi2_log_source6_platform_state(
 	bb6_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(6));
 	bb6_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(6));
 	bb6_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(6));
+	/* Diagnostic-only readback: this hook deliberately performs no BB8 writes. */
+	bb8_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(8));
+	bb8_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(8));
+	bb8_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(8));
 	bb10_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(10));
 	bb10_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(10));
 	bb10_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(10));
@@ -130,11 +135,51 @@ static void ipu4p_csi2_log_source6_platform_state(
 		combo_hpll, combo_isclk, combo_override, combo_port, bscan);
 	dev_info(&csi2->isys->adev->dev,
 		 "source-6 %s PHY readback: bb4=(0x%x,0x%x,0x%x) "
-		 "bb6=(0x%x,0x%x,0x%x) bb10=(0x%x,0x%x,0x%x) "
+		 "bb6=(0x%x,0x%x,0x%x) bb8=(0x%x,0x%x,0x%x) "
+		 "bb10=(0x%x,0x%x,0x%x) "
 		 "bb12=(0x%x,0x%x,0x%x) bb14=(0x%x,0x%x,0x%x)\n",
 		tag, bb4_cphy, bb4_dphy, bb4_afe, bb6_cphy, bb6_dphy, bb6_afe,
-		bb10_cphy, bb10_dphy, bb10_afe, bb12_cphy, bb12_dphy, bb12_afe,
+		bb8_cphy, bb8_dphy, bb8_afe, bb10_cphy, bb10_dphy, bb10_afe,
+		bb12_cphy, bb12_dphy, bb12_afe,
 		bb14_cphy, bb14_dphy, bb14_afe);
+}
+
+/* Temporary source-6-only candidate recovered from D-PHY Table B. */
+static void ipu4p_csi2_init_source6_bb8(struct ipu_isys_csi2 *csi2)
+{
+	void __iomem *isp_base;
+	u32 before_cphy, before_dphy, before_afe;
+	u32 val, after_cphy, after_dphy, after_afe;
+
+	if (csi2->asd.source != IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
+		return;
+
+	isp_base = csi2->isys->adev->isp->base;
+	before_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(8));
+	before_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(8));
+	before_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(8));
+
+	val = before_cphy;
+	val &= ~0x7e;
+	val |= (13 << 1) | 1;
+	writel(val, isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(8));
+
+	val = before_dphy;
+	val &= ~0x7e;
+	val |= (32 << 1) | 1;
+	writel(val, isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(8));
+	writel(0x44104015, isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(8));
+
+	after_cphy = readl(isp_base + BUTTRESS_REG_CPHYX_DLL_OVRD(8));
+	after_dphy = readl(isp_base + BUTTRESS_REG_DPHYX_DLL_OVRD(8));
+	after_afe = readl(isp_base + BUTTRESS_REG_BBX_AFE_CONFIG(8));
+	dev_info(&csi2->isys->adev->dev,
+		 "source-6 BB8 init: before=(0x%x,0x%x,0x%x) "
+		 "requested=cphy=(field=13,mask=0xffffff81) "
+		 "dphy=(field=32,mask=0xffffff81) afe=0x44104015 "
+		 "after=(0x%x,0x%x,0x%x)\n",
+		 before_cphy, before_dphy, before_afe,
+		after_cphy, after_dphy, after_afe);
 }
 
 
@@ -320,6 +365,7 @@ int ipu_isys_csi2_set_stream(struct v4l2_subdev *sd,
 
 	ipu4p_csi2_ev_correction_params(csi2, nlanes);
 	ipu4p_csi2_log_source6_platform_state(csi2, "before timing");
+	ipu4p_csi2_init_source6_bb8(csi2);
 
 	writel(timing.ctermen,
 		   csi2->base + CSI2_REG_CSI_RX_DLY_CNT_TERMEN_CLANE);
@@ -435,11 +481,23 @@ void ipu_isys_csi2_isr(struct ipu_isys_csi2 *csi2)
 	/* handle sof and eof event */
 #ifdef IPU_VC_SUPPORT
 	for (i = 0; i < NR_OF_CSI2_VC; i++) {
-		if (status & CSI2_IRQ_FS_VC(i))
+		if (status & CSI2_IRQ_FS_VC(i)) {
+			if (csi2->asd.source ==
+			    IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
+				dev_info(&isys->adev->dev,
+					 "CSI-TAP receiver SOF source=6 vc=%u status=0x%x\n",
+					 i, status);
 			ipu_isys_csi2_sof_event(csi2, i);
+		}
 
-		if (status & CSI2_IRQ_FE_VC(i))
+		if (status & CSI2_IRQ_FE_VC(i)) {
+			if (csi2->asd.source ==
+			    IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
+				dev_info(&isys->adev->dev,
+					 "CSI-TAP receiver EOF source=6 vc=%u status=0x%x\n",
+					 i, status);
 			ipu_isys_csi2_eof_event(csi2, i);
+		}
 	}
 #else
 	if (status & CSI2_IRQ_FS_VC)

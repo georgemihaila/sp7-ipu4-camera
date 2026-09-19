@@ -4,6 +4,7 @@
 #include <linux/completion.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/string.h>
 
@@ -1450,6 +1451,52 @@ void ipu_isys_queue_buf_done(struct ipu_isys_buffer *ib)
 	}
 }
 
+static void ipu_isys_log_source6_csi_header(struct ipu_isys_pipeline *ip,
+						 struct ipu_isys_video *av,
+						 struct vb2_buffer *vb,
+						 struct ipu_fw_isys_resp_info_abi *info)
+{
+	unsigned int line, lines;
+	unsigned int stride = av->mpix.plane_fmt[0].bytesperline;
+	unsigned int size = vb2_plane_size(vb, 0);
+	void *vaddr;
+
+	if (!av->debug_link_only ||
+	    ip->source != IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6)
+		return;
+
+	vaddr = vb2_plane_vaddr(vb, 0);
+	if (!vaddr) {
+		dev_info(&av->isys->adev->dev,
+			 "CSI-TAP packet source=6 buffer=%u header-unavailable "
+			 "pin=0x%x error=%d\n", vb->index, info->pin.addr,
+			 info->error_info.error);
+		return;
+	}
+
+	dma_sync_single_for_cpu(av->aq.dev,
+				vb2_dma_contig_plane_dma_addr(vb, 0), size,
+				DMA_FROM_DEVICE);
+	lines = min_t(unsigned int, av->mpix.height, 4);
+	for (line = 0; line < lines; line++) {
+		u32 h0, h1;
+		unsigned int offset = line * stride;
+
+		if (offset + sizeof(h0) + sizeof(h1) > size)
+			break;
+		memcpy(&h0, vaddr + offset, sizeof(h0));
+		memcpy(&h1, vaddr + offset + sizeof(h0), sizeof(h1));
+		dev_info(&av->isys->adev->dev,
+			 "CSI-TAP packet source=6 buffer=%u line=%u vc=%u "
+			 "dtype=0x%x word_count=%u sync=%u stype=%u sid=%u "
+			 "port=%u raw=0x%08x/0x%08x pin=0x%x error=%d\n",
+			 vb->index, line, ip->vc, (h0 >> 16) & 0x1fff,
+			 h0 & 0xffff, (h0 >> 29) & 0x3, h0 >> 31,
+			 h1 & 0xf, (h1 >> 4) & 0xf, h0, h1, info->pin.addr,
+			 info->error_info.error);
+	}
+}
+
 void ipu_isys_queue_buf_ready(struct ipu_isys_pipeline *ip,
 			      struct ipu_fw_isys_resp_info_abi *info)
 {
@@ -1489,6 +1536,9 @@ void ipu_isys_queue_buf_ready(struct ipu_isys_pipeline *ip,
 
 		if (info->error_info.error ==
 		    IPU_FW_ISYS_ERROR_HW_REPORTED_STR2MMIO) {
+			ipu_isys_log_source6_csi_header(ip,
+						       ipu_isys_queue_to_video(aq), vb,
+						       info);
 			/*
 			 * While stream-start verification runs, a failed
 			 * D-PHY lock burns one buffer per corrupt frame;
@@ -1512,6 +1562,8 @@ void ipu_isys_queue_buf_ready(struct ipu_isys_pipeline *ip,
 			atomic_set(&ib->str2mmio_flag, 1);
 		}
 		dev_dbg(&isys->adev->dev, "buffer: found buffer %pad\n", &addr);
+		ipu_isys_log_source6_csi_header(ip,
+					       ipu_isys_queue_to_video(aq), vb, info);
 
 		buf = to_vb2_v4l2_buffer(vb);
 		buf->field = V4L2_FIELD_NONE;

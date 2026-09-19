@@ -1253,6 +1253,17 @@ int isys_isr_one(struct ipu_bus_device *adev)
 		goto leave;
 	}
 	pipe->error = resp->error_info.error;
+	if (pipe->source == IPU_FW_ISYS_STREAM_SRC_CSI2_PORT0 + 6 &&
+	    (resp->type == IPU_FW_ISYS_RESP_TYPE_FRAME_SOF ||
+	     resp->type == IPU_FW_ISYS_RESP_TYPE_FRAME_EOF ||
+	     resp->type == IPU_FW_ISYS_RESP_TYPE_PIN_DATA_READY))
+		dev_info(&adev->dev,
+			 "CSI-TAP fw %s source=6 handle=%u vc=%u pin=%u "
+			 "error=%d timestamp=0x%16.16llx\n",
+			 resp->type == IPU_FW_ISYS_RESP_TYPE_FRAME_SOF ? "SOF" :
+			 resp->type == IPU_FW_ISYS_RESP_TYPE_FRAME_EOF ? "EOF" :
+			 "PIN_DATA_READY", resp->stream_handle, pipe->vc,
+			 resp->pin_id, resp->error_info.error, ts);
 
 	switch (resp->type) {
 	case IPU_FW_ISYS_RESP_TYPE_STREAM_OPEN_DONE:
