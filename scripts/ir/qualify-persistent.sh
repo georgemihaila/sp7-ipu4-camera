@@ -12,10 +12,49 @@ LINK_HELPER=$SCRIPT_DIR/media-link
 QUALIFIER=$REPO_DIR/cbridge/ir-hardware-qualification
 MEDIA=${OV7251_MEDIA:-/dev/media0}
 BRIDGE_SERVICE=${OV7251_BRIDGE_SERVICE:-sp7-camera-bridge.service}
-OUT_DIR=${1:-${OV7251_OUTPUT_DIR:-/var/tmp/ov7251-ir-qualification-$(date +%Y%m%d-%H%M%S)}}
 DURATION=${OV7251_QUALIFY_DURATION:-600}
 CYCLES=${OV7251_QUALIFY_CYCLES:-20}
 CYCLE_FRAMES=${OV7251_QUALIFY_CYCLE_FRAMES:-5}
+BASELINE=0
+
+if [[ ${OV7251_QUALIFY_BASELINE:-0} == 1 ]]; then
+	BASELINE=1
+fi
+
+OUT_DIR=''
+while (($# > 0)); do
+	case $1 in
+	--baseline)
+		BASELINE=1
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		printf 'error: unknown option: %s\n' "$1" >&2
+		exit 2
+		;;
+	*)
+		if [[ -n $OUT_DIR ]]; then
+			printf 'error: too many positional arguments\n' >&2
+			exit 2
+		fi
+		OUT_DIR=$1
+		shift
+		;;
+	esac
+done
+if (($# > 0)); then
+	if [[ -n $OUT_DIR ]]; then
+		printf 'error: too many positional arguments\n' >&2
+		exit 2
+	fi
+	OUT_DIR=$1
+	shift
+fi
+OUT_DIR=${OUT_DIR:-${OV7251_OUTPUT_DIR:-/var/tmp/ov7251-ir-qualification-$(date +%Y%m%d-%H%M%S)}}
 
 die()
 {
@@ -42,6 +81,7 @@ GRAPH_BEFORE=$OUT_DIR/graph-before.txt
 GRAPH_AFTER=$OUT_DIR/graph-after.txt
 RUN_INFO=$OUT_DIR/run.txt
 setup_start=$(date --iso-8601=seconds)
+wall_start=$(date +%s.%N)
 
 bridge_was_active=0
 base_was_loaded=0
@@ -49,17 +89,30 @@ base_removed=0
 candidate_loaded=0
 sensor_link_enabled=0
 capture_link_enabled=0
+cleanup_failures=0
 
 systemctl --user is-active --quiet "$BRIDGE_SERVICE" && bridge_was_active=1 || :
 sudo -n lsmod | awk '$1 == "intel_ipu4p_isys" { found = 1 } END { exit !found }' && \
 	base_was_loaded=1 || :
 media-ctl -d "$MEDIA" -p >"$GRAPH_BEFORE" 2>&1 || :
 {
-	printf 'start=%s\nmedia=%s\nduration=%s\ncycles=%s\ncycle_frames=%s\n' \
-		"$setup_start" "$MEDIA" "$DURATION" "$CYCLES" "$CYCLE_FRAMES"
+	printf 'start=%s\nmode=%s\nmedia=%s\nrequested_duration_seconds=%s\n' \
+		"$setup_start" "$([[ $BASELINE -eq 1 ]] && printf baseline || printf normal)" \
+		"$MEDIA" "$DURATION"
+	printf 'requested_cycles=%s\ncycle_frames=%s\n' "$CYCLES" "$CYCLE_FRAMES"
+	printf 'module_configuration=unchanged\nmodule_path=%s\n' "$MODULE"
+	printf 'kernel_log=kernel.log\nkernel_log_filter=none\n'
+	printf 'kernel_warning_rate_limiting=possible\n'
+	printf 'kernel_log_note=counts represent emitted messages only; existing rate-limited kernel paths may suppress repeats\n'
 	sha256sum "$MODULE"
 	modinfo intel_ipu4p_isys 2>/dev/null | rg '^(filename|vermagic):' || :
 } >"$RUN_INFO"
+
+cleanup_failure()
+{
+	cleanup_failures=$((cleanup_failures + 1))
+	printf 'cleanup_failure step=%s\n' "$1" >&2
+}
 
 unload_isys()
 {
@@ -87,41 +140,63 @@ cleanup()
 	local original_rc=$?
 	local cleanup_rc=0
 	local software_restored=1
+	local wall_end
 	trap - EXIT
 	set +e
 
 	if [[ $capture_link_enabled -eq 1 ]]; then
-		sudo -n "$LINK_HELPER" "$MEDIA" \
-			'Intel IPU4 CSI-2 1' 1 'Intel IPU4 CSI-2 1 capture 0' 0 off || cleanup_rc=1
+		if ! sudo -n "$LINK_HELPER" "$MEDIA" \
+			'Intel IPU4 CSI-2 1' 1 'Intel IPU4 CSI-2 1 capture 0' 0 off; then
+			cleanup_rc=1
+			cleanup_failure disable_capture_link
+		fi
 	fi
 	if [[ $sensor_link_enabled -eq 1 ]]; then
-		sudo -n "$LINK_HELPER" "$MEDIA" \
-			'ov7251 2-0060' 0 'Intel IPU4 CSI-2 1' 0 off || cleanup_rc=1
+		if ! sudo -n "$LINK_HELPER" "$MEDIA" \
+			'ov7251 2-0060' 0 'Intel IPU4 CSI-2 1' 0 off; then
+			cleanup_rc=1
+			cleanup_failure disable_sensor_link
+		fi
 	fi
 	if [[ $candidate_loaded -eq 1 ]]; then
 		if ! unload_isys; then
 			cleanup_rc=1
+			cleanup_failure unload_candidate_module
 			software_restored=0
 			printf 'error: source-backed module remains loaded\n' >&2
 		fi
 	fi
 	if [[ $base_was_loaded -eq 1 && $base_removed -eq 1 ]]; then
 		if [[ $software_restored -eq 1 ]]; then
-			sudo -n modprobe intel_ipu4p_isys || {
+			if ! sudo -n modprobe intel_ipu4p_isys; then
 				cleanup_rc=1
+				cleanup_failure restore_distribution_module
 				software_restored=0
-			}
+			fi
 		else
 			cleanup_rc=1
+			cleanup_failure restore_distribution_module
 		fi
 	fi
 	if [[ $bridge_was_active -eq 1 && $software_restored -eq 1 ]]; then
-		systemctl --user start "$BRIDGE_SERVICE" || cleanup_rc=1
+		if ! systemctl --user start "$BRIDGE_SERVICE"; then
+			cleanup_rc=1
+			cleanup_failure restart_bridge
+		fi
 	elif [[ $bridge_was_active -eq 1 && $software_restored -eq 0 ]]; then
 		printf 'error: bridge remains stopped because restoration failed\n' >&2
 	fi
 	media-ctl -d "$MEDIA" -p >"$GRAPH_AFTER" 2>&1 || :
 	read_kernel_log
+	wall_end=$(date +%s.%N)
+	{
+		printf 'actual_wall_duration_seconds=%.3f\n' \
+			"$(awk -v start="$wall_start" -v end="$wall_end" 'BEGIN { print end - start }')"
+		printf 'cleanup_failures=%s\ncleanup_result=%s\n' "$cleanup_failures" \
+			"$([[ $cleanup_failures -eq 0 ]] && printf PASS || printf FAIL)"
+		printf 'physical_csi_measurement=NOT_PERFORMED\n'
+		printf 'phy_changes=NONE\ndesktop_integration=DEFERRED\n'
+	} >>"$RUN_INFO"
 
 	if [[ $original_rc -eq 0 && $cleanup_rc -ne 0 ]]; then
 		printf 'error: qualification completed but restoration failed; inspect %s\n' \
@@ -156,9 +231,13 @@ sudo -n "$LINK_HELPER" "$MEDIA" \
 capture_link_enabled=1
 
 media-ctl -d "$MEDIA" -p >>"$SETUP_LOG" 2>&1 || :
+QUALIFIER_ARGS=(--duration "$DURATION" --cycles "$CYCLES" \
+	--cycle-frames "$CYCLE_FRAMES")
+if [[ $BASELINE -eq 1 ]]; then
+	QUALIFIER_ARGS+=(--baseline)
+fi
 set +e
-sudo -n "$QUALIFIER" --duration "$DURATION" --cycles "$CYCLES" \
-	--cycle-frames "$CYCLE_FRAMES" >"$QUALIFY_LOG" 2>&1
+sudo -n "$QUALIFIER" "${QUALIFIER_ARGS[@]}" >"$QUALIFY_LOG" 2>&1
 qualify_rc=$?
 set -e
 printf 'qualify_rc=%s\nend=%s\n' "$qualify_rc" "$(date --iso-8601=seconds)" >>"$RUN_INFO"

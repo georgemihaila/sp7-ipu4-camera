@@ -16,10 +16,18 @@
 #define DEFAULT_CYCLES 20U
 #define DEFAULT_CYCLE_FRAMES 5U
 #define CAPTURE_TIMEOUT_MS 1000U
-#define MAX_RECOVERIES 5U
 #define RECOVERY_DELAY_SECONDS 1U
 
 static volatile sig_atomic_t stop_requested;
+
+typedef struct {
+	uint64_t timeouts;
+	uint64_t malformed;
+	uint64_t recoveries;
+	uint64_t sequence_gaps;
+	uint64_t rejected_buffers;
+	uint64_t cleanup_failures;
+} QualificationTotals;
 
 static void request_stop(int signal_number)
 {
@@ -58,9 +66,18 @@ static uint64_t frame_hash_and_range(const uint8_t *frame, size_t size,
 	return hash;
 }
 
+static void accumulate_capture_stats(QualificationTotals *totals,
+	const IrCaptureStats *stats)
+{
+	if (totals == NULL || stats == NULL)
+		return;
+	totals->sequence_gaps += stats->sequence_gaps;
+	totals->rejected_buffers += stats->rejected_buffers;
+}
+
 static void print_progress(const char *label, double elapsed, uint64_t frames,
-	uint64_t changed, uint64_t timeouts, uint64_t malformed,
-	uint64_t recoveries, const IrCaptureStats *stats)
+	uint64_t changed, const QualificationTotals *totals,
+	const IrCaptureStats *stats)
 {
 	double fps = elapsed > 0.0 ? (double)frames / elapsed : 0.0;
 
@@ -68,10 +85,12 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 		" fps=%.3f changed=%" PRIu64 " timeouts=%" PRIu64
 		" malformed=%" PRIu64 " recoveries=%" PRIu64
 		" sequence_gaps=%" PRIu64 " rejected_buffers=%" PRIu64
+		" cleanup_failures=%" PRIu64
 		" last_sequence=%" PRIu32 " stride=%u data_offset=%u\n",
-		label, elapsed, frames, fps, changed, timeouts, malformed,
-		recoveries, stats->sequence_gaps, stats->rejected_buffers,
-		stats->last_sequence, stats->stride, stats->last_data_offset);
+		label, elapsed, frames, fps, changed, totals->timeouts,
+		totals->malformed, totals->recoveries, totals->sequence_gaps,
+		totals->rejected_buffers, totals->cleanup_failures, stats->last_sequence,
+		stats->stride, stats->last_data_offset);
 	fflush(stdout);
 }
 
@@ -91,17 +110,27 @@ static int capture_one_frame(IrCapture **capture, uint8_t *frame,
 		CAPTURE_TIMEOUT_MS, stats, error, error_size);
 }
 
-static void close_capture(IrCapture **capture, char *error, unsigned error_size)
+static int close_capture(IrCapture **capture, IrCaptureStats *stats,
+	QualificationTotals *totals, char *error, unsigned error_size)
 {
+	int result = 0;
+
 	if (*capture == NULL)
-		return;
-	if (ir_capture_stop(*capture, error, error_size) != 0)
-		fprintf(stderr, "warning: STREAMOFF failed: %s\n", error);
+		return 0;
+	accumulate_capture_stats(totals, stats);
+	if (ir_capture_stop(*capture, error, error_size) != 0) {
+		if (totals != NULL)
+			totals->cleanup_failures++;
+		fprintf(stderr, "cleanup_error operation=STREAMOFF error=%s\n", error);
+		result = -1;
+	}
 	ir_capture_close(*capture);
 	*capture = NULL;
+	return result;
 }
 
-static int run_persistent(unsigned duration_seconds)
+static int run_persistent(unsigned duration_seconds, bool baseline,
+	QualificationTotals *totals)
 {
 	uint8_t frame[IR_CAPTURE_OUTPUT_BYTES];
 	IrCapture *capture = NULL;
@@ -111,12 +140,8 @@ static int run_persistent(unsigned duration_seconds)
 	double next_report = started;
 	uint64_t frames = 0U;
 	uint64_t changed = 0U;
-	uint64_t timeouts = 0U;
-	uint64_t malformed = 0U;
-	uint64_t recoveries = 0U;
 	uint64_t previous_hash = 0U;
 	bool have_previous = false;
-	unsigned consecutive_recoveries = 0U;
 
 	while (!stop_requested && monotonic_seconds() - started <
 		(double)duration_seconds) {
@@ -134,7 +159,6 @@ static int run_persistent(unsigned duration_seconds)
 			previous_hash = hash;
 			have_previous = true;
 			frames++;
-			consecutive_recoveries = 0U;
 			if (frames == 1U || frames % 100U == 0U)
 				printf("frame frames=%" PRIu64 " hash=0x%016" PRIx64
 					" luma_min=%u luma_max=%u bytesused=%u data_offset=%u"
@@ -143,59 +167,79 @@ static int run_persistent(unsigned duration_seconds)
 					stats.last_data_offset, stats.last_dequeued_sequence,
 					stats.last_timestamp_seconds, stats.last_timestamp_usec);
 		} else if (result == 0) {
-			timeouts++;
+			totals->timeouts++;
+			fprintf(stderr, "capture_timeout elapsed=%.3f\n",
+				monotonic_seconds() - started);
+			if (!baseline)
+				break;
 		} else {
-			malformed++;
-			recoveries++;
-			consecutive_recoveries++;
+			totals->malformed++;
+			totals->recoveries++;
 			fprintf(stderr, "capture_error elapsed=%.3f recovery=%" PRIu64
 				" malformed=%" PRIu64 " error=%s\n",
-				monotonic_seconds() - started, recoveries, malformed, error);
-			close_capture(&capture, error, sizeof(error));
-			if (consecutive_recoveries >= MAX_RECOVERIES)
+				monotonic_seconds() - started, totals->recoveries,
+				totals->malformed, error);
+			if (close_capture(&capture, &stats, totals, error,
+				sizeof(error)) != 0 && !baseline)
+				break;
+			if (!baseline)
 				break;
 			sleep(RECOVERY_DELAY_SECONDS);
 		}
 		if (monotonic_seconds() >= next_report) {
 			print_progress("persistent", monotonic_seconds() - started,
-				frames, changed, timeouts, malformed, recoveries, &stats);
+				frames, changed, totals, &stats);
 			next_report += 10.0;
 		}
 	}
-	close_capture(&capture, error, sizeof(error));
+	(void)close_capture(&capture, &stats, totals, error, sizeof(error));
 	{
 		double elapsed = monotonic_seconds() - started;
 		bool passed = !stop_requested && elapsed >= (double)duration_seconds &&
-			frames > 0U && changed > 0U && timeouts == 0U &&
-			malformed == 0U && recoveries == 0U &&
-			stats.sequence_gaps == 0U && stats.rejected_buffers == 0U;
+			frames > 0U && changed > 0U && totals->timeouts == 0U &&
+			totals->malformed == 0U && totals->recoveries == 0U &&
+			totals->sequence_gaps == 0U &&
+			totals->rejected_buffers == 0U &&
+			totals->cleanup_failures == 0U;
 
-		printf("persistent_summary duration_seconds=%.3f frames=%" PRIu64
+		printf("persistent_summary requested_duration_seconds=%u"
+			" actual_duration_seconds=%.3f frames=%" PRIu64
 			" fps=%.3f changed=%" PRIu64 " timeouts=%" PRIu64
 			" malformed=%" PRIu64 " recoveries=%" PRIu64
 			" sequence_gaps=%" PRIu64 " rejected_buffers=%" PRIu64
-			" result=%s\n", elapsed, frames,
+			" cleanup_failures=%" PRIu64 " gate_result=%s result=%s"
+			" stability_pass=%s\n", duration_seconds, elapsed, frames,
 			elapsed > 0.0 ? (double)frames / elapsed : 0.0, changed,
-			timeouts, malformed, recoveries, stats.sequence_gaps,
-			stats.rejected_buffers, passed ? "PASS" : "FAIL");
+			totals->timeouts, totals->malformed, totals->recoveries,
+			totals->sequence_gaps, totals->rejected_buffers,
+			totals->cleanup_failures, passed ? "PASS" : "FAIL",
+			baseline ? "BASELINE" : (passed ? "PASS" : "FAIL"),
+			baseline ? "NO" : (passed ? "YES" : "NO"));
 		return passed ? 0 : 1;
 	}
 }
 
-static int run_cycles(unsigned cycles, unsigned frames_per_cycle)
+static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
+	QualificationTotals *totals)
 {
 	uint8_t frame[IR_CAPTURE_OUTPUT_BYTES];
 	unsigned passed = 0U;
 	unsigned failed = 0U;
+	unsigned attempted = 0U;
+	uint64_t total_frames = 0U;
 
-	for (unsigned cycle = 1U; cycle <= cycles && !stop_requested; cycle++) {
+	for (unsigned cycle = 1U; cycle <= cycles && !stop_requested &&
+		(baseline || failed == 0U); cycle++) {
 		IrCapture *capture = NULL;
 		IrCaptureStats stats = { 0 };
 		char error[256];
 		unsigned frames = 0U;
-		unsigned timeouts = 0U;
-		unsigned malformed = 0U;
 		bool cycle_ok = true;
+		uint64_t cycle_cleanup_failures_before = totals->cleanup_failures;
+		uint64_t cycle_sequence_gaps_before = totals->sequence_gaps;
+		uint64_t cycle_rejected_buffers_before = totals->rejected_buffers;
+		uint64_t cycle_timeouts_before = totals->timeouts;
+		uint64_t cycle_malformed_before = totals->malformed;
 
 		while (frames < frames_per_cycle && !stop_requested) {
 			int result = capture_one_frame(&capture, frame, &stats, error,
@@ -206,32 +250,59 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle)
 				continue;
 			}
 			if (result == 0) {
-				timeouts++;
+				totals->timeouts++;
 				cycle_ok = false;
+				fprintf(stderr, "cycle=%u capture_timeout\n", cycle);
 				break;
 			}
-			malformed++;
+			totals->malformed++;
 			cycle_ok = false;
 			fprintf(stderr, "cycle=%u capture_error=%s\n", cycle, error);
 			break;
 		}
-		if (stats.sequence_gaps != 0U || stats.rejected_buffers != 0U)
+		if (close_capture(&capture, &stats, totals, error, sizeof(error)) != 0)
 			cycle_ok = false;
-		close_capture(&capture, error, sizeof(error));
+		if (totals->sequence_gaps != cycle_sequence_gaps_before ||
+			totals->rejected_buffers != cycle_rejected_buffers_before)
+			cycle_ok = false;
+		attempted++;
+		total_frames += frames;
 		if (cycle_ok && frames == frames_per_cycle)
 			passed++;
 		else
 			failed++;
-		printf("cycle=%u frames=%u timeouts=%u malformed=%u sequence_gaps=%" PRIu64
-			" rejected_buffers=%" PRIu64 " result=%s\n", cycle, frames,
-			timeouts, malformed, stats.sequence_gaps, stats.rejected_buffers,
+		printf("cycle=%u requested_frames=%u actual_frames=%u frames=%u"
+			" timeouts=%" PRIu64
+			" malformed=%" PRIu64 " sequence_gaps=%" PRIu64
+			" rejected_buffers=%" PRIu64 " cleanup_failures=%" PRIu64
+			" cumulative_timeouts=%" PRIu64 " cumulative_malformed=%" PRIu64
+			" cumulative_sequence_gaps=%" PRIu64
+			" cumulative_rejected_buffers=%" PRIu64
+			" cumulative_cleanup_failures=%" PRIu64 " result=%s\n", cycle,
+			frames_per_cycle, frames, frames, totals->timeouts - cycle_timeouts_before,
+			totals->malformed - cycle_malformed_before,
+			totals->sequence_gaps - cycle_sequence_gaps_before,
+			totals->rejected_buffers - cycle_rejected_buffers_before,
+			totals->cleanup_failures - cycle_cleanup_failures_before,
+			totals->timeouts, totals->malformed, totals->sequence_gaps,
+			totals->rejected_buffers, totals->cleanup_failures,
 			cycle_ok && frames == frames_per_cycle ? "PASS" : "FAIL");
 		fflush(stdout);
 	}
-	printf("cycles_summary requested=%u passed=%u failed=%u result=%s\n",
-		cycles, passed, failed, failed == 0U && passed == cycles ? "PASS" :
-		"FAIL");
-	return failed == 0U && passed == cycles ? 0 : 1;
+	{
+		bool passed_gate = !stop_requested && failed == 0U && passed == cycles;
+		printf("cycles_summary requested=%u attempted=%u passed=%u failed=%u"
+			" frames=%" PRIu64 " timeouts=%" PRIu64
+			" malformed=%" PRIu64 " sequence_gaps=%" PRIu64
+			" rejected_buffers=%" PRIu64 " cleanup_failures=%" PRIu64
+			" gate_result=%s result=%s stability_pass=%s\n", cycles,
+			attempted, passed, failed, total_frames, totals->timeouts,
+			totals->malformed, totals->sequence_gaps, totals->rejected_buffers,
+			totals->cleanup_failures, passed_gate ? "PASS" : "FAIL",
+			baseline ? "BASELINE" : (passed_gate ? "PASS" : "FAIL"),
+			baseline ? "NO" : (passed_gate ? "YES" : "NO"));
+		return passed_gate ? 0 : 1;
+	}
 }
 
 static int parse_unsigned(const char *value, unsigned *result)
@@ -252,6 +323,7 @@ int main(int argc, char **argv)
 	unsigned duration = DEFAULT_DURATION_SECONDS;
 	unsigned cycles = DEFAULT_CYCLES;
 	unsigned cycle_frames = DEFAULT_CYCLE_FRAMES;
+	bool baseline = false;
 
 	for (int index = 1; index < argc; index++) {
 		if (strcmp(argv[index], "--duration") == 0 && index + 1 < argc) {
@@ -264,17 +336,50 @@ int main(int argc, char **argv)
 			index + 1 < argc) {
 			if (parse_unsigned(argv[++index], &cycle_frames) != 0)
 				return EXIT_FAILURE;
+		} else if (strcmp(argv[index], "--baseline") == 0) {
+			baseline = true;
 		} else {
 			fprintf(stderr, "usage: %s [--duration seconds] [--cycles count] "
-				"[--cycle-frames count]\n", argv[0]);
+				"[--cycle-frames count] [--baseline]\n", argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
+	if (duration == 0U || cycles == 0U || cycle_frames == 0U) {
+		fprintf(stderr, "duration, cycles, and cycle-frames must be nonzero\n");
+		return EXIT_FAILURE;
+	}
 	(void)signal(SIGINT, request_stop);
 	(void)signal(SIGTERM, request_stop);
-	printf("qualification_start duration=%u cycles=%u cycle_frames=%u\n",
-		duration, cycles, cycle_frames);
-	if (run_persistent(duration) != 0 || stop_requested)
-		return EXIT_FAILURE;
-	return run_cycles(cycles, cycle_frames) == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+	printf("qualification_start mode=%s requested_duration_seconds=%u"
+		" requested_cycles=%u cycle_frames=%u\n", baseline ? "baseline" :
+		"normal", duration, cycles, cycle_frames);
+	{
+		QualificationTotals persistent_totals = { 0 };
+		QualificationTotals cycle_totals = { 0 };
+		int persistent_result = run_persistent(duration, baseline,
+			&persistent_totals);
+		int cycles_result = EXIT_FAILURE;
+
+		if (baseline || (persistent_result == 0 && !stop_requested))
+			cycles_result = run_cycles(cycles, cycle_frames, baseline,
+				&cycle_totals);
+		else
+			printf("cycles_summary requested=%u attempted=0 passed=0 failed=0"
+				" gate_result=SKIPPED result=SKIPPED stability_pass=NO\n",
+				cycles);
+		printf("qualification_summary mode=%s persistent_gate=%s"
+			" cycles_gate=%s cleanup_failures=%" PRIu64
+			" result=%s stability_pass=%s\n", baseline ? "baseline" : "normal",
+			persistent_result == 0 ? "PASS" : "FAIL",
+			cycles_result == 0 ? "PASS" :
+			(baseline ? "FAIL" : (persistent_result != 0 ? "SKIPPED" :
+			"FAIL")),
+			persistent_totals.cleanup_failures + cycle_totals.cleanup_failures,
+			baseline ? "BASELINE" :
+			(persistent_result == 0 && cycles_result == 0 ? "PASS" : "FAIL"),
+			baseline ? "NO" :
+			(persistent_result == 0 && cycles_result == 0 ? "YES" : "NO"));
+		return persistent_result == 0 && cycles_result == 0 ? EXIT_SUCCESS :
+			EXIT_FAILURE;
+	}
 }

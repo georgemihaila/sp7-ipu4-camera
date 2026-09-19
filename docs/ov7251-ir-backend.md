@@ -128,6 +128,49 @@ links were disabled, the source-backed module was unloaded, the distribution
 after the run. `/dev/video62` was not installed, no service was changed, and no
 reboot or suspend/resume was performed.
 
+## Baseline mode
+
+The qualifier has two modes. The default mode is fail-fast: a persistent
+capture failure prevents the cycle phase, and a failed cycle stops the normal
+cycle phase. An explicit baseline run keeps attempting the requested persistent
+duration and every requested cycle after capture failures:
+
+```bash
+make -C cbridge qualify-ir
+./scripts/ir/qualify-persistent.sh --baseline \
+  /var/tmp/ov7251-ir-qualification-baseline-$(date +%Y%m%d-%H%M%S)
+```
+
+The baseline qualifier still returns failure when its gates fail. It records
+`requested_duration_seconds` separately from `actual_duration_seconds`, logs
+each cycle, preserves cumulative timeout/malformed/recovery/sequence-gap/
+rejected-buffer counts across reopen attempts, and counts surfaced
+`STREAMOFF` cleanup failures. The wrapper also records total wall-clock
+duration and restoration failures. A baseline result is reported as
+`result=BASELINE` with `stability_pass=NO`; it is an observation, not a
+stability pass.
+
+The existing bundled source-6 module, media links, module options, and kernel
+logging configuration are unchanged. The wrapper preserves `setup.log`,
+`qualify.log`, and `kernel.log` without filtering fatal messages. Existing
+kernel rate limiting remains in effect, so emitted log counts are lower bounds;
+the absence of a repeated line does not prove that the underlying event did
+not recur.
+
+## Evidence boundaries
+
+The older synchronized source-6 trace is historical evidence for its own
+configuration and reported `hs=0`/`lp=0`, `0x4000`, and zero usable payload.
+The later BB8 run used the existing bundled configuration and reported
+`hs=0x101` with changing packet payload, while also reporting receiver and
+firmware errors. These are different software runs. Neither establishes
+physical CSI lane behavior, and no electrical lane measurement was performed.
+
+Sensor power/reset/clock, initialization, and `0x0100=0x01` readbacks from
+earlier trace runs are historical unless collected again on the same timeline
+as a baseline run. They must not be merged into the baseline's synchronized
+evidence. PHY changes and desktop integration remain deferred.
+
 ## Rollback
 
 To stop the standalone producer, send it `SIGTERM` or press `Ctrl-C`; it will

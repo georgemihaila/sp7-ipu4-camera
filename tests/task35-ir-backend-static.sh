@@ -7,6 +7,8 @@ CROOT="$ROOT/cbridge"
 MODULE_OPTIONS="$ROOT/modprobe.d/98-v4l2loopback.conf"
 SETUP="$ROOT/scripts/setup-camera-bridge.sh"
 UNIT="$ROOT/systemd/user/sp7-camera-bridge.service"
+QUALIFIER="$CROOT/ir-hardware-qualification.c"
+QUALIFY_WRAPPER="$ROOT/scripts/ir/qualify-persistent.sh"
 
 grep -Fq 'MEDIA_IOC_ENUM_ENTITIES' "$CROOT/ir-v4l2.c"
 grep -Fq 'MEDIA_IOC_ENUM_LINKS' "$CROOT/ir-v4l2.c"
@@ -22,6 +24,12 @@ grep -Fq 'video_nr=55,60,61,62' "$MODULE_OPTIONS"
 grep -Fq 'Surface Camera (IR)' "$MODULE_OPTIONS"
 grep -Fq 'IR_BINARY=' "$SETUP"
 ! grep -Fq 'sp7-camera-ir' "$UNIT"
+grep -Fq -- '--baseline' "$QUALIFIER"
+grep -Fq 'requested_duration_seconds' "$QUALIFIER"
+grep -Fq 'actual_duration_seconds' "$QUALIFIER"
+grep -Fq 'cumulative_cleanup_failures' "$QUALIFIER"
+grep -Fq 'kernel_warning_rate_limiting=possible' "$QUALIFY_WRAPPER"
+bash -n "$QUALIFY_WRAPPER"
 
 make -C "$CROOT" clean all test-ir
 printf '%s\n' 'task35-ir-backend-static: PASS'
