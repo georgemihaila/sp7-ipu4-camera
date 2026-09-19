@@ -21,7 +21,7 @@ if [ -S "$RUNTIME_DIR/bus" ]; then
 		systemctl --user disable --now sp7-camera-bridge.service 2>/dev/null || true
 fi
 if command -v fuser >/dev/null 2>&1; then
-	for dev in /dev/video55 /dev/video60 /dev/video61; do
+	for dev in /dev/video55 /dev/video60 /dev/video61 /dev/video62; do
 		if [ -e "$dev" ] && fuser -s "$dev"; then
 			if [ -S "$RUNTIME_DIR/bus" ]; then
 				runuser -u "$TARGET_USER" -- env \
@@ -37,6 +37,7 @@ fi
 rm -f "$TARGET_HOME/.config/systemd/user/sp7-camera-bridge.service"
 rm -f "$TARGET_HOME/.config/systemd/user/sp7-zoom-camera-bridge.service"
 rm -f /usr/local/libexec/sp7-camera-bridge
+rm -f /usr/local/libexec/sp7-camera-ir
 rm -f /usr/local/libexec/sp7-zoom-camera-bridge
 rm -f /etc/modules-load.d/sp7-camera-bridge.conf
 rm -f /etc/modules-load.d/sp7-zoom-camera-bridge.conf

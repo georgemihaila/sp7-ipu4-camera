@@ -9,8 +9,9 @@ supplies two stable V4L2 names backed by the existing libcamera cameras:
 |---|---|---|
 | Surface Camera (front) | `/dev/video60` | OV5693 |
 | Surface Camera (back) | `/dev/video61` | OV8865 |
+| Surface Camera (IR) | `/dev/video62` | OV7251 packed RAW10 source-6 producer |
 
-The IPU4P shares a backend capture route between the sensors. The user service
+The IPU4P shares a backend capture route between the RGB sensors. The user service
 keeps both virtual devices capturable with an idle black signal, watches for an
 application opening one, and starts only that sensor's GStreamer pipeline. It
 releases the route when the virtual device is no longer in use. The OBS
@@ -22,6 +23,15 @@ both `Device Caps` blocks for `Video Capture`; a timeout fails the service
 instead of allowing WirePlumber to cache the initial output-only state. The
 check uses `v4l2-ctl --all` because `--list-formats-ext` can print a capture
 format while the device capabilities still advertise `Video Output` only.
+
+The IR loopback is additive and intentionally outside the front/rear bridge
+controller. Its `exclusive_caps=1` node stays output-only until the standalone
+`sp7-camera-ir` producer is started; the bridge service does not start it,
+watch it, or switch RGB requests to it. The producer discovers the enabled
+OV7251-to-source-6 media graph, validates the negotiated packed-RAW10 buffer,
+decodes it to grayscale YUYV with neutral chroma, and writes `/dev/video62`.
+Concurrency with RGB capture remains unqualified and must not be inferred from
+enumeration.
 
 ## Install
 
@@ -67,7 +77,7 @@ packages. The C executable is the only supported camera bridge.
 The setup installs the module labels, loads the loopback nodes, and enables a
 per-user systemd service. It overrides RPM Fusion's same-named modprobe file
 with an `/etc` configuration that keeps the OBS virtual camera and adds the
-two SP7 devices. It also installs a WirePlumber policy that hides the raw
+two SP7 RGB devices plus the opt-in IR loopback. It also installs a WirePlumber policy that hides the raw
 `ipu4p` nodes and disables the physical libcamera monitor. This leaves
 WirePlumber serving the named loopback devices without opening the shared
 backend itself. The bridge owns the physical sensor only while an application

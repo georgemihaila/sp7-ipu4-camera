@@ -195,8 +195,9 @@ Installation complete for kernel $KREL.
 EOF
 if [ "$INSTALL_MODE" = full ]; then
 	cat <<EOF
-Surface Camera (front) and Surface Camera (back) will be available to V4L2
-applications after the desktop user service starts.
+Surface Camera (front), Surface Camera (back), and the opt-in Surface Camera
+(IR) endpoint will be available to V4L2 applications after setup. The IR
+producer is not started by the desktop user service.
 EOF
 else
 	cat <<EOF

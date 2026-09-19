@@ -10,6 +10,7 @@ SOURCE_COMMIT=${SOURCE_COMMIT:-unknown}
 OUTPUT_DIR=${OUTPUT_DIR:-$ROOT/dist}
 MODULE_MANIFEST=${MODULE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 C_BRIDGE_BINARY=${C_BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
+C_IR_BINARY=${C_IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
 
 case $VERSION in
 	''|*[!A-Za-z0-9._+-]*)
@@ -35,6 +36,10 @@ fi
 }
 [ -x "$C_BRIDGE_BINARY" ] || {
 	printf 'error: C camera bridge is missing or not executable: %s\n' "$C_BRIDGE_BINARY" >&2
+	exit 2
+}
+[ -x "$C_IR_BINARY" ] || {
+	printf 'error: standalone IR producer is missing or not executable: %s\n' "$C_IR_BINARY" >&2
 	exit 2
 }
 
@@ -90,6 +95,7 @@ cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/kernel-release.sh" "$STAGE/scripts/"
 mkdir -p "$STAGE/cbridge"
 cp -p "$C_BRIDGE_BINARY" "$STAGE/cbridge/sp7-camera-bridge"
+cp -p "$C_IR_BINARY" "$STAGE/cbridge/sp7-camera-ir"
 mkdir -p "$STAGE/modules"
 cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
@@ -121,10 +127,17 @@ akmod-v4l2loopback and v4l2loopback packages.
 
    FIRMWARE=/absolute/path/to/ipu4p_cpd.bin sudo -E ./scripts/install-modules.sh
 
-3. Install the named Surface Camera (front) and Surface Camera (back)
+3. Install the named Surface Camera (front), Surface Camera (back), and
+   Surface Camera (IR) loopbacks while logged into the desktop session:
    endpoints while logged into the desktop session:
 
    sudo ./scripts/setup-camera-bridge.sh
+
+   The IR producer is not started by the bridge service. Start it manually
+   only after the source-6 capture qualification gates in the documentation
+   have passed:
+
+   /usr/local/libexec/sp7-camera-ir
 
 4. Reboot so the kernel loads the installed modules at boot.
 

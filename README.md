@@ -58,7 +58,9 @@ The installer also builds and installs the C camera bridge, installs the
 libcamera and v4l2loopback dependencies and,
 when run from a logged-in desktop session, enables the named **Surface Camera
 (front)** and **Surface Camera (back)** V4L2 endpoints for applications that
-enumerate camera devices directly.
+enumerate camera devices directly. Setup also reserves **Surface Camera (IR)**
+on `/dev/video62`; its standalone producer is opt-in and is not started by the
+front/rear bridge service.
 
 The required camera firmware is not bundled with this repository. If
 `/lib/firmware/ipu4p_cpd.bin` is absent, the script downloads Microsoft's

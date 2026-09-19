@@ -4,6 +4,7 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BRIDGE_BINARY=${BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
+IR_BINARY=${IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
 fail() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
@@ -28,6 +29,7 @@ command -v gst-launch-1.0 >/dev/null 2>&1 || fail 'GStreamer tools are required'
 command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer plugins'
 command -v runuser >/dev/null 2>&1 || fail 'runuser is required to configure the target user session'
 [ -x "$BRIDGE_BINARY" ] || fail "C camera bridge is missing or not executable: $BRIDGE_BINARY (build it with make -C cbridge all)"
+[ -x "$IR_BINARY" ] || fail "standalone IR producer is missing or not executable: $IR_BINARY (build it with make -C cbridge all)"
 
 for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
 	gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
@@ -62,20 +64,21 @@ if [ -e "$OPTIONS" ] && ! cmp -s "$ROOT/modprobe.d/98-v4l2loopback.conf" "$OPTIO
 	# 1,0,0 profile was an intermediate PipeWire experiment; the installed
 	# configuration is replaced by the proven exclusive profile below.
 	if ! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,1,1' "$OPTIONS" && \
-		! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,0,0' "$OPTIONS"; then
+		! grep -Fqx 'options v4l2loopback devices=3 video_nr=55,60,61 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back)" exclusive_caps=1,0,0' "$OPTIONS" && \
+		! grep -Fqx 'options v4l2loopback devices=4 video_nr=55,60,61,62 card_label="OBS Virtual Camera,Surface Camera (front),Surface Camera (back),Surface Camera (IR)" exclusive_caps=1,1,1,1' "$OPTIONS"; then
 		fail "$OPTIONS already exists with different contents; review it before replacing"
 	fi
 fi
 
-for dev in /dev/video55 /dev/video60 /dev/video61; do
-	if [ -e "$dev" ] && ! v4l2-ctl --device "$dev" --all 2>/dev/null | grep -Eq 'Card type.*(OBS Virtual Camera|Surface Camera \(front\)|Surface Camera \(back\)|Surface Pro 7 Front Camera|Surface Pro 7 Rear Camera)'; then
+for dev in /dev/video55 /dev/video60 /dev/video61 /dev/video62; do
+	if [ -e "$dev" ] && ! v4l2-ctl --device "$dev" --all 2>/dev/null | grep -Eq 'Card type.*(OBS Virtual Camera|Surface Camera \(front\)|Surface Camera \(back\)|Surface Camera \(IR\)|Surface Pro 7 Front Camera|Surface Pro 7 Rear Camera)'; then
 		fail "$dev is already assigned to another video device"
 	fi
 done
 
 if lsmod | awk '$1 == "v4l2loopback" { found = 1 } END { exit !found }'; then
 	if command -v fuser >/dev/null 2>&1; then
-		for dev in /dev/video55 /dev/video60 /dev/video61; do
+		for dev in /dev/video55 /dev/video60 /dev/video61 /dev/video62; do
 			if [ -e "$dev" ] && fuser -s "$dev"; then
 				fail "a loopback camera is open at $dev; close the app using it and rerun setup"
 			fi
@@ -92,13 +95,15 @@ modprobe v4l2loopback
 for pair in \
 	'/dev/video55|OBS Virtual Camera' \
 	'/dev/video60|Surface Camera (front)' \
-	'/dev/video61|Surface Camera (back)'; do
+	'/dev/video61|Surface Camera (back)' \
+	'/dev/video62|Surface Camera (IR)'; do
 	dev=${pair%%|*}
 	label=${pair#*|}
 	v4l2-ctl --device "$dev" --all 2>/dev/null | grep -Fq "$label" || fail "expected label '$label' on $dev"
 done
 
 install -D -m 0755 "$BRIDGE_BINARY" /usr/local/libexec/sp7-camera-bridge
+install -D -m 0755 "$IR_BINARY" /usr/local/libexec/sp7-camera-ir
 install -d -m 0755 -o "$TARGET_UID" -g "$TARGET_GID" "$USER_UNIT_DIR"
 install -m 0644 -o "$TARGET_UID" -g "$TARGET_GID" \
 	"$ROOT/systemd/user/sp7-camera-bridge.service" \
@@ -125,5 +130,6 @@ runuser -u "$TARGET_USER" -- env \
 	DBUS_SESSION_BUS_ADDRESS="unix:path=$RUNTIME_DIR/bus" \
 	systemctl --user restart wireplumber.service
 
-printf 'Installed. Surface Camera (front) is /dev/video60 and Surface Camera (back) is /dev/video61.\n'
+printf 'Installed. Surface Camera (front) is /dev/video60, Surface Camera (back) is /dev/video61, and Surface Camera (IR) is /dev/video62.\n'
 printf 'The existing OBS Virtual Camera remains on /dev/video55.\n'
+printf 'The IR producer is opt-in and is not started by the bridge service.\n'
