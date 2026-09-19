@@ -305,6 +305,111 @@ kernel rate limiting remains in effect, so emitted log counts are lower bounds;
 the absence of a repeated line does not prove that the underlying event did
 not recur.
 
+## 2026-09-19 instrumented 120-second diagnostic run
+
+The instrumented qualifier was run with the unchanged BB8 module and
+configuration, using `--baseline` so the requested 120-second capture and all
+20 cycles were attempted after failures. Baseline mode retained the existing
+requeue, close, reopen, and fatal-handling decisions; it only prevented the
+qualification harness from stopping early. The complete artifacts are
+preserved at:
+
+```text
+/var/tmp/ov7251-ir-qualification-instrumented-20260919-190000/
+```
+
+The directory contains `setup.log`, `qualify.log`, the unfiltered 8.7 MiB
+`kernel.log`, `run.txt`, `graph-before.txt`, `graph-after.txt`,
+`hashes-pre.txt`, `hashes-post.txt`, and the post-run `graph-verify.txt`.
+
+Run provenance:
+
+- commit: `fdea44beeb0b974bc8cfc24f56d6e4678d842896`;
+- kernel: `6.19.8-3.surface.fc43.x86_64`;
+- qualifier SHA-256: `05501670599bf964703293106b3f39b02d204091b8dc2e6e67935b8fbcbd88f3`;
+- unchanged BB8 module SHA-256: `546d80d5c692e0b394b56f4771fbf244bb9427419f6126405fe766fc9b1eaf7b`;
+- restored distribution module SHA-256: `10ec710e00d411cc29b5f192200bd22b28b4e13a0cd131ab93ad9ecbc433e3ce`.
+
+The persistent phase requested 120 seconds and ran for 120.284 seconds. It
+decoded 2,174 frames, 2,173 changed, at 18.074 FPS in the final summary. Its
+totals were 5 metadata rejections, 5 recoveries, and zero startup, timeout,
+timestamp, sequence-error, decode, requeue, poll, DQBUF, sequence-gap, or
+cleanup errors. The wrapper's total wall time, including setup, cycles, and
+cleanup, was 348.266 seconds.
+
+All 20 cycles were attempted: 9 passed and 11 failed. The cycle totals were:
+
+- startup failures: 8 (`VIDIOC_STREAMON: Connection timed out`);
+- metadata rejections: 3;
+- timestamp, sequence-error, decode, and requeue failures: 0;
+- sequence gaps: 426, all reported in cycle 20;
+- rejected buffers: 3;
+- cleanup failures: 0.
+
+Cycles 1, 4, 6, 7, 9, 11, 12, and 16 failed at startup. Cycles 14 and 15
+failed after one frame on metadata rejection. Cycle 20 decoded three frames,
+reported 426 forward sequence gaps, and then hit a metadata rejection. The
+remaining nine cycles passed their five-frame criterion.
+
+### Rejection classification
+
+There were eight rejection records in total. Every record had the exact
+reason mask `0x00000004`, meaning `V4L2_BUF_FLAG_ERROR` only:
+
+| reason mask | count | successful requeues | raw evidence |
+| --- | ---: | ---: | --- |
+| `0x00000004` | 8 | 8 | `flags=0x00002041`, `timestamp_flags=0x00002000`, `plane_count=1`, `bytesused=399360`, `data_offset=4`, capacity `400384` |
+
+Thus error-flag-only buffers with successful requeue: **8**. There were no
+combined reason masks. Invalid index, invalid plane count, unavailable
+capacity, invalid plane metadata, timestamp flags/timestamp order, sequence
+regression, decode, and requeue-failure counts were all zero. The 426 sequence
+gaps are continuity discontinuities, not `sequence_errors` or rejection masks.
+
+### Monotonic rejection timeline
+
+Userspace `monotonic_ns / 1e9` and the kernel log's `short-monotonic` seconds
+share the same monotonic clock domain. `reopen` is shown for persistent
+recoveries; cycle rows show the next cycle's `stream_open` instead.
+
+| attempt | rejection time | stop | next reopen/open | nearby kernel correlation |
+| ---: | ---: | ---: | ---: | --- |
+| 1 | 22000.434435 | +0.000103 s | reopen +0.321591 s | source-6 `error=8` +0.000635 s; stream disable +0.316540 s |
+| 2 | 22007.857574 | +0.000034 s | reopen +0.294629 s | `error=8` +0.000416 s; stream disable +0.289413 s |
+| 3 | 22018.054213 | +0.000043 s | reopen +0.295008 s | `error=8` +0.000314 s; stream disable +0.288717 s |
+| 4 | 22034.125656 | +0.000053 s | reopen +0.361747 s | `error=8` +0.000603 s; receiver status lines and stream disable +0.355940 s |
+| 5 | 22095.518552 | +0.000055 s | reopen +0.361342 s | `error=8` +0.000745 s; receiver status lines and stream disable +0.356472 s |
+| 20 | 22296.379445 | +0.000037 s | next open +0.305174 s | sensor retry -0.239408 s; `error=8` +0.000228 s; stream disable +0.301216 s |
+| 21 | 22296.931970 | +0.000069 s | next open +0.265059 s | sensor retry -0.791933 s; `error=8` +0.000424 s; stream disable +0.260425 s |
+| 26 | 22342.190307 | +0.000058 s | none | sensor retry -0.474531 s; `error=8` +0.000381 s; stream disable +0.445193 s |
+
+Every rejection therefore had a source-6 `error=8` line within 0.00023 to
+0.00075 seconds after the userspace rejection. The cycle rejections also had
+nearby sensor-retry activity. This establishes temporal correlation, not
+causation or proof that userspace reopen caused the kernel events.
+
+The run emitted 4,470 receiver snapshots, of which 4,391 had nonzero
+`fatal_receiver_errors`; 1,075 had a nonzero retained fatal field while the
+current receiver field was zero. It also emitted 611 explicit fatal receiver
+status lines, 8,890 `error=8` lines, and 305 sensor retries. These are emitted
+message counts only; existing kernel rate limiting remains active. Fatal
+handling was not changed.
+
+The evidence supports proposing a separate, narrowly guarded discard-and-
+continue policy for an exact `0x00000004` rejection when the DQBUF index and
+plane metadata are valid and requeue succeeds. It does not yet prove that
+capture remains healthy without reopening, because this run deliberately kept
+the existing reopen decision after every rejection. Any other reason mask
+must retain structural-error recovery, and kernel fatal receiver handling must
+remain unchanged. A separate short A/B acceptance run should be used before
+implementing that policy.
+
+Cleanup completed with `cleanup_failures=0`. The distribution module was
+restored with the recorded hash and `modinfo` provenance, the bridge remained
+inactive, and a post-cleanup graph verification matched the pre-run graph.
+This confirms software restoration only; it does not claim BB8 register
+rollback. No PHY setting, fatal handling, or desktop integration was changed.
+
 ## Evidence boundaries
 
 The older synchronized source-6 trace is historical evidence for its own
