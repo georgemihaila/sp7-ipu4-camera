@@ -27,6 +27,7 @@ extern int sp7_camera_ir_test_ioctl(int fd, unsigned long request,
 	void *argument);
 extern int sp7_camera_ir_test_poll(struct pollfd *fds, nfds_t count,
 	int timeout_ms);
+extern uint64_t sp7_camera_ir_test_monotonic_ns(void);
 #endif
 
 #define IR_MEDIA_MAX_ENTITIES 128U
@@ -34,6 +35,8 @@ extern int sp7_camera_ir_test_poll(struct pollfd *fds, nfds_t count,
 #define IR_CAPTURE_BUFFERS 8U
 #define IR_HEADER_WORD 0x40U
 #define IR_MAX_ROW_PADDING 64U
+#define IR_CAPTURE_MAX_CONSECUTIVE_DISCARDS 5U
+#define IR_CAPTURE_MAX_DISCARD_WAIT_NS UINT64_C(2000000000)
 
 typedef struct {
 	void *address;
@@ -50,20 +53,26 @@ struct IrCapture {
 	unsigned buffer_count;
 	bool streaming;
 	bool have_sequence;
+	bool discard_error_buffers;
 	uint32_t last_sequence;
 	struct timeval last_timestamp;
 	uint64_t stream_attempt_id;
+	uint64_t discard_anchor_monotonic_ns;
 	IrCaptureStats stats;
 };
 
 static uint64_t monotonic_timestamp_ns(void)
 {
+#ifdef SP7_CAMERA_IR_TEST
+	return sp7_camera_ir_test_monotonic_ns();
+#else
 	struct timespec now;
 
 	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
 		return 0U;
 	return (uint64_t)now.tv_sec * UINT64_C(1000000000) +
 		(uint64_t)now.tv_nsec;
+#endif
 }
 
 static void log_stream_event(const IrCapture *capture, const char *event,
@@ -520,6 +529,13 @@ void ir_capture_set_stream_attempt_id(IrCapture *capture, uint64_t attempt_id)
 	capture->stats.stream_attempt_id = attempt_id;
 }
 
+void ir_capture_set_discard_error_buffers(IrCapture *capture, bool enabled)
+{
+	if (capture == NULL)
+		return;
+	capture->discard_error_buffers = enabled;
+}
+
 #ifdef SP7_CAMERA_IR_TEST
 IrCapture *ir_test_capture_create(int video_fd, void *buffer,
 	size_t buffer_length, unsigned width, unsigned height, unsigned stride,
@@ -569,6 +585,8 @@ int ir_capture_start(IrCapture *capture, char *error, unsigned error_size)
 	}
 	start_timestamp_ns = monotonic_timestamp_ns();
 	capture->stats.stream_start_monotonic_ns = start_timestamp_ns;
+	capture->discard_anchor_monotonic_ns = 0U;
+	capture->stats.consecutive_discards = 0U;
 	for (unsigned index = 0U; index < capture->buffer_count; index++) {
 		struct v4l2_buffer buffer = { 0 };
 		struct v4l2_plane plane = { 0 };
@@ -617,6 +635,36 @@ static uint32_t validate_timestamp(IrCapture *capture,
 		return IR_CAPTURE_REJECTION_TIMESTAMP_REGRESSION;
 	}
 	return IR_CAPTURE_REJECTION_NONE;
+}
+
+static bool discard_limit_reached(const IrCapture *capture,
+	uint64_t now_monotonic_ns)
+{
+	if (capture == NULL || !capture->discard_error_buffers)
+		return false;
+	if (capture->stats.consecutive_discards >=
+		IR_CAPTURE_MAX_CONSECUTIVE_DISCARDS)
+		return true;
+	return capture->discard_anchor_monotonic_ns != 0U &&
+		now_monotonic_ns >= capture->discard_anchor_monotonic_ns &&
+		now_monotonic_ns - capture->discard_anchor_monotonic_ns >=
+		IR_CAPTURE_MAX_DISCARD_WAIT_NS;
+}
+
+static int handle_capture_timeout(IrCapture *capture, IrCaptureStats *stats,
+	char *error, unsigned error_size)
+{
+	if (discard_limit_reached(capture, monotonic_timestamp_ns())) {
+		set_error(error, error_size,
+			"discard continuation limit reached without a valid frame");
+		capture->stats.discard_limit_errors++;
+		capture->stats.last_error = IR_CAPTURE_ERROR_DISCARD_LIMIT;
+		publish_stats(capture, stats);
+		return -1;
+	}
+	capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
+	publish_stats(capture, stats);
+	return 0;
 }
 
 int ir_decode_raw10_to_yuyv(const uint8_t *buffer, size_t buffer_size,
@@ -685,15 +733,11 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	result = poll(&descriptor, 1, (int)timeout_ms);
 #endif
 	if (result == 0) {
-		capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
-		publish_stats(capture, stats);
-		return 0;
+		return handle_capture_timeout(capture, stats, error, error_size);
 	}
 	if (result < 0) {
 		if (errno == EINTR) {
-			capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
-			publish_stats(capture, stats);
-			return 0;
+			return handle_capture_timeout(capture, stats, error, error_size);
 		}
 		set_error(error, error_size, "poll source-6 capture: %s", strerror(errno));
 		capture->stats.poll_errors++;
@@ -714,9 +758,7 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	buffer.m.planes = &plane;
 	if (ioctl_retry(capture->video_fd, VIDIOC_DQBUF, &buffer) < 0) {
 		if (errno == EAGAIN) {
-			capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
-			publish_stats(capture, stats);
-			return 0;
+			return handle_capture_timeout(capture, stats, error, error_size);
 		}
 		set_error(error, error_size, "VIDIOC_DQBUF: %s", strerror(errno));
 		capture->stats.dqbuf_errors++;
@@ -843,9 +885,11 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 		capture->last_sequence = dequeued_sequence;
 		capture->last_timestamp = dequeued_timestamp;
 		capture->have_sequence = true;
+		capture->discard_anchor_monotonic_ns = 0U;
 		capture->stats.last_sequence = dequeued_sequence;
 		capture->stats.data_offset = dequeued_data_offset;
 		capture->stats.frames++;
+		capture->stats.consecutive_discards = 0U;
 		publish_stats(capture, stats);
 		return 1;
 	}
@@ -871,6 +915,26 @@ requeue_fail:
 			capture->stats.last_requeue_monotonic_ns =
 				monotonic_timestamp_ns();
 			capture->stats.last_requeue_result = IR_CAPTURE_REQUEUE_SUCCEEDED;
+		}
+	}
+	if (capture->discard_error_buffers &&
+		capture->stats.last_rejection_reasons == IR_CAPTURE_REJECTION_ERROR_FLAG &&
+		capture->stats.last_requeue_result == IR_CAPTURE_REQUEUE_SUCCEEDED) {
+		uint64_t now_monotonic_ns = capture->stats.last_requeue_monotonic_ns;
+
+		if (capture->discard_anchor_monotonic_ns == 0U)
+			capture->discard_anchor_monotonic_ns = now_monotonic_ns;
+		if (discard_limit_reached(capture, now_monotonic_ns)) {
+			set_error(error, error_size,
+				"discard continuation limit reached without a valid frame");
+			capture->stats.discard_limit_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_DISCARD_LIMIT;
+		} else {
+			capture->stats.discarded_buffers++;
+			capture->stats.consecutive_discards++;
+			log_rejection(capture);
+			publish_stats(capture, stats);
+			return IR_CAPTURE_RESULT_DISCARDED;
 		}
 	}
 	log_rejection(capture);

@@ -24,6 +24,7 @@ typedef enum {
 	IR_CAPTURE_ERROR_SEQUENCE,
 	IR_CAPTURE_ERROR_DECODE,
 	IR_CAPTURE_ERROR_REQUEUE,
+	IR_CAPTURE_ERROR_DISCARD_LIMIT,
 } IrCaptureError;
 
 typedef enum {
@@ -85,6 +86,9 @@ typedef struct {
 	uint64_t sequence_errors;
 	uint64_t decode_errors;
 	uint64_t requeue_errors;
+	uint64_t discarded_buffers;
+	uint64_t discard_limit_errors;
+	uint64_t consecutive_discards;
 	uint64_t poll_errors;
 	uint64_t dqbuf_errors;
 	IrCaptureError last_error;
@@ -93,9 +97,13 @@ typedef struct {
 /* Discover the OV7251 -> source-6 -> capture route and prepare MMAP buffers. */
 int ir_capture_open(IrCapture **capture, char *error, unsigned error_size);
 void ir_capture_set_stream_attempt_id(IrCapture *capture, uint64_t attempt_id);
+/* Opt in to bounded continuation for independently valid V4L2 error buffers. */
+void ir_capture_set_discard_error_buffers(IrCapture *capture, bool enabled);
 int ir_capture_start(IrCapture *capture, char *error, unsigned error_size);
 
-/* Returns 1 for a decoded frame, 0 for a poll timeout, and -1 on bad input. */
+/* Returns 1 for a decoded frame, 2 for a discarded error buffer, 0 for a
+ * poll timeout, and -1 for a stream/recovery failure. */
+#define IR_CAPTURE_RESULT_DISCARDED 2
 int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	unsigned timeout_ms, IrCaptureStats *stats, char *error,
 	unsigned error_size);

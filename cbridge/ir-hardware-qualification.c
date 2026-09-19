@@ -31,6 +31,8 @@ typedef struct {
 	uint64_t sequence_errors;
 	uint64_t decode_errors;
 	uint64_t requeue_errors;
+	uint64_t discarded_buffers;
+	uint64_t discard_limit_errors;
 	uint64_t poll_errors;
 	uint64_t dqbuf_errors;
 	uint64_t recoveries;
@@ -105,6 +107,8 @@ static void add_capture_stats(QualificationTotals *totals,
 	totals->sequence_errors += stats->sequence_errors;
 	totals->decode_errors += stats->decode_errors;
 	totals->requeue_errors += stats->requeue_errors;
+	totals->discarded_buffers += stats->discarded_buffers;
+	totals->discard_limit_errors += stats->discard_limit_errors;
 	totals->poll_errors += stats->poll_errors;
 	totals->dqbuf_errors += stats->dqbuf_errors;
 	totals->malformed += stats->metadata_errors + stats->timestamp_errors +
@@ -136,6 +140,8 @@ static const char *capture_error_name(IrCaptureError error)
 		return "decode";
 	case IR_CAPTURE_ERROR_REQUEUE:
 		return "requeue";
+	case IR_CAPTURE_ERROR_DISCARD_LIMIT:
+		return "discard-limit";
 	case IR_CAPTURE_ERROR_POLL:
 		return "poll";
 	case IR_CAPTURE_ERROR_DQBUF:
@@ -162,7 +168,8 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 		" startup_errors=%" PRIu64 " malformed=%" PRIu64
 		" metadata_errors=%" PRIu64 " timestamp_errors=%" PRIu64
 		" sequence_errors=%" PRIu64 " decode_errors=%" PRIu64
-		" requeue_errors=%" PRIu64 " poll_errors=%" PRIu64
+		" requeue_errors=%" PRIu64 " discarded_buffers=%" PRIu64
+		" discard_limit_errors=%" PRIu64 " poll_errors=%" PRIu64
 		" dqbuf_errors=%" PRIu64 " recoveries=%" PRIu64
 		" sequence_gaps=%" PRIu64 " rejected_buffers=%" PRIu64
 		" cleanup_failures=%" PRIu64
@@ -170,7 +177,8 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 		label, elapsed, frames, fps, changed, visible.timeouts,
 		visible.startup_errors, visible.malformed, visible.metadata_errors,
 		visible.timestamp_errors, visible.sequence_errors, visible.decode_errors,
-		visible.requeue_errors, visible.poll_errors, visible.dqbuf_errors,
+		visible.requeue_errors, visible.discarded_buffers,
+		visible.discard_limit_errors, visible.poll_errors, visible.dqbuf_errors,
 		visible.recoveries, visible.sequence_gaps, visible.rejected_buffers,
 		visible.cleanup_failures, stats->last_sequence, stats->stride,
 		stats->last_data_offset);
@@ -179,7 +187,7 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 
 static int capture_one_frame(IrCapture **capture, uint8_t *frame,
 	IrCaptureStats *stats, uint64_t *attempt_id, char *error,
-	unsigned error_size)
+	unsigned error_size, bool discard_error_buffers)
 {
 	if (*capture == NULL) {
 		uint64_t new_attempt = next_stream_attempt_id++;
@@ -196,6 +204,7 @@ static int capture_one_frame(IrCapture **capture, uint8_t *frame,
 			return CAPTURE_STARTUP_ERROR;
 		}
 		ir_capture_set_stream_attempt_id(*capture, new_attempt);
+		ir_capture_set_discard_error_buffers(*capture, discard_error_buffers);
 		if (ir_capture_start(*capture, error, error_size) != 0) {
 			ir_capture_close(*capture);
 			*capture = NULL;
@@ -229,7 +238,7 @@ static int close_capture(IrCapture **capture, IrCaptureStats *stats,
 }
 
 static int run_persistent(unsigned duration_seconds, bool baseline,
-	QualificationTotals *totals)
+	bool discard_error_buffers, QualificationTotals *totals)
 {
 	uint8_t frame[IR_CAPTURE_OUTPUT_BYTES];
 	IrCapture *capture = NULL;
@@ -246,9 +255,9 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 	while (!stop_requested && monotonic_seconds() - started <
 		(double)duration_seconds) {
 		int result = capture_one_frame(&capture, frame, &stats, &attempt_id,
-			error, sizeof(error));
+			error, sizeof(error), discard_error_buffers);
 
-		if (result > 0) {
+		if (result == 1) {
 			uint8_t minimum;
 			uint8_t maximum;
 			uint64_t hash = frame_hash_and_range(frame, sizeof(frame),
@@ -266,6 +275,10 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 					frames, hash, minimum, maximum, stats.last_bytesused,
 					stats.last_data_offset, stats.last_dequeued_sequence,
 					stats.last_timestamp_seconds, stats.last_timestamp_usec);
+		} else if (result == IR_CAPTURE_RESULT_DISCARDED) {
+			fprintf(stderr, "capture_discarded elapsed=%.3f attempt=%" PRIu64
+				" cumulative=%" PRIu64 "\n", monotonic_seconds() - started,
+				attempt_id, stats.discarded_buffers);
 		} else if (result == 0) {
 			totals->timeouts++;
 			fprintf(stderr, "capture_timeout elapsed=%.3f\n",
@@ -318,6 +331,8 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 			totals->dqbuf_errors == 0U && totals->recoveries == 0U &&
 			totals->sequence_gaps == 0U &&
 			totals->rejected_buffers == 0U &&
+			totals->discarded_buffers == 0U &&
+			totals->discard_limit_errors == 0U &&
 			totals->cleanup_failures == 0U;
 
 		printf("persistent_summary requested_duration_seconds=%u"
@@ -326,7 +341,8 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 			" startup_errors=%" PRIu64 " malformed=%" PRIu64
 			" metadata_errors=%" PRIu64 " timestamp_errors=%" PRIu64
 			" sequence_errors=%" PRIu64 " decode_errors=%" PRIu64
-			" requeue_errors=%" PRIu64 " poll_errors=%" PRIu64
+			" requeue_errors=%" PRIu64 " discarded_buffers=%" PRIu64
+			" discard_limit_errors=%" PRIu64 " poll_errors=%" PRIu64
 			" dqbuf_errors=%" PRIu64 " recoveries=%" PRIu64
 			" sequence_gaps=%" PRIu64 " rejected_buffers=%" PRIu64
 			" cleanup_failures=%" PRIu64 " gate_result=%s result=%s"
@@ -335,7 +351,9 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 			totals->timeouts, totals->startup_errors, totals->malformed,
 			totals->metadata_errors, totals->timestamp_errors,
 			totals->sequence_errors, totals->decode_errors,
-			totals->requeue_errors, totals->poll_errors, totals->dqbuf_errors,
+			totals->requeue_errors, totals->discarded_buffers,
+			totals->discard_limit_errors, totals->poll_errors,
+			totals->dqbuf_errors,
 			totals->recoveries, totals->sequence_gaps, totals->rejected_buffers,
 			totals->cleanup_failures, passed ? "PASS" : "FAIL",
 			baseline ? "BASELINE" : (passed ? "PASS" : "FAIL"),
@@ -345,7 +363,7 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 }
 
 static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
-	QualificationTotals *totals)
+	bool discard_error_buffers, QualificationTotals *totals)
 {
 	uint8_t frame[IR_CAPTURE_OUTPUT_BYTES];
 	unsigned passed = 0U;
@@ -372,15 +390,23 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 		uint64_t cycle_sequence_errors_before = totals->sequence_errors;
 		uint64_t cycle_decode_errors_before = totals->decode_errors;
 		uint64_t cycle_requeue_errors_before = totals->requeue_errors;
+		uint64_t cycle_discarded_buffers_before = totals->discarded_buffers;
+		uint64_t cycle_discard_limit_errors_before = totals->discard_limit_errors;
 		uint64_t cycle_poll_errors_before = totals->poll_errors;
 		uint64_t cycle_dqbuf_errors_before = totals->dqbuf_errors;
 
 		while (frames < frames_per_cycle && !stop_requested) {
 			int result = capture_one_frame(&capture, frame, &stats, &attempt_id,
-				error, sizeof(error));
+				error, sizeof(error), discard_error_buffers);
 
-			if (result > 0) {
+			if (result == 1) {
 				frames++;
+				continue;
+			}
+			if (result == IR_CAPTURE_RESULT_DISCARDED) {
+				fprintf(stderr, "cycle=%u attempt=%" PRIu64
+					" discarded_buffer cumulative=%" PRIu64 "\n", cycle,
+					attempt_id, stats.discarded_buffers);
 				continue;
 			}
 			if (result == 0) {
@@ -407,7 +433,9 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 		if (close_capture(&capture, &stats, totals, error, sizeof(error)) != 0)
 			cycle_ok = false;
 		if (totals->sequence_gaps != cycle_sequence_gaps_before ||
-			totals->rejected_buffers != cycle_rejected_buffers_before)
+			totals->rejected_buffers != cycle_rejected_buffers_before ||
+			totals->discarded_buffers != cycle_discarded_buffers_before ||
+			totals->discard_limit_errors != cycle_discard_limit_errors_before)
 			cycle_ok = false;
 		attempted++;
 		total_frames += frames;
@@ -420,6 +448,7 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			" malformed=%" PRIu64 " metadata_errors=%" PRIu64
 			" timestamp_errors=%" PRIu64 " sequence_errors=%" PRIu64
 			" decode_errors=%" PRIu64 " requeue_errors=%" PRIu64
+			" discarded_buffers=%" PRIu64 " discard_limit_errors=%" PRIu64
 			" poll_errors=%" PRIu64 " dqbuf_errors=%" PRIu64
 			" sequence_gaps=%" PRIu64
 			" rejected_buffers=%" PRIu64 " cleanup_failures=%" PRIu64
@@ -430,6 +459,8 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			" cumulative_sequence_errors=%" PRIu64
 			" cumulative_decode_errors=%" PRIu64
 			" cumulative_requeue_errors=%" PRIu64
+			" cumulative_discarded_buffers=%" PRIu64
+			" cumulative_discard_limit_errors=%" PRIu64
 			" cumulative_poll_errors=%" PRIu64
 			" cumulative_dqbuf_errors=%" PRIu64
 			" cumulative_sequence_gaps=%" PRIu64
@@ -443,6 +474,8 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			totals->sequence_errors - cycle_sequence_errors_before,
 			totals->decode_errors - cycle_decode_errors_before,
 			totals->requeue_errors - cycle_requeue_errors_before,
+			totals->discarded_buffers - cycle_discarded_buffers_before,
+			totals->discard_limit_errors - cycle_discard_limit_errors_before,
 			totals->poll_errors - cycle_poll_errors_before,
 			totals->dqbuf_errors - cycle_dqbuf_errors_before,
 			totals->sequence_gaps - cycle_sequence_gaps_before,
@@ -451,7 +484,9 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			totals->timeouts, totals->malformed, totals->startup_errors,
 			totals->metadata_errors, totals->timestamp_errors,
 			totals->sequence_errors, totals->decode_errors,
-			totals->requeue_errors, totals->poll_errors, totals->dqbuf_errors,
+			totals->requeue_errors, totals->discarded_buffers,
+			totals->discard_limit_errors, totals->poll_errors,
+			totals->dqbuf_errors,
 			totals->sequence_gaps,
 			totals->rejected_buffers, totals->cleanup_failures,
 			cycle_ok && frames == frames_per_cycle ? "PASS" : "FAIL");
@@ -465,6 +500,7 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			" metadata_errors=%" PRIu64 " timestamp_errors=%" PRIu64
 			" sequence_errors=%" PRIu64 " decode_errors=%" PRIu64
 			" requeue_errors=%" PRIu64 " poll_errors=%" PRIu64
+			" discarded_buffers=%" PRIu64 " discard_limit_errors=%" PRIu64
 			" dqbuf_errors=%" PRIu64 " recoveries=%" PRIu64
 			" sequence_gaps=%" PRIu64
 			" rejected_buffers=%" PRIu64 " cleanup_failures=%" PRIu64
@@ -473,6 +509,7 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 			totals->startup_errors, totals->malformed, totals->metadata_errors,
 			totals->timestamp_errors, totals->sequence_errors,
 			totals->decode_errors, totals->requeue_errors, totals->poll_errors,
+			totals->discarded_buffers, totals->discard_limit_errors,
 			totals->dqbuf_errors, totals->recoveries, totals->sequence_gaps,
 			totals->rejected_buffers, totals->cleanup_failures,
 			passed_gate ? "PASS" : "FAIL",
@@ -501,6 +538,7 @@ int main(int argc, char **argv)
 	unsigned cycles = DEFAULT_CYCLES;
 	unsigned cycle_frames = DEFAULT_CYCLE_FRAMES;
 	bool baseline = false;
+	bool discard_error_buffers = false;
 
 	for (int index = 1; index < argc; index++) {
 		if (strcmp(argv[index], "--duration") == 0 && index + 1 < argc) {
@@ -515,9 +553,12 @@ int main(int argc, char **argv)
 				return EXIT_FAILURE;
 		} else if (strcmp(argv[index], "--baseline") == 0) {
 			baseline = true;
+		} else if (strcmp(argv[index], "--discard-error-buffers") == 0) {
+			discard_error_buffers = true;
 		} else {
 			fprintf(stderr, "usage: %s [--duration seconds] [--cycles count] "
-				"[--cycle-frames count] [--baseline]\n", argv[0]);
+				"[--cycle-frames count] [--baseline] "
+				"[--discard-error-buffers]\n", argv[0]);
 			return EXIT_FAILURE;
 		}
 	}
@@ -528,18 +569,19 @@ int main(int argc, char **argv)
 	(void)signal(SIGINT, request_stop);
 	(void)signal(SIGTERM, request_stop);
 	printf("qualification_start mode=%s requested_duration_seconds=%u"
-		" requested_cycles=%u cycle_frames=%u\n", baseline ? "baseline" :
-		"normal", duration, cycles, cycle_frames);
+		" requested_cycles=%u cycle_frames=%u discard_error_buffers=%s\n",
+		baseline ? "baseline" : "normal", duration, cycles, cycle_frames,
+		discard_error_buffers ? "yes" : "no");
 	{
 		QualificationTotals persistent_totals = { 0 };
 		QualificationTotals cycle_totals = { 0 };
 		int persistent_result = run_persistent(duration, baseline,
-			&persistent_totals);
+			discard_error_buffers, &persistent_totals);
 		int cycles_result = EXIT_FAILURE;
 
 		if (baseline || (persistent_result == 0 && !stop_requested))
 			cycles_result = run_cycles(cycles, cycle_frames, baseline,
-				&cycle_totals);
+				discard_error_buffers, &cycle_totals);
 		else
 			printf("cycles_summary requested=%u attempted=0 passed=0 failed=0"
 				" gate_result=SKIPPED result=SKIPPED stability_pass=NO\n",

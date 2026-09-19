@@ -16,9 +16,13 @@ DURATION=${OV7251_QUALIFY_DURATION:-600}
 CYCLES=${OV7251_QUALIFY_CYCLES:-20}
 CYCLE_FRAMES=${OV7251_QUALIFY_CYCLE_FRAMES:-5}
 BASELINE=0
+DISCARD_ERROR_BUFFERS=0
 
 if [[ ${OV7251_QUALIFY_BASELINE:-0} == 1 ]]; then
 	BASELINE=1
+fi
+if [[ ${OV7251_QUALIFY_DISCARD_ERROR_BUFFERS:-0} == 1 ]]; then
+	DISCARD_ERROR_BUFFERS=1
 fi
 
 OUT_DIR=''
@@ -26,6 +30,10 @@ while (($# > 0)); do
 	case $1 in
 	--baseline)
 		BASELINE=1
+		shift
+		;;
+	--discard-error-buffers)
+		DISCARD_ERROR_BUFFERS=1
 		shift
 		;;
 	--)
@@ -100,6 +108,8 @@ media-ctl -d "$MEDIA" -p >"$GRAPH_BEFORE" 2>&1 || :
 		"$setup_start" "$([[ $BASELINE -eq 1 ]] && printf baseline || printf normal)" \
 		"$MEDIA" "$DURATION"
 	printf 'requested_cycles=%s\ncycle_frames=%s\n' "$CYCLES" "$CYCLE_FRAMES"
+	printf 'discard_error_buffers=%s\n' \
+		"$([[ $DISCARD_ERROR_BUFFERS -eq 1 ]] && printf yes || printf no)"
 	printf 'module_configuration=unchanged\nmodule_path=%s\n' "$MODULE"
 	printf 'kernel_log=kernel.log\nkernel_log_filter=none\n'
 	printf 'kernel_warning_rate_limiting=possible\n'
@@ -235,6 +245,9 @@ QUALIFIER_ARGS=(--duration "$DURATION" --cycles "$CYCLES" \
 	--cycle-frames "$CYCLE_FRAMES")
 if [[ $BASELINE -eq 1 ]]; then
 	QUALIFIER_ARGS+=(--baseline)
+fi
+if [[ $DISCARD_ERROR_BUFFERS -eq 1 ]]; then
+	QUALIFIER_ARGS+=(--discard-error-buffers)
 fi
 set +e
 sudo -n "$QUALIFIER" "${QUALIFIER_ARGS[@]}" >"$QUALIFY_LOG" 2>&1

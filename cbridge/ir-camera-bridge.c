@@ -133,6 +133,8 @@ int main(void)
 
 		if (result == 0)
 			continue;
+		if (result == IR_CAPTURE_RESULT_DISCARDED)
+			continue;
 		if (result < 0) {
 			fprintf(stderr, "IR capture stopped attempt=%" PRIu64 ": %s\n",
 				attempt_id, error);
