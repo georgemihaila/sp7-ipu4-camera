@@ -122,6 +122,62 @@ enumeration. No receiver timing/PHY mutation was made in response to this run:
 the existing source-6 evidence still lacks a known-good Windows receiver trace
 or physical CSI lane measurement that would justify such a change.
 
+### 2026-09-19 baseline execution
+
+The documented baseline mode was run with the existing BB8 module and
+configuration unchanged. Artifacts are preserved at:
+
+```text
+/var/tmp/ov7251-ir-qualification-baseline-20260919-173257/
+```
+
+The requested persistent duration was 600 seconds; the qualifier measured
+600.571 seconds, with 690.055 seconds total wall-clock duration including
+setup, cleanup, and the cycle phase. It decoded 11,348 frames, of which 11,347
+changed, at 18.895 FPS. The persistent totals were:
+
+- timeouts: 0;
+- malformed/capture errors: 11;
+- recoveries/reopens: 11;
+- sequence gaps: 60,480,588 in the final cumulative summary (the last
+  progress line before close reported 41,193);
+- rejected buffers: 10; and
+- cleanup failures: 0.
+
+All 20 requested stop/start cycles were attempted. None passed: 0 passed and
+20 failed, with 88 decoded frames total. The cycle totals were 0 timeouts, 3
+malformed/capture errors (two `VIDIOC_STREAMON: Connection timed out` events
+and one invalid source-6 metadata event), 3,093 sequence gaps, 1 rejected
+buffer, and 0 cleanup failures. Each cycle's result is retained in
+`qualify.log`.
+
+The unfiltered `kernel.log` emitted 1,323 receiver-status lines marked
+`(fatal)`, including recurring `0x400`, `0x480`, `0x8400`, and `0x8480` states;
+12,694 error snapshots contained a nonzero `fatal_receiver_errors` field.
+It also emitted 4,164 source-6 `error=8` lines and 159
+`no frames from ov7251` recovery lines. These are emitted-message counts only:
+the existing kernel rate limiting remains in effect, so they are lower bounds.
+The direct tap did show source-6 packets and changing decoded payload, but the
+receiver/fatal and sequence-gap errors make the result a failed qualification
+gate.
+
+The outcome is **baseline completed: YES** and **stability passed: NO**. This
+is a baseline record, not a stability pass. The baseline wrapper returned
+`qualify_rc=1` because its gates failed, while still completing the requested
+duration and all 20 cycles. The run captured the bundled BB8 module hash
+`546d80d5c692e0b394b56f4771fbf244bb9427419f6126405fe766fc9b1eaf7b`. After
+cleanup, the distribution module was restored and loaded from
+`/lib/modules/6.19.8-3.surface.fc43.x86_64/updates/extra/intel-ipu4p-isys.ko`
+with hash
+`10ec710e00d411cc29b5f192200bd22b28b4e13a0cd131ab93ad9ecbc433e3ce`; the
+media graph enumerated normally and the bridge remained inactive. This confirms
+software restoration only. It does not claim BB8 register rollback.
+
+No physical CSI measurement was performed, no PHY change was made, and desktop
+integration remains deferred. The older `hs=0` trace and the later BB8
+`hs=0x101`/changing-payload trace remain historical evidence from different
+timelines and do not establish physical lane behavior.
+
 The diagnostic wrapper completed cleanup after the failed run: the temporary
 links were disabled, the source-backed module was unloaded, the distribution
 `intel_ipu4p_isys` module was restored, and the bridge was not active before or
