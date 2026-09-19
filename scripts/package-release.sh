@@ -11,6 +11,7 @@ OUTPUT_DIR=${OUTPUT_DIR:-$ROOT/dist}
 MODULE_MANIFEST=${MODULE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 C_BRIDGE_BINARY=${C_BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 C_IR_BINARY=${C_IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
+C_AUTH_BINARY=${C_AUTH_BINARY:-$ROOT/cbridge/sp7-camera-auth-capture}
 
 case $VERSION in
 	''|*[!A-Za-z0-9._+-]*)
@@ -40,6 +41,10 @@ fi
 }
 [ -x "$C_IR_BINARY" ] || {
 	printf 'error: standalone IR producer is missing or not executable: %s\n' "$C_IR_BINARY" >&2
+	exit 2
+}
+[ -x "$C_AUTH_BINARY" ] || {
+	printf 'error: authentication capture helper is missing or not executable: %s\n' "$C_AUTH_BINARY" >&2
 	exit 2
 }
 
@@ -93,9 +98,13 @@ cp -p "$ROOT/scripts/uninstall-modules.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/setup-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/kernel-release.sh" "$STAGE/scripts/"
+mkdir -p "$STAGE/scripts/ir" "$STAGE/docs"
+cp -p "$ROOT/scripts/ir/howdy-direct-demo.py" "$STAGE/scripts/ir/"
+cp -p "$ROOT/docs/ir-auth-capture-demo.md" "$STAGE/docs/"
 mkdir -p "$STAGE/cbridge"
 cp -p "$C_BRIDGE_BINARY" "$STAGE/cbridge/sp7-camera-bridge"
 cp -p "$C_IR_BINARY" "$STAGE/cbridge/sp7-camera-ir"
+cp -p "$C_AUTH_BINARY" "$STAGE/cbridge/sp7-camera-auth-capture"
 mkdir -p "$STAGE/modules"
 cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
@@ -138,6 +147,10 @@ akmod-v4l2loopback and v4l2loopback packages.
    have passed:
 
    /usr/local/libexec/sp7-camera-ir
+
+   The protected standalone authentication capture helper is installed at
+   /usr/local/libexec/sp7-camera-auth-capture. It is not connected to PAM.
+   The no-PAM enrollment/matching demo is scripts/ir/howdy-direct-demo.py.
 
 4. Reboot so the kernel loads the installed modules at boot.
 

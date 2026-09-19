@@ -38,6 +38,7 @@ rm -f "$TARGET_HOME/.config/systemd/user/sp7-camera-bridge.service"
 rm -f "$TARGET_HOME/.config/systemd/user/sp7-zoom-camera-bridge.service"
 rm -f /usr/local/libexec/sp7-camera-bridge
 rm -f /usr/local/libexec/sp7-camera-ir
+rm -f /usr/local/libexec/sp7-camera-auth-capture
 rm -f /usr/local/libexec/sp7-zoom-camera-bridge
 rm -f /etc/modules-load.d/sp7-camera-bridge.conf
 rm -f /etc/modules-load.d/sp7-zoom-camera-bridge.conf

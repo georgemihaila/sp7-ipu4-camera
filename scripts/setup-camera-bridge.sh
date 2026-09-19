@@ -5,6 +5,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BRIDGE_BINARY=${BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 IR_BINARY=${IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
+AUTH_BINARY=${AUTH_BINARY:-$ROOT/cbridge/sp7-camera-auth-capture}
 fail() {
 	printf 'error: %s\n' "$*" >&2
 	exit 1
@@ -30,6 +31,7 @@ command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required 
 command -v runuser >/dev/null 2>&1 || fail 'runuser is required to configure the target user session'
 [ -x "$BRIDGE_BINARY" ] || fail "C camera bridge is missing or not executable: $BRIDGE_BINARY (build it with make -C cbridge all)"
 [ -x "$IR_BINARY" ] || fail "standalone IR producer is missing or not executable: $IR_BINARY (build it with make -C cbridge all)"
+[ -x "$AUTH_BINARY" ] || fail "authentication capture helper is missing or not executable: $AUTH_BINARY (build it with make -C cbridge all)"
 
 for element in libcamerasrc videotestsrc videoconvert videoscale jpegenc jpegparse v4l2sink filesink; do
 	gst-inspect-1.0 "$element" >/dev/null 2>&1 || \
@@ -104,6 +106,7 @@ done
 
 install -D -m 0755 "$BRIDGE_BINARY" /usr/local/libexec/sp7-camera-bridge
 install -D -m 0755 "$IR_BINARY" /usr/local/libexec/sp7-camera-ir
+install -D -m 0755 "$AUTH_BINARY" /usr/local/libexec/sp7-camera-auth-capture
 install -d -m 0755 -o "$TARGET_UID" -g "$TARGET_GID" "$USER_UNIT_DIR"
 install -m 0644 -o "$TARGET_UID" -g "$TARGET_GID" \
 	"$ROOT/systemd/user/sp7-camera-bridge.service" \

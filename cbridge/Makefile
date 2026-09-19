@@ -17,6 +17,9 @@ CONTROLLER_TEST_OBJECTS := $(CONTROLLER_TEST_SOURCES:.c=.o)
 IR_PROGRAM := sp7-camera-ir
 IR_SOURCES := ir-camera-bridge.c ir-v4l2.c
 IR_OBJECTS := $(IR_SOURCES:.c=.o)
+AUTH_PROGRAM := sp7-camera-auth-capture
+AUTH_SOURCES := auth-capture-helper.c ir-v4l2.c
+AUTH_OBJECTS := $(AUTH_SOURCES:.c=.o)
 IR_TEST_PROGRAM := ir-capture-test
 IR_TEST_SOURCES := ir-capture-test.c ir-v4l2.c
 IR_TEST_OBJECTS := $(IR_TEST_SOURCES:.c=.o)
@@ -28,7 +31,7 @@ IR_QUALIFY_OBJECTS := $(IR_QUALIFY_SOURCES:.c=.o)
 
 .PHONY: all clean sanitize test-controller test-ir test-ir-metadata qualify-ir
 
-all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM)
+all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM) $(AUTH_PROGRAM)
 
 $(PROGRAM): $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
@@ -38,6 +41,9 @@ $(CONTROLLER_PROGRAM): $(CONTROLLER_OBJECTS)
 
 $(IR_PROGRAM): $(IR_OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(IR_OBJECTS)
+
+$(AUTH_PROGRAM): $(AUTH_OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(AUTH_OBJECTS)
 
 %.o: %.c media-backend.h controller.h ir-v4l2.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c -o $@ $<
@@ -80,10 +86,12 @@ clean:
 	$(RM) $(PROGRAM) $(CONTROLLER_PROGRAM) $(CONTROLLER_TEST) $(OBJECTS) \
 		$(CONTROLLER_OBJECTS) $(CONTROLLER_TEST_OBJECTS) \
 		$(IR_PROGRAM) $(IR_TEST_PROGRAM) $(IR_QUALIFY_PROGRAM) \
+		$(AUTH_PROGRAM) $(AUTH_OBJECTS) \
 		$(IR_METADATA_TEST_PROGRAM) $(IR_OBJECTS) $(IR_TEST_OBJECTS) \
 		$(IR_METADATA_TEST_OBJECTS) $(IR_QUALIFY_OBJECTS) \
 		$(OBJECTS:.o=.d) $(CONTROLLER_TEST_OBJECTS:.o=.d) \
 		$(IR_OBJECTS:.o=.d) $(IR_TEST_OBJECTS:.o=.d) \
+		$(AUTH_OBJECTS:.o=.d) \
 		$(IR_METADATA_TEST_OBJECTS:.o=.d) \
 		$(IR_QUALIFY_OBJECTS:.o=.d)
 
