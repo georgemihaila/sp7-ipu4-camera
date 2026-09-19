@@ -100,7 +100,11 @@ cp -p "$ROOT/scripts/remove-camera-bridge.sh" "$STAGE/scripts/"
 cp -p "$ROOT/scripts/kernel-release.sh" "$STAGE/scripts/"
 mkdir -p "$STAGE/scripts/ir" "$STAGE/docs"
 cp -p "$ROOT/scripts/ir/howdy-direct-demo.py" "$STAGE/scripts/ir/"
+cp -p "$ROOT/scripts/ir/prepare-auth-env.sh" "$STAGE/scripts/ir/"
+cp -p "$ROOT/scripts/ir/requirements-py314.txt" "$STAGE/scripts/ir/"
+cp -p "$ROOT/scripts/ir/validate-auth-demo-offline.py" "$STAGE/scripts/ir/"
 cp -p "$ROOT/docs/ir-auth-capture-demo.md" "$STAGE/docs/"
+cp -p "$ROOT/docs/ir-auth-pipeline-validation-20260919.md" "$STAGE/docs/"
 mkdir -p "$STAGE/cbridge"
 cp -p "$C_BRIDGE_BINARY" "$STAGE/cbridge/sp7-camera-bridge"
 cp -p "$C_IR_BINARY" "$STAGE/cbridge/sp7-camera-ir"
@@ -151,6 +155,8 @@ akmod-v4l2loopback and v4l2loopback packages.
    The protected standalone authentication capture helper is installed at
    /usr/local/libexec/sp7-camera-auth-capture. It is not connected to PAM.
    The no-PAM enrollment/matching demo is scripts/ir/howdy-direct-demo.py.
+   To prepare its isolated, pinned recognition dependencies without installing
+   Howdy or PAM, run scripts/ir/prepare-auth-env.sh.
 
 4. Reboot so the kernel loads the installed modules at boot.
 

@@ -1,0 +1,5 @@
+# Direct imports used by howdy-direct-demo.py and the offline validation tool.
+# This environment intentionally excludes the Howdy package and all PAM code.
+numpy==2.4.6
+opencv-python-headless==4.13.0.92
+dlib==20.0.1

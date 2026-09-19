@@ -40,3 +40,5 @@ Module.symvers
 /cbridge/sp7-camera-backend-prototype
 /cbridge/sp7-camera-bridge
 /cbridge/controller-test
+/.venv-auth/
+scripts/ir/__pycache__/
