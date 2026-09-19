@@ -50,6 +50,11 @@ requests to change PHY values or fatal handling.
     boundaries? What operation is the supported way to clear or acknowledge
     that field, and how should a maintainer distinguish a retained snapshot
     from a newly latched error?
+12. After `verify_stream_start()` reports `-ETIMEDOUT`, can source 6 still emit
+    receiver SOF/EOF and `PIN_DATA_READY error=8` before stream stop and
+    `flush_firmware_streamon_fail()` complete? Is that late response expected
+    teardown behavior, and what ordering guarantees distinguish it from the
+    response that caused the startup failure?
 
 The run cannot answer these questions from changing payload hashes alone. It
 also cannot distinguish sensor output failure from receiver synchronization

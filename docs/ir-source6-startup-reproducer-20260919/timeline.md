@@ -35,16 +35,24 @@ ownership evidence available in this run.
 | 26356.343359 | +235.101 ms | summary `clean=1`, result 0 | -- |
 | 26357.341516 | -- | -- | snapshot: `hs=0x101`, `status=0x1`, `receiver_errors=0x8643`, `fatal=0` |
 | 26357.402018 | +705.975 ms | -- | retry 1 refeed: `clean=0`, no parked/refed, active `8->8` |
+| 26377.445177 | +20.749134 s | -- | `no clean frames ... after 31 sensor attempts` |
 | 26377.445725 | +20.749682 s | -- | summary: retry 30, `clean=0`, active 8, result `-110` |
-| 26379.412993 | +22.716950 s | -- | first logged `PIN_DATA_READY error=8`; no clean frame |
-| 26379.511523 | +22.815480 s | -- | rollback: active `8->0` |
+| 26379.411819 | +22.715776 s | -- | late receiver SOF, status `0x38643` |
+| 26379.412368 | +22.716325 s | -- | late receiver EOF, status `0x38643` |
+| 26379.412993 | +22.716950 s | -- | first logged `PIN_DATA_READY error=8`; no timely startup completion |
+| 26379.498114 | +22.802071 s | -- | `stream stop time out` |
+| 26379.511233 | +22.815190 s | -- | failed to stop pipeline after stream-start error: `-5` |
+| 26379.511523 | +22.815480 s | -- | rollback marker: active `8->0`; follows the flush path, which has no timestamp |
 
 The first direct register divergence in this adjacent pair is the initial
-`hs` readback (`0x100` versus `0x0`) about 2.7 ms after the pipeline begins.
-The first completion divergence is stronger operational evidence: attempt 3
-receives a clean `PIN_DATA_READY error=0` at +216.6 ms, while attempt 4 has no
-completion by the comparable interval and does not log a completion until
-after the retry budget, with `error=8`.
+`hs` readback (`0x100` versus `0x0`) about 2.7 ms after the pipeline begins,
+but `hs=0x0` also occurred in successful attempts 1--2, so it is not
+predictive. The first completion divergence is stronger operational evidence:
+attempt 3 receives a clean `PIN_DATA_READY error=0` at +216.6 ms, while
+attempt 4 has no timely comparable completion. Its first `error=8` arrives
+only after the clean-frame timeout and just before stop/rollback completes.
+The late completion therefore cannot, by itself, establish the initial startup
+transport cause.
 
 ## Cross-check: successful attempt 1 vs failed attempt 4
 
@@ -56,7 +64,8 @@ begin, with `error=8`; it later reaches a clean frame. Attempt 4 has no
 source-6 `PIN_DATA_READY` by the equivalent 61.816 ms. This makes the absence
 of an early completion the earliest observable divergence for this pair, while
 also showing that the initial `hs` value alone is not sufficient to predict
-success.
+success. The failed attempt's later `error=8` must be interpreted against the
+timeout, stop timeout, and rollback/flush ordering above.
 
 ## Interpretation boundary
 

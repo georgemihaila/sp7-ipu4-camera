@@ -107,13 +107,22 @@ Verified by the source and captured logs:
 
 - The candidate module was selected by path and hash and emitted the new
   source-6 diagnostics.
-- Attempts 1--3 had clean-frame evidence. Attempt 4 had no clean frame before
-  startup timeout and had error-marked source-6 responses.
+- Attempts 1--3 had clean-frame evidence. Attempt 4 had no timely comparable
+  completion; its first `error=8` arrived after the clean-frame timeout
+  decision during teardown, so the run does not establish that all startup
+  completions were error-marked.
 - Attempts 1--2 paired every newly parked identity with a refed identity;
   attempt 3 required no new refeed; attempt 4 retained eight in-flight active
   buffers and rolled them back from `active=8` to `active=0`.
+- Initial `hs=0x0` is not predictive: it occurred in successful attempts 1--2
+  and in failed attempt 4.
+- Attempt 4 produced no timely completion comparable to the successful starts.
+  Its first `error=8` was logged at +22.7 seconds, after the clean-frame
+  timeout decision and before the stop/rollback sequence completed. It must
+  not be described as proof that startup produced only error-marked frames.
 - No buffer was demonstrated lost, duplicated, or stranded. The result is
-  classified as a transport failure, not a bookkeeping defect.
+  classified as a transport failure, not a bookkeeping defect, but the late
+  `error=8` is not sufficient to identify the startup transport cause.
 - The current `fatal_receiver_errors` fields and snapshots were preserved;
   they do not independently prove a newly latched fatal state or a reset bug.
 
@@ -132,6 +141,31 @@ Evidence-backed hypotheses that remain unproven:
 The earliest observable divergence is described precisely in
 [`timeline.md`](timeline.md). No PHY value, fatal handling, module policy, or
 desktop integration was changed.
+
+## Next review boundary
+
+One falsifiable hypothesis is sufficient for the next technical review:
+
+> The failed start's first `error=8` is a late firmware completion emitted
+> after the driver's clean-frame timeout while stream teardown is in progress,
+> rather than the event that caused the initial startup failure.
+
+Predicted observation: a failed start will show the clean-frame timeout before
+the first `PIN_DATA_READY error=8`, with the error-8 completion occurring
+before or during the stop/flush path; a timely error-8 completion before the
+clean-frame timeout would falsify this hypothesis. The current run already
+places the events as timeout summary `26377.445725`, first error-8 completion
+`26379.412993`, stream-stop timeout `26379.498114`, failed stop
+`26379.511233`, and rollback marker `26379.511523`. The flush function has no
+dedicated timestamp, so its exact relation to the late completion is not yet
+observable.
+
+The narrowly scoped follow-up, if later authorized, is instrumentation only:
+timestamp `flush_firmware_streamon_fail()` entry/return, stream-stop
+entry/return, and source-6 SOF/EOF/PIN_DATA_READY events, then capture one
+successful and one failed start with the unchanged configuration and recovery
+policy. No PHY change, fatal-policy change, or endurance run is justified by
+the present evidence.
 
 ## Restoration limits
 
