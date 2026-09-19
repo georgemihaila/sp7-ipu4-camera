@@ -70,8 +70,16 @@ sudo /usr/local/sbin/howdy-sp7-ir-diagnostic --frames 12
 ```
 
 It reports startup, fresh-frame metadata, clean exhaustion, release, and
-elapsed time without requiring GUI support. The command was checked with
-`--help`; it was not run against hardware in this milestone.
+elapsed time without requiring GUI support. Its installed entrypoint uses the
+protected pinned Python runtime. The first post-install hardware attempt
+reached the helper and returned:
+
+```text
+auth_capture result=error detail=enabled OV7251 source-6 media route was not found
+```
+
+This is a capture-availability failure, not a face-recognition result. No
+frames were enrolled and no authentication model was created.
 
 ## PAM and pre-login state
 

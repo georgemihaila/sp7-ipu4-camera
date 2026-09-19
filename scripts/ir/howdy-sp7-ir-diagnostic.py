@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/local/libexec/sp7-camera-howdy/python/bin/python
 """Headless capture diagnostic for the installed Howdy sp7_ir recorder."""
 
 import argparse
@@ -11,7 +11,7 @@ import time
 def main():
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("--config", default="/etc/howdy/config.ini")
-	parser.add_argument("--howdy-python-dir", default="/usr/local/lib/howdy")
+	parser.add_argument("--howdy-python-dir", default="/usr/local/lib/howdy/howdy")
 	parser.add_argument("--frames", type=int, default=12, choices=range(1, 13))
 	args = parser.parse_args()
 
