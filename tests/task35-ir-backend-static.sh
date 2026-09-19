@@ -17,7 +17,11 @@ grep -Fq 'VIDIOC_SUBDEV_S_FMT' "$CROOT/ir-v4l2.c"
 grep -Fq 'V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE' "$CROOT/ir-v4l2.c"
 grep -Fq 'V4L2_BUF_FLAG_ERROR' "$CROOT/ir-v4l2.c"
 grep -Fq 'data_offset' "$CROOT/ir-v4l2.c"
+grep -Fq 'dequeued_sequence' "$CROOT/ir-v4l2.c"
+grep -Fq 'last_dequeued_sequence' "$CROOT/ir-v4l2.h"
 grep -Fq 'sequence_gaps' "$CROOT/ir-v4l2.c"
+grep -Fq 'metadata_errors' "$QUALIFIER"
+grep -Fq 'startup_errors' "$QUALIFIER"
 grep -Fq '0x80U' "$CROOT/ir-v4l2.c"
 grep -Fq 'V4L2_BUF_TYPE_VIDEO_OUTPUT' "$CROOT/ir-camera-bridge.c"
 grep -Fq 'video_nr=55,60,61,62' "$MODULE_OPTIONS"
@@ -31,5 +35,5 @@ grep -Fq 'cumulative_cleanup_failures' "$QUALIFIER"
 grep -Fq 'kernel_warning_rate_limiting=possible' "$QUALIFY_WRAPPER"
 bash -n "$QUALIFY_WRAPPER"
 
-make -C "$CROOT" clean all test-ir
+make -C "$CROOT" clean all test-ir test-ir-metadata
 printf '%s\n' 'task35-ir-backend-static: PASS'

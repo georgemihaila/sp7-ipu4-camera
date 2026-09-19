@@ -201,10 +201,25 @@ The baseline qualifier still returns failure when its gates fail. It records
 `requested_duration_seconds` separately from `actual_duration_seconds`, logs
 each cycle, preserves cumulative timeout/malformed/recovery/sequence-gap/
 rejected-buffer counts across reopen attempts, and counts surfaced
-`STREAMOFF` cleanup failures. The wrapper also records total wall-clock
-duration and restoration failures. A baseline result is reported as
+`STREAMOFF` cleanup failures. The qualifier now reports startup, metadata,
+timestamp, sequence, decode, requeue, poll, and DQBUF errors separately. Its
+progress snapshot includes the currently open stream; closing that stream adds
+its counters exactly once. The wrapper also records total wall-clock duration
+and restoration failures. A baseline result is reported as
 `result=BASELINE` with `stability_pass=NO`; it is an observation, not a
 stability pass.
+
+The userspace metadata regression target is hardware-independent:
+
+```bash
+make -C cbridge test-ir-metadata
+```
+
+It mutates sequence, timestamp, flags, and plane metadata in the mocked
+`QBUF` call. The test covers consecutive frames, genuine sequence skips,
+timestamp regression, 32-bit sequence wraparound, and stream restart. The
+capture path copies the DQBUF metadata before requeue and uses those copies for
+validation, continuity, decoding, and reporting.
 
 The existing bundled source-6 module, media links, module options, and kernel
 logging configuration are unchanged. The wrapper preserves `setup.log`,

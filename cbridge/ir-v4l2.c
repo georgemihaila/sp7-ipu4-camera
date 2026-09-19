@@ -20,6 +20,13 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#ifdef SP7_CAMERA_IR_TEST
+extern int sp7_camera_ir_test_ioctl(int fd, unsigned long request,
+	void *argument);
+extern int sp7_camera_ir_test_poll(struct pollfd *fds, nfds_t count,
+	int timeout_ms);
+#endif
+
 #define IR_MEDIA_MAX_ENTITIES 128U
 #define IR_MEDIA_MAX_LINKS 512U
 #define IR_CAPTURE_BUFFERS 8U
@@ -68,7 +75,11 @@ static int ioctl_retry(int fd, unsigned long request, void *argument)
 	int result;
 
 	do {
+#ifdef SP7_CAMERA_IR_TEST
+		result = sp7_camera_ir_test_ioctl(fd, request, argument);
+#else
 		result = ioctl(fd, request, argument);
+#endif
 	} while (result < 0 && errno == EINTR);
 	return result;
 }
@@ -443,6 +454,45 @@ fail:
 	return -1;
 }
 
+#ifdef SP7_CAMERA_IR_TEST
+IrCapture *ir_test_capture_create(int video_fd, void *buffer,
+	size_t buffer_length, unsigned width, unsigned height, unsigned stride,
+	unsigned sizeimage)
+{
+	IrCapture *capture;
+
+	if (buffer == NULL || buffer_length == 0U || width == 0U || height == 0U ||
+		stride == 0U || sizeimage == 0U)
+		return NULL;
+	capture = calloc(1U, sizeof(*capture));
+	if (capture == NULL)
+		return NULL;
+	capture->media_fd = -1;
+	capture->csi_fd = -1;
+	capture->video_fd = video_fd;
+	capture->buffer_count = 1U;
+	capture->streaming = true;
+	capture->buffers[0].address = buffer;
+	capture->buffers[0].length = buffer_length;
+	capture->format.width = width;
+	capture->format.height = height;
+	capture->format.pixelformat = V4L2_PIX_FMT_Y10;
+	capture->format.num_planes = 1U;
+	capture->format.plane_fmt[0].bytesperline = stride;
+	capture->format.plane_fmt[0].sizeimage = sizeimage;
+	capture->stats.width = width;
+	capture->stats.height = height;
+	capture->stats.stride = stride;
+	capture->stats.sizeimage = sizeimage;
+	return capture;
+}
+
+void ir_test_capture_destroy(IrCapture *capture)
+{
+	free(capture);
+}
+#endif
+
 int ir_capture_start(IrCapture *capture, char *error, unsigned error_size)
 {
 	if (capture == NULL || capture->video_fd < 0) {
@@ -553,22 +603,32 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	descriptor.fd = capture->video_fd;
 	descriptor.events = POLLIN | POLLERR;
 	descriptor.revents = 0;
+#ifdef SP7_CAMERA_IR_TEST
+	result = sp7_camera_ir_test_poll(&descriptor, 1, (int)timeout_ms);
+#else
 	result = poll(&descriptor, 1, (int)timeout_ms);
+#endif
 	if (result == 0) {
+		capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
 		publish_stats(capture, stats);
 		return 0;
 	}
 	if (result < 0) {
 		if (errno == EINTR) {
+			capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
 			publish_stats(capture, stats);
 			return 0;
 		}
 		set_error(error, error_size, "poll source-6 capture: %s", strerror(errno));
+		capture->stats.poll_errors++;
+		capture->stats.last_error = IR_CAPTURE_ERROR_POLL;
 		publish_stats(capture, stats);
 		return -1;
 	}
 	if ((descriptor.revents & (POLLERR | POLLNVAL)) != 0U) {
 		set_error(error, error_size, "source-6 capture poll reported error");
+		capture->stats.poll_errors++;
+		capture->stats.last_error = IR_CAPTURE_ERROR_POLL;
 		publish_stats(capture, stats);
 		return -1;
 	}
@@ -578,60 +638,96 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 	buffer.m.planes = &plane;
 	if (ioctl_retry(capture->video_fd, VIDIOC_DQBUF, &buffer) < 0) {
 		if (errno == EAGAIN) {
+			capture->stats.last_error = IR_CAPTURE_ERROR_TIMEOUT;
 			publish_stats(capture, stats);
 			return 0;
 		}
 		set_error(error, error_size, "VIDIOC_DQBUF: %s", strerror(errno));
+		capture->stats.dqbuf_errors++;
+		capture->stats.last_error = IR_CAPTURE_ERROR_DQBUF;
 		publish_stats(capture, stats);
 		return -1;
 	}
-	capture->stats.last_bytesused = plane.bytesused;
-	capture->stats.last_data_offset = plane.data_offset;
-	capture->stats.last_dequeued_sequence = buffer.sequence;
-	capture->stats.last_timestamp_seconds = (uint64_t)buffer.timestamp.tv_sec;
-	capture->stats.last_timestamp_usec = (uint64_t)buffer.timestamp.tv_usec;
-	can_requeue = buffer.index < capture->buffer_count && buffer.length == 1U;
-	if (buffer.index >= capture->buffer_count || buffer.length != 1U ||
-		(buffer.flags & V4L2_BUF_FLAG_ERROR) != 0U ||
-		(buffer.flags & V4L2_BUF_FLAG_TIMESTAMP_MASK) !=
-		V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) {
-		set_error(error, error_size,
-			"dequeued source-6 buffer metadata/timestamp flags are invalid");
-		goto requeue_fail;
-	}
-	if (validate_timestamp(capture, &buffer.timestamp, error, error_size) != 0)
-		goto requeue_fail;
-	if (capture->have_sequence) {
-		uint32_t delta = buffer.sequence - capture->last_sequence;
+	{
+		const uint32_t dequeued_index = buffer.index;
+		const uint32_t dequeued_length = buffer.length;
+		const uint32_t dequeued_flags = buffer.flags;
+		const uint32_t dequeued_sequence = buffer.sequence;
+		const struct timeval dequeued_timestamp = buffer.timestamp;
+		const uint32_t dequeued_bytesused = plane.bytesused;
+		const uint32_t dequeued_data_offset = plane.data_offset;
 
-		if (delta == 0U || delta > UINT32_MAX / 2U) {
-			set_error(error, error_size, "source-6 sequence regressed/repeated: %u",
-				buffer.sequence);
+		capture->stats.last_bytesused = dequeued_bytesused;
+		capture->stats.last_data_offset = dequeued_data_offset;
+		capture->stats.last_dequeued_sequence = dequeued_sequence;
+		capture->stats.last_timestamp_seconds =
+			(uint64_t)dequeued_timestamp.tv_sec;
+		capture->stats.last_timestamp_usec =
+			(uint64_t)dequeued_timestamp.tv_usec;
+		can_requeue = dequeued_index < capture->buffer_count &&
+			dequeued_length == 1U;
+		if (dequeued_index >= capture->buffer_count || dequeued_length != 1U ||
+			(dequeued_flags & V4L2_BUF_FLAG_ERROR) != 0U ||
+			(dequeued_flags & V4L2_BUF_FLAG_TIMESTAMP_MASK) !=
+			V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) {
+			set_error(error, error_size,
+				"dequeued source-6 buffer metadata/timestamp flags are invalid");
+			capture->stats.metadata_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_METADATA;
 			goto requeue_fail;
 		}
-		if (delta > 1U)
-			capture->stats.sequence_gaps += (uint64_t)delta - 1U;
-	}
-	if (plane.data_offset >= plane.bytesused || plane.bytesused >
-		capture->buffers[buffer.index].length || ir_decode_raw10_to_yuyv(
-			capture->buffers[buffer.index].address, plane.bytesused,
-			capture->format.width, capture->format.height,
-			capture->format.plane_fmt[0].bytesperline, plane.data_offset, yuyv,
-			yuyv_size, error, error_size) != 0)
-		goto requeue_fail;
-	if (ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
-		set_error(error, error_size, "VIDIOC_QBUF after decode: %s", strerror(errno));
+		if (validate_timestamp(capture, &dequeued_timestamp, error, error_size) != 0) {
+			capture->stats.timestamp_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_TIMESTAMP;
+			goto requeue_fail;
+		}
+		if (capture->have_sequence) {
+			uint32_t delta = dequeued_sequence - capture->last_sequence;
+
+			if (delta == 0U || delta > UINT32_MAX / 2U) {
+				set_error(error, error_size,
+					"source-6 sequence regressed/repeated: %u",
+					dequeued_sequence);
+				capture->stats.sequence_errors++;
+				capture->stats.last_error = IR_CAPTURE_ERROR_SEQUENCE;
+				goto requeue_fail;
+			}
+			if (delta > 1U)
+				capture->stats.sequence_gaps += (uint64_t)delta - 1U;
+		}
+		if (dequeued_data_offset >= dequeued_bytesused ||
+			dequeued_bytesused > capture->buffers[dequeued_index].length) {
+			set_error(error, error_size,
+				"dequeued source-6 plane metadata is invalid");
+			capture->stats.metadata_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_METADATA;
+			goto requeue_fail;
+		}
+		if (ir_decode_raw10_to_yuyv(capture->buffers[dequeued_index].address,
+			dequeued_bytesused, capture->format.width, capture->format.height,
+			capture->format.plane_fmt[0].bytesperline, dequeued_data_offset, yuyv,
+			yuyv_size, error, error_size) != 0) {
+			capture->stats.decode_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_DECODE;
+			goto requeue_fail;
+		}
+		if (ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
+			set_error(error, error_size, "VIDIOC_QBUF after decode: %s",
+				strerror(errno));
+			capture->stats.requeue_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_REQUEUE;
+			publish_stats(capture, stats);
+			return -1;
+		}
+		capture->last_sequence = dequeued_sequence;
+		capture->last_timestamp = dequeued_timestamp;
+		capture->have_sequence = true;
+		capture->stats.last_sequence = dequeued_sequence;
+		capture->stats.data_offset = dequeued_data_offset;
+		capture->stats.frames++;
 		publish_stats(capture, stats);
-		return -1;
+		return 1;
 	}
-	capture->last_sequence = buffer.sequence;
-	capture->last_timestamp = buffer.timestamp;
-	capture->have_sequence = true;
-	capture->stats.last_sequence = buffer.sequence;
-	capture->stats.data_offset = plane.data_offset;
-	capture->stats.frames++;
-	publish_stats(capture, stats);
-	return 1;
 
 requeue_fail:
 	capture->stats.rejected_buffers++;
@@ -642,6 +738,8 @@ requeue_fail:
 			error != NULL ? error : "invalid source-6 buffer");
 		set_error(error, error_size, "%s; VIDIOC_QBUF recovery: %s",
 			previous_error, strerror(errno));
+		capture->stats.requeue_errors++;
+		capture->stats.last_error = IR_CAPTURE_ERROR_REQUEUE;
 	}
 	publish_stats(capture, stats);
 	return -1;

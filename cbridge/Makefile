@@ -20,11 +20,13 @@ IR_OBJECTS := $(IR_SOURCES:.c=.o)
 IR_TEST_PROGRAM := ir-capture-test
 IR_TEST_SOURCES := ir-capture-test.c ir-v4l2.c
 IR_TEST_OBJECTS := $(IR_TEST_SOURCES:.c=.o)
+IR_METADATA_TEST_PROGRAM := ir-v4l2-metadata-test
+IR_METADATA_TEST_OBJECTS := ir-v4l2-metadata-test.o ir-v4l2-metadata-mock.o
 IR_QUALIFY_PROGRAM := ir-hardware-qualification
 IR_QUALIFY_SOURCES := ir-hardware-qualification.c ir-v4l2.c
 IR_QUALIFY_OBJECTS := $(IR_QUALIFY_SOURCES:.c=.o)
 
-.PHONY: all clean sanitize test-controller test-ir qualify-ir
+.PHONY: all clean sanitize test-controller test-ir test-ir-metadata qualify-ir
 
 all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM)
 
@@ -57,6 +59,18 @@ $(IR_TEST_PROGRAM): $(IR_TEST_OBJECTS)
 test-ir: $(IR_TEST_PROGRAM)
 	./$(IR_TEST_PROGRAM)
 
+$(IR_METADATA_TEST_PROGRAM): $(IR_METADATA_TEST_OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(IR_METADATA_TEST_OBJECTS)
+
+test-ir-metadata: $(IR_METADATA_TEST_PROGRAM)
+	./$(IR_METADATA_TEST_PROGRAM)
+
+ir-v4l2-metadata-test.o: ir-v4l2-metadata-test.c ir-v4l2.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DSP7_CAMERA_IR_TEST -MMD -MP -c -o $@ $<
+
+ir-v4l2-metadata-mock.o: ir-v4l2.c ir-v4l2.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DSP7_CAMERA_IR_TEST -MMD -MP -c -o $@ $<
+
 $(IR_QUALIFY_PROGRAM): $(IR_QUALIFY_OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(IR_QUALIFY_OBJECTS)
 
@@ -66,11 +80,14 @@ clean:
 	$(RM) $(PROGRAM) $(CONTROLLER_PROGRAM) $(CONTROLLER_TEST) $(OBJECTS) \
 		$(CONTROLLER_OBJECTS) $(CONTROLLER_TEST_OBJECTS) \
 		$(IR_PROGRAM) $(IR_TEST_PROGRAM) $(IR_QUALIFY_PROGRAM) \
-		$(IR_OBJECTS) $(IR_TEST_OBJECTS) $(IR_QUALIFY_OBJECTS) \
+		$(IR_METADATA_TEST_PROGRAM) $(IR_OBJECTS) $(IR_TEST_OBJECTS) \
+		$(IR_METADATA_TEST_OBJECTS) $(IR_QUALIFY_OBJECTS) \
 		$(OBJECTS:.o=.d) $(CONTROLLER_TEST_OBJECTS:.o=.d) \
 		$(IR_OBJECTS:.o=.d) $(IR_TEST_OBJECTS:.o=.d) \
+		$(IR_METADATA_TEST_OBJECTS:.o=.d) \
 		$(IR_QUALIFY_OBJECTS:.o=.d)
 
 -include $(OBJECTS:.o=.d) $(CONTROLLER_OBJECTS:.o=.d) \
 	$(CONTROLLER_TEST_OBJECTS:.o=.d) $(IR_OBJECTS:.o=.d) \
-	$(IR_TEST_OBJECTS:.o=.d) $(IR_QUALIFY_OBJECTS:.o=.d)
+	$(IR_TEST_OBJECTS:.o=.d) $(IR_METADATA_TEST_OBJECTS:.o=.d) \
+	$(IR_QUALIFY_OBJECTS:.o=.d)
