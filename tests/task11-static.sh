@@ -61,7 +61,10 @@ done
 
 # Production entry points must not contain the removed bring-up service/knob path.
 if [ -d "$ROOT/systemd" ] && [ -n "$(find "$ROOT/systemd" -type f -print 2>/dev/null)" ]; then
-	if [ -n "$(find "$ROOT/systemd" -type f ! -path "$ROOT/systemd/user/sp7-camera-bridge.service" -print 2>/dev/null)" ]; then
+	if [ -n "$(find "$ROOT/systemd" -type f \
+		! -path "$ROOT/systemd/user/sp7-camera-bridge.service" \
+		! -path "$ROOT/systemd/system/sp7-camera-howdy-preflight.service" \
+		-print 2>/dev/null)" ]; then
 		echo 'task11-static: removed systemd bring-up files remain' >&2
 		exit 1
 	fi

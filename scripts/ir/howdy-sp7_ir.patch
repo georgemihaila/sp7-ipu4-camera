@@ -1,0 +1,129 @@
+diff --git a/howdy/src/compare.py b/howdy/src/compare.py
+index 35e85fb..41007b1 100644
+--- a/howdy/src/compare.py
++++ b/howdy/src/compare.py
+@@ -8,6 +8,7 @@ import time
+ timings = {
+ 	"st": time.time()
+ }
++attempt_start = time.monotonic()
+ 
+ # Import required modules
+ import sys
+@@ -24,6 +25,7 @@ import numpy as np
+ import _thread as thread
+ import paths_factory
+ from recorders.video_capture import VideoCapture
++from recorders.sp7_ir_reader import Sp7IrCaptureError, Sp7IrExhausted
+ from i18n import _
+ 
+ def exit(code=None):
+@@ -141,6 +143,8 @@ config.read(paths_factory.config_file_path())
+ # Get all config values needed
+ use_cnn = config.getboolean("core", "use_cnn", fallback=False)
+ timeout = config.getint("video", "timeout", fallback=4)
++attempt_deadline = attempt_start + timeout
++config._sp7_ir_attempt_deadline = attempt_deadline
+ dark_threshold = config.getfloat("video", "dark_threshold", fallback=50.0)
+ video_certainty = config.getfloat("video", "certainty", fallback=3.5) / 10
+ end_report = config.getboolean("debug", "end_report", fallback=False)
+@@ -176,7 +180,11 @@ thread.start_new_thread(init_detector, (lock, ))
+ # Start video capture on the IR camera
+ timings["ic"] = time.time()
+ 
+-video_capture = VideoCapture(config)
++try:
++	video_capture = VideoCapture(config)
++except Sp7IrCaptureError as error:
++	print(_("Protected IR capture unavailable: ") + str(error))
++	exit(14)
+ 
+ # Read exposure from config to use in the main loop
+ exposure = config.getint("video", "exposure", fallback=-1)
+@@ -228,7 +236,7 @@ while True:
+ 	send_to_ui("S", ui_subtext)
+ 
+ 	# Stop if we've exceeded the time limit
+-	if time.time() - timings["fr"] > timeout:
++	if time.monotonic() >= attempt_deadline:
+ 		# Create a timeout snapshot if enabled
+ 		if save_failed:
+ 			make_snapshot(_("FAILED"))
+@@ -241,7 +249,14 @@ while True:
+ 			exit(11)
+ 
+ 	# Grab a single frame of video
+-	frame, gsframe = video_capture.read_frame()
++	try:
++		frame, gsframe = video_capture.read_frame()
++	except Sp7IrExhausted:
++		# The helper's fixed 12-frame stream ended cleanly without a match.
++		exit(11)
++	except Sp7IrCaptureError as error:
++		print(_("Protected IR capture failed: ") + str(error))
++		exit(14)
+ 	gsframe = clahe.apply(gsframe)
+ 
+ 	# If snapshots have been turned on
+diff --git a/howdy/src/meson.build b/howdy/src/meson.build
+index 36dc05e..e257bed 100644
+--- a/howdy/src/meson.build
++++ b/howdy/src/meson.build
+@@ -36,6 +36,8 @@ py_sources = [
+     'recorders/pyv4l2_reader.py',
+     'recorders/v4l2.py',
+     'recorders/video_capture.py',
++    'recorders/sp7_ir_protocol.py',
++    'recorders/sp7_ir_reader.py',
+     'rubberstamps/__init__.py',
+     'rubberstamps/hotkey.py',
+     'rubberstamps/nod.py',
+diff --git a/howdy/src/recorders/video_capture.py b/howdy/src/recorders/video_capture.py
+index 15888a5..5675b3e 100644
+--- a/howdy/src/recorders/video_capture.py
++++ b/howdy/src/recorders/video_capture.py
+@@ -31,8 +31,10 @@ class VideoCapture:
+ 		else:
+ 			self.config = config
+ 
+-		# Check device path
+-		if not os.path.exists(self.config.get("video", "device_path")):
++		# The protected sp7_ir recorder validates its helper path itself. Other
++		# recorders retain Howdy's existing device-path check.
++		recording_plugin = self.config.get("video", "recording_plugin", fallback="opencv")
++		if recording_plugin != "sp7_ir" and not os.path.exists(self.config.get("video", "device_path")):
+ 			if self.config.getboolean("video", "warn_no_device", fallback=True):
+ 				print(_("Howdy could not find a camera device at the path specified in the config file."))
+ 				print(_("It is very likely that the path is not configured correctly, please edit the 'device_path' config value by running:"))
+@@ -82,6 +84,9 @@ class VideoCapture:
+ 		# Don't remove ret, it doesn't work without it
+ 		ret, frame = self.internal.read()
+ 		if not ret:
++			if getattr(self.internal, "exhausted", False):
++				from recorders.sp7_ir_reader import Sp7IrExhausted
++				raise Sp7IrExhausted("sp7_ir frame budget exhausted")
+ 			print(_("Failed to read camera specified in the 'device_path' config option, aborting"))
+ 			sys.exit(14)
+ 
+@@ -101,7 +106,6 @@ class VideoCapture:
+ 		Sets up the video reader instance
+ 		"""
+ 		recording_plugin = self.config.get("video", "recording_plugin", fallback="opencv")
+-
+ 		if recording_plugin == "ffmpeg":
+ 			# Set the capture source for ffmpeg
+ 			from recorders.ffmpeg_reader import ffmpeg_reader
+@@ -118,6 +122,13 @@ class VideoCapture:
+ 				self.config.get("video", "device_format", fallback="v4l2")
+ 			)
+ 
++		elif recording_plugin == "sp7_ir":
++			from recorders.sp7_ir_reader import sp7_ir_reader
++			self.internal = sp7_ir_reader(
++				self.config.get("video", "device_path"),
++				self.config,
++			)
++
+ 		else:
+ 			# Start video capture on the IR camera through OpenCV
+ 			self.internal = cv2.VideoCapture(

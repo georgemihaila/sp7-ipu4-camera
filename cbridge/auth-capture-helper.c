@@ -32,6 +32,10 @@
 #define AUTH_FRAME_POLL_MS 100
 
 static volatile sig_atomic_t stop_requested;
+#ifdef AUTH_CAPTURE_SUPERVISOR_TEST
+static pid_t auth_test_worker_pid = -1;
+static int auth_test_late_status_fd = -1;
+#endif
 
 static uint64_t monotonic_timestamp_ns(void)
 {
@@ -66,6 +70,7 @@ static void report_error(const char *message)
 	fprintf(stderr, "auth_capture result=error detail=%s\n", message);
 }
 
+#ifndef AUTH_CAPTURE_SUPERVISOR_TEST
 static int write_all(int fd, const void *data, size_t length)
 {
 	const uint8_t *bytes = data;
@@ -133,7 +138,30 @@ static bool frame_timestamp_is_fresh(const IrCaptureStats *stats)
 
 	return now != 0U && timestamp <= now && now - timestamp <= AUTH_MAX_FRAME_AGE_NS;
 }
+#endif
 
+#ifdef AUTH_CAPTURE_SUPERVISOR_TEST
+static int worker_main(int output_fd, unsigned requested_frames)
+{
+	const char late_output[] = "late";
+	char result;
+	ssize_t written;
+
+	(void)requested_frames;
+	install_worker_signals();
+	/* Model an ioctl that remains blocked after the supervisor deadline. */
+	(void)signal(SIGTERM, SIG_IGN);
+	sleep(4U);
+	errno = 0;
+	written = write(output_fd, late_output, sizeof(late_output) - 1U);
+	result = written < 0 && errno == EPIPE ? 'E' : 'W';
+	if (auth_test_late_status_fd >= 0)
+		(void)write(auth_test_late_status_fd, &result, sizeof(result));
+	for (;;)
+		pause();
+	return AUTH_EXIT_FAILURE;
+}
+#else
 static int worker_main(int output_fd, unsigned requested_frames)
 {
 	IrCapture *capture = NULL;
@@ -192,6 +220,7 @@ static int worker_main(int output_fd, unsigned requested_frames)
 		frames, result);
 	return result;
 }
+#endif
 
 static int open_auth_lock(void)
 {
@@ -289,10 +318,17 @@ static int supervise_worker(int lock_fd, unsigned requested_frames)
 		int child_result;
 
 		(void)close(pipe_fds[0]);
+		/* The worker must not inherit the caller's outward stdout pipe. It
+		 * retains pipe_fds[1] and the cleanup lock until worker_main returns. */
+		if (pipe_fds[1] != STDOUT_FILENO)
+			(void)close(STDOUT_FILENO);
 		child_result = worker_main(pipe_fds[1], requested_frames);
 		(void)close(pipe_fds[1]);
 		_exit(child_result);
 	}
+#ifdef AUTH_CAPTURE_SUPERVISOR_TEST
+	auth_test_worker_pid = worker;
+#endif
 	(void)close(pipe_fds[1]);
 	{
 		int flags = fcntl(pipe_fds[0], F_GETFL, 0);

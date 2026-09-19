@@ -1,0 +1,14 @@
+[Unit]
+Description=Surface Pro 7 Howdy protected runtime preflight
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/howdy-preflight.sh
+# A failed or unavailable preflight never blocks GDM; PAM falls back to a password.
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

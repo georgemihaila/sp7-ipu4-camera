@@ -1,0 +1,6 @@
+#%PAM-1.0
+auth        sufficient    pam_howdy.so
+auth        substack      password-auth
+account     include       password-auth
+password    substack      password-auth
+session     include       password-auth

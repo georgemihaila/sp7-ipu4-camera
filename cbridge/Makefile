@@ -25,11 +25,12 @@ IR_TEST_SOURCES := ir-capture-test.c ir-v4l2.c
 IR_TEST_OBJECTS := $(IR_TEST_SOURCES:.c=.o)
 IR_METADATA_TEST_PROGRAM := ir-v4l2-metadata-test
 IR_METADATA_TEST_OBJECTS := ir-v4l2-metadata-test.o ir-v4l2-metadata-mock.o
+AUTH_SUPERVISOR_TEST := auth-capture-supervisor-test
 IR_QUALIFY_PROGRAM := ir-hardware-qualification
 IR_QUALIFY_SOURCES := ir-hardware-qualification.c ir-v4l2.c
 IR_QUALIFY_OBJECTS := $(IR_QUALIFY_SOURCES:.c=.o)
 
-.PHONY: all clean sanitize test-controller test-ir test-ir-metadata qualify-ir
+.PHONY: all clean sanitize test-controller test-ir test-ir-metadata test-auth-supervisor qualify-ir
 
 all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM) $(AUTH_PROGRAM)
 
@@ -71,6 +72,12 @@ $(IR_METADATA_TEST_PROGRAM): $(IR_METADATA_TEST_OBJECTS)
 test-ir-metadata: $(IR_METADATA_TEST_PROGRAM)
 	./$(IR_METADATA_TEST_PROGRAM)
 
+$(AUTH_SUPERVISOR_TEST): auth-capture-supervisor-test.c auth-capture-helper.c ir-v4l2.c ir-v4l2.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ auth-capture-supervisor-test.c
+
+test-auth-supervisor: $(AUTH_SUPERVISOR_TEST)
+	./$(AUTH_SUPERVISOR_TEST)
+
 ir-v4l2-metadata-test.o: ir-v4l2-metadata-test.c ir-v4l2.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DSP7_CAMERA_IR_TEST -MMD -MP -c -o $@ $<
 
@@ -89,6 +96,7 @@ clean:
 		$(AUTH_PROGRAM) $(AUTH_OBJECTS) \
 		$(IR_METADATA_TEST_PROGRAM) $(IR_OBJECTS) $(IR_TEST_OBJECTS) \
 		$(IR_METADATA_TEST_OBJECTS) $(IR_QUALIFY_OBJECTS) \
+		$(AUTH_SUPERVISOR_TEST) \
 		$(OBJECTS:.o=.d) $(CONTROLLER_TEST_OBJECTS:.o=.d) \
 		$(IR_OBJECTS:.o=.d) $(IR_TEST_OBJECTS:.o=.d) \
 		$(AUTH_OBJECTS:.o=.d) \

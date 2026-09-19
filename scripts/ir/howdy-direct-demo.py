@@ -10,94 +10,20 @@ import argparse
 import json
 import os
 from pathlib import Path
-import stat
-import struct
-import subprocess
 import sys
 import tempfile
 import time
 
+from sp7_ir_protocol import Sp7IrCaptureError, capture_frames
 
-HELPER_PATH = Path("/usr/local/libexec/sp7-camera-auth-capture")
-MAGIC = b"SP7IRF01"
-HEADER = struct.Struct("<8sIIIIIQQ")
+
 WIDTH = 640
 HEIGHT = 480
 MAX_FRAMES = 12
 
 
-class CaptureError(RuntimeError):
+class CaptureError(Sp7IrCaptureError):
     """The direct capture session did not produce a usable frame stream."""
-
-
-def resolve_helper() -> Path:
-    try:
-        info = HELPER_PATH.stat()
-    except OSError as error:
-        raise CaptureError(f"protected helper is unavailable: {HELPER_PATH}") from error
-    if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
-        raise CaptureError("protected helper is not a root-owned, non-writable regular file")
-    if not os.access(HELPER_PATH, os.X_OK):
-        raise CaptureError("protected helper is not executable")
-    return HELPER_PATH
-
-
-def read_exact(stream, length):
-    data = bytearray()
-    while len(data) < length:
-        chunk = stream.read(length - len(data))
-        if not chunk:
-            if not data:
-                return None
-            raise CaptureError("direct capture ended in the middle of a frame")
-        data.extend(chunk)
-    return bytes(data)
-
-
-def capture_frames(requested):
-    helper = resolve_helper()
-    process = subprocess.Popen(
-        [str(helper), "--frames", str(requested)],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=None,
-        close_fds=True,
-    )
-    frames = []
-    seen = set()
-    try:
-        while len(frames) < requested:
-            raw_header = read_exact(process.stdout, HEADER.size)
-            if raw_header is None:
-                break
-            magic, version, width, height, payload, sequence, seconds, usec = HEADER.unpack(raw_header)
-            if (magic != MAGIC or version != 1 or width != WIDTH or height != HEIGHT or
-                    payload != WIDTH * HEIGHT):
-                raise CaptureError("direct capture emitted an invalid frame header")
-            raw_frame = read_exact(process.stdout, payload)
-            if raw_frame is None:
-                raise CaptureError("direct capture ended before the frame payload")
-            freshness = (sequence, seconds, usec)
-            if freshness in seen or (frames and freshness <= frames[-1][0]):
-                raise CaptureError("direct capture emitted a stale or regressed frame")
-            seen.add(freshness)
-            frames.append((freshness, raw_frame))
-    finally:
-        if process.stdout is not None:
-            process.stdout.close()
-        try:
-            status = process.wait(timeout=4)
-        except subprocess.TimeoutExpired as error:
-            raise CaptureError("direct capture helper did not finish cleanup") from error
-    if status != 0:
-        if status == 124:
-            raise CaptureError("direct capture exceeded the three-second budget")
-        if status == 2:
-            raise CaptureError("direct capture is already owned by another worker")
-        raise CaptureError(f"direct capture failed with status {status}")
-    if len(frames) != requested:
-        raise CaptureError(f"only {len(frames)} fresh frames arrived; needed {requested}")
-    return frames
 
 
 def load_engine(data_dir, use_cnn):
