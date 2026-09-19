@@ -1,0 +1,304 @@
+--- a/drivers/media/i2c/ov7251.c
++++ b/drivers/media/i2c/ov7251.c
+@@ -27,6 +27,11 @@
+ #define OV7251_SC_MODE_SELECT_SW_STANDBY	0x0
+ #define OV7251_SC_MODE_SELECT_STREAMING		0x1
+ 
++#define OV7251_STROBE_OUTPUT_CONTROL		0x3005
++#define OV7251_STROBE_OUTPUT_ENABLE		BIT(3)
++#define OV7251_STROBE_FRAME_PWM_CONTROL		0x3b96
++#define OV7251_STROBE_FRAME_PWM_ENABLE		BIT(7)
++
+ #define OV7251_CHIP_ID_HIGH		0x300a
+ #define OV7251_CHIP_ID_HIGH_BYTE	0x77
+ #define OV7251_CHIP_ID_LOW		0x300b
+@@ -158,6 +163,7 @@
+ 	struct mutex lock; /* lock to protect power state, ctrls and mode */
+ 	bool power_on;
+ 
++	bool strobe_cleanup_needed;
+ 	struct gpio_desc *enable_gpio;
+ };
+ 
+@@ -166,6 +172,17 @@
+ 	return container_of(sd, struct ov7251, sd);
+ }
+ 
++static bool experimental_strobe_output;
++module_param_named(experimental_strobe_output, experimental_strobe_output,
++			   bool, 0444);
++MODULE_PARM_DESC(experimental_strobe_output,
++			 "Enable the experimental OV7251 STROBE/frame-PWM output");
++
++static bool strobe_diagnostics;
++module_param_named(strobe_diagnostics, strobe_diagnostics, bool, 0444);
++MODULE_PARM_DESC(strobe_diagnostics,
++			 "Log bounded OV7251 STROBE register readback");
++
+ static const struct ov7251_pll1_cfg ov7251_pll1_cfg_19_2_mhz_240_mhz = {
+ 	.pre_div = 0x03,
+ 	.mult = 0x4b,
+@@ -750,6 +767,11 @@
+ 			__func__, ret, reg, val);
+ 		return ret;
+ 	}
++	if (ret != sizeof(regbuf)) {
++		dev_err(ov7251->dev, "%s: short write %d: reg=%x, val=%x\n",
++			__func__, ret, reg, val);
++		return -EIO;
++	}
+ 
+ 	return 0;
+ }
+@@ -794,6 +816,11 @@
+ 			__func__, ret, reg);
+ 		return ret;
+ 	}
++	if (ret != sizeof(regbuf)) {
++		dev_err(ov7251->dev, "%s: short address write %d: reg=%x\n",
++			__func__, ret, reg);
++		return -EIO;
++	}
+ 
+ 	ret = i2c_master_recv(ov7251->i2c_client, val, 1);
+ 	if (ret < 0) {
+@@ -801,6 +828,11 @@
+ 			__func__, ret, reg);
+ 		return ret;
+ 	}
++	if (ret != sizeof(*val)) {
++		dev_err(ov7251->dev, "%s: short read %d: reg=%x\n",
++			__func__, ret, reg);
++		return -EIO;
++	}
+ 
+ 	return 0;
+ }
+@@ -977,6 +1009,141 @@
+ 	return 0;
+ }
+ 
++static int ov7251_update_strobe_bit(struct ov7251 *ov7251, u16 reg,
++					    u8 mask, bool enable, const char *name)
++{
++	u8 before;
++	u8 after;
++	u8 verify;
++	int ret;
++
++	ret = ov7251_read_reg(ov7251, reg, &before);
++	if (ret) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe %s read-before failed reg=0x%04x ret=%d\n",
++			name, reg, ret);
++		return ret;
++	}
++
++	after = enable ? before | mask : before & ~mask;
++	ret = ov7251_write_reg(ov7251, reg, after);
++	if (ret) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe %s write failed reg=0x%04x value=0x%02x ret=%d\n",
++			name, reg, after, ret);
++		return ret;
++	}
++
++	ret = ov7251_read_reg(ov7251, reg, &verify);
++	if (ret) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe %s readback failed reg=0x%04x ret=%d\n",
++			name, reg, ret);
++		return ret;
++	}
++
++	if ((verify & mask) != (after & mask)) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe %s enable mismatch reg=0x%04x "
++			"before=0x%02x requested=0x%02x readback=0x%02x\n",
++			name, reg, before, after, verify);
++		return -EIO;
++	}
++
++	if ((verify ^ before) & (u8)~mask) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe %s preserved-bit mismatch reg=0x%04x "
++			"before=0x%02x requested=0x%02x readback=0x%02x\n",
++			name, reg, before, after, verify);
++		return -EIO;
++	}
++
++	if (strobe_diagnostics)
++		dev_info(ov7251->dev,
++			 "IRTRACE strobe %s reg=0x%04x before=0x%02x "
++			 "after=0x%02x readback=0x%02x\n",
++			 name, reg, before, after, verify);
++
++	return 0;
++}
++
++static const u16 ov7251_strobe_diag_regs[] = {
++	0x3005, 0x3027, 0x3009,
++	0x3b80, 0x3b81, 0x3b82, 0x3b83, 0x3b84, 0x3b85,
++	0x3b86, 0x3b87, 0x3b88, 0x3b89, 0x3b8a, 0x3b8b,
++	0x3b8c, 0x3b8d, 0x3b8e, 0x3b8f, 0x3b90, 0x3b91,
++	0x3b92, 0x3b93, 0x3b94, 0x3b95, 0x3b96,
++};
++
++static void ov7251_trace_strobe_state(struct ov7251 *ov7251,
++					      const char *phase)
++{
++	unsigned int i;
++
++	if (!strobe_diagnostics)
++		return;
++
++	for (i = 0; i < ARRAY_SIZE(ov7251_strobe_diag_regs); i++) {
++		u8 value = 0;
++		int ret;
++
++		ret = ov7251_read_reg(ov7251, ov7251_strobe_diag_regs[i], &value);
++		if (ret)
++			dev_info(ov7251->dev,
++				 "IRTRACE strobe-state phase=%s reg=0x%04x value=invalid ret=%d\n",
++				 phase, ov7251_strobe_diag_regs[i], ret);
++		else
++			dev_info(ov7251->dev,
++				 "IRTRACE strobe-state phase=%s reg=0x%04x value=0x%02x\n",
++				 phase, ov7251_strobe_diag_regs[i], value);
++	}
++}
++
++static int ov7251_disable_experimental_strobe(struct ov7251 *ov7251)
++{
++	int first_ret = 0;
++	int ret;
++
++	/* Remove the output gate before removing the frame-PWM permission. */
++	ret = ov7251_update_strobe_bit(ov7251, OV7251_STROBE_OUTPUT_CONTROL,
++					       OV7251_STROBE_OUTPUT_ENABLE, false,
++					       "output-disable");
++	if (ret && !first_ret)
++		first_ret = ret;
++
++	ret = ov7251_update_strobe_bit(ov7251,
++					       OV7251_STROBE_FRAME_PWM_CONTROL,
++					       OV7251_STROBE_FRAME_PWM_ENABLE, false,
++					       "pwm-disable");
++	if (ret && !first_ret)
++		first_ret = ret;
++
++	if (!first_ret)
++		ov7251->strobe_cleanup_needed = false;
++
++	return first_ret;
++}
++
++static int ov7251_enable_experimental_strobe(struct ov7251 *ov7251)
++{
++	int ret;
++
++	/* Keep the flag set until both fields have been proven disabled again. */
++	ov7251->strobe_cleanup_needed = true;
++
++	/* Permit frame PWM first; expose the sensor STROBE output last. */
++	ret = ov7251_update_strobe_bit(ov7251,
++					       OV7251_STROBE_FRAME_PWM_CONTROL,
++					       OV7251_STROBE_FRAME_PWM_ENABLE, true,
++					       "pwm-enable");
++	if (ret)
++		return ret;
++
++	return ov7251_update_strobe_bit(ov7251, OV7251_STROBE_OUTPUT_CONTROL,
++					       OV7251_STROBE_OUTPUT_ENABLE, true,
++					       "output-enable");
++}
++
+ static int ov7251_set_power_on(struct device *dev)
+ {
+ 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+@@ -1034,6 +1201,15 @@
+ 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+ 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+ 	struct ov7251 *ov7251 = to_ov7251(sd);
++	int ret = 0;
++
++	if (experimental_strobe_output && ov7251->strobe_cleanup_needed) {
++		ret = ov7251_disable_experimental_strobe(ov7251);
++		if (ret)
++			dev_err(ov7251->dev,
++				"IRTRACE strobe shutdown not confirmed before power-off ret=%d\n",
++				ret);
++	}
+ 
+ 	dev_info(ov7251->dev, "IRTRACE power-off begin\n");
+ 	clk_disable_unprepare(ov7251->xclk);
+@@ -1042,7 +1218,7 @@
+ 	dev_info(ov7251->dev, "IRTRACE power-off complete gpio=%d\n",
+ 		 gpiod_get_value_cansleep(ov7251->enable_gpio));
+ 
+-	return 0;
++	return ret;
+ }
+ 
+ static int ov7251_set_hflip(struct ov7251 *ov7251, s32 value)
+@@ -1464,6 +1640,16 @@
+ 			dev_err(ov7251->dev, "could not sync v4l2 controls\n");
+ 			goto err_power_down;
+ 		}
++		ov7251_trace_strobe_state(ov7251, "before-experiment");
++		if (experimental_strobe_output) {
++			ret = ov7251_enable_experimental_strobe(ov7251);
++			if (ret) {
++				dev_err(ov7251->dev,
++					"experimental STROBE enable failed ret=%d\n", ret);
++				goto err_power_down;
++			}
++			ov7251_trace_strobe_state(ov7251, "after-experiment");
++		}
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
+ 				       OV7251_SC_MODE_SELECT_STREAMING);
+ 		dev_info(ov7251->dev, "IRTRACE stream mode-select write ret=%d\n",
+@@ -1479,6 +1665,13 @@
+ 		ov7251_trace_pll_mipi(ov7251);
+ 		ov7251_trace_mipi_state(ov7251);
+ 	} else {
++		int cleanup_ret = 0;
++
++		ov7251_trace_strobe_state(ov7251, "before-stop");
++		if (experimental_strobe_output &&
++		    ov7251->strobe_cleanup_needed)
++			cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++		ov7251_trace_strobe_state(ov7251, "after-disable");
+ 		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
+ 				       OV7251_SC_MODE_SELECT_SW_STANDBY);
+ 		dev_info(ov7251->dev, "IRTRACE stream standby write ret=%d\n", ret);
+@@ -1487,6 +1680,13 @@
+ 		dev_info(ov7251->dev,
+ 			 "IRTRACE stream standby read ret=%d value=0x%02x\n",
+ 			 read_ret, mode_select);
++		if (cleanup_ret) {
++			dev_err(ov7251->dev,
++				"IRTRACE strobe normal-stop shutdown not confirmed ret=%d\n",
++				cleanup_ret);
++			if (!ret)
++				ret = cleanup_ret;
++		}
+ 		pm_runtime_put(ov7251->dev);
+ 	}
+ 
+@@ -1494,6 +1694,15 @@
+ 	return ret;
+ 
+ err_power_down:
++	if (experimental_strobe_output && ov7251->strobe_cleanup_needed) {
++		int cleanup_ret;
++
++		cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++		if (cleanup_ret)
++			dev_err(ov7251->dev,
++				"IRTRACE strobe failed-start shutdown not confirmed ret=%d\n",
++				cleanup_ret);
++	}
+ 	pm_runtime_put(ov7251->dev);
+ 	mutex_unlock(&ov7251->lock);
+ 	return ret;
