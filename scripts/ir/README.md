@@ -43,6 +43,9 @@ The bundled module has vermagic
 kernel module. The wrapper verifies the BB8 log readback
 `after=(0x1001b,0x41,0x44104015)` after the receiver starts. The bundled
 module emits this diagnostic during receiver setup, not at module insertion.
+The decoder accepts a capture that is short only by trailing stride padding;
+the observed `bytesused=399360`, `offset=4` direct-tap buffer can therefore
+produce a complete image from a 399356-byte `--stream-to` file.
 
 Cleanup reloads the distribution software module and restarts the bridge if
 it was active. Earlier read-only verification showed that module reload and a

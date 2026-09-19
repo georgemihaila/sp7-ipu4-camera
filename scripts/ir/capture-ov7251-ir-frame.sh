@@ -147,11 +147,29 @@ raw_path, png_path, stats_path = map(Path, sys.argv[1:4])
 width, height, stride, header_bytes = map(int, sys.argv[4:8])
 payload_bytes = width * 10 // 8
 frame_bytes = stride * height
+minimum_frame_bytes = (height - 1) * stride + header_bytes + payload_bytes
 raw = raw_path.read_bytes()
-if len(raw) < frame_bytes:
-    raise SystemExit(f"short capture: {len(raw)} bytes, need {frame_bytes}")
+if len(raw) < minimum_frame_bytes:
+	raise SystemExit(
+		f"short capture: {len(raw)} bytes, need at least {minimum_frame_bytes}"
+	)
 
-rows = np.frombuffer(raw[:frame_bytes], dtype=np.uint8).reshape(height, stride)
+missing_tail_bytes = max(0, frame_bytes - len(raw))
+row_padding_bytes = stride - header_bytes - payload_bytes
+if missing_tail_bytes > row_padding_bytes:
+	raise SystemExit(
+		f"short capture: {len(raw)} bytes, missing {missing_tail_bytes} bytes "
+		f"beyond the {row_padding_bytes}-byte row padding allowance"
+	)
+
+# v4l2-ctl may omit the plane data offset from --stream-to. For this direct
+# tap that can remove only trailing stride padding from a one-buffer capture;
+# restore those bytes for the fixed-stride reshape without inventing pixels.
+frame = np.zeros(frame_bytes, dtype=np.uint8)
+copy_bytes = min(len(raw), frame_bytes)
+frame[:copy_bytes] = np.frombuffer(raw[:copy_bytes], dtype=np.uint8)
+
+rows = frame.reshape(height, stride)
 packed = rows[:, header_bytes:header_bytes + payload_bytes]
 groups = packed.reshape(height, width // 4, 5).astype(np.uint16)
 pixels = np.empty((height, width), dtype=np.uint16)
@@ -170,6 +188,7 @@ stats_path.write_text(
         f"png={png_path}",
         f"raw_bytes={len(raw)}",
         f"frame_bytes_used={frame_bytes}",
+        f"decoder_padded_trailing_bytes={missing_tail_bytes}",
         f"width={width} height={height} stride={stride} header_bytes={header_bytes}",
         f"pixel_min={int(pixels.min())}",
         f"pixel_max={int(pixels.max())}",
