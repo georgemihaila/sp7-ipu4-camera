@@ -1,0 +1,46 @@
+#ifndef SP7_CAMERA_IR_V4L2_H
+#define SP7_CAMERA_IR_V4L2_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define IR_CAPTURE_WIDTH 640U
+#define IR_CAPTURE_HEIGHT 480U
+#define IR_CAPTURE_HEADER_BYTES 4U
+#define IR_CAPTURE_RAW10_BYTES (IR_CAPTURE_WIDTH * 10U / 8U)
+#define IR_CAPTURE_MIN_STRIDE 832U
+#define IR_CAPTURE_OUTPUT_BYTES (IR_CAPTURE_WIDTH * IR_CAPTURE_HEIGHT * 2U)
+
+typedef struct IrCapture IrCapture;
+
+typedef struct {
+	unsigned width;
+	unsigned height;
+	unsigned stride;
+	unsigned sizeimage;
+	unsigned data_offset;
+	uint32_t last_sequence;
+	uint64_t frames;
+	uint64_t sequence_gaps;
+	uint64_t rejected_buffers;
+} IrCaptureStats;
+
+/* Discover the OV7251 -> source-6 -> capture route and prepare MMAP buffers. */
+int ir_capture_open(IrCapture **capture, char *error, unsigned error_size);
+int ir_capture_start(IrCapture *capture, char *error, unsigned error_size);
+
+/* Returns 1 for a decoded frame, 0 for a poll timeout, and -1 on bad input. */
+int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
+	unsigned timeout_ms, IrCaptureStats *stats, char *error,
+	unsigned error_size);
+
+int ir_capture_stop(IrCapture *capture, char *error, unsigned error_size);
+void ir_capture_close(IrCapture *capture);
+
+/* Decode one complete direct-tap packed RAW10 frame into neutral-chroma YUYV. */
+int ir_decode_raw10_to_yuyv(const uint8_t *buffer, size_t buffer_size,
+	unsigned width, unsigned height, unsigned stride, unsigned data_offset,
+	uint8_t *yuyv, size_t yuyv_size, char *error, unsigned error_size);
+
+#endif
