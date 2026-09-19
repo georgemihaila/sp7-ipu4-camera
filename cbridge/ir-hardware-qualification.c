@@ -71,7 +71,7 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 		" last_sequence=%" PRIu32 " stride=%u data_offset=%u\n",
 		label, elapsed, frames, fps, changed, timeouts, malformed,
 		recoveries, stats->sequence_gaps, stats->rejected_buffers,
-		stats->last_sequence, stats->stride, stats->data_offset);
+		stats->last_sequence, stats->stride, stats->last_data_offset);
 	fflush(stdout);
 }
 
@@ -137,8 +137,11 @@ static int run_persistent(unsigned duration_seconds)
 			consecutive_recoveries = 0U;
 			if (frames == 1U || frames % 100U == 0U)
 				printf("frame frames=%" PRIu64 " hash=0x%016" PRIx64
-					" luma_min=%u luma_max=%u data_offset=%u\n",
-					frames, hash, minimum, maximum, stats.data_offset);
+					" luma_min=%u luma_max=%u bytesused=%u data_offset=%u"
+					" sequence=%" PRIu32 " timestamp=%" PRIu64 ".%06" PRIu64 "\n",
+					frames, hash, minimum, maximum, stats.last_bytesused,
+					stats.last_data_offset, stats.last_dequeued_sequence,
+					stats.last_timestamp_seconds, stats.last_timestamp_usec);
 		} else if (result == 0) {
 			timeouts++;
 		} else {

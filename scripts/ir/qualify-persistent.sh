@@ -157,7 +157,7 @@ capture_link_enabled=1
 
 media-ctl -d "$MEDIA" -p >>"$SETUP_LOG" 2>&1 || :
 set +e
-"$QUALIFIER" --duration "$DURATION" --cycles "$CYCLES" \
+sudo -n "$QUALIFIER" --duration "$DURATION" --cycles "$CYCLES" \
 	--cycle-frames "$CYCLE_FRAMES" >"$QUALIFY_LOG" 2>&1
 qualify_rc=$?
 set -e

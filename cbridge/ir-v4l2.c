@@ -4,7 +4,9 @@
 #include <fcntl.h>
 #include <glob.h>
 #include <linux/media.h>
+#include <linux/media-bus-format.h>
 #include <linux/videodev2.h>
+#include <linux/v4l2-subdev.h>
 #include <poll.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -31,6 +33,7 @@ typedef struct {
 
 struct IrCapture {
 	int media_fd;
+	int csi_fd;
 	int video_fd;
 	char video_path[64];
 	struct v4l2_pix_format_mplane format;
@@ -73,6 +76,11 @@ static int ioctl_retry(int fd, unsigned long request, void *argument)
 static bool name_has(const char *name, const char *needle)
 {
 	return name != NULL && needle != NULL && strstr(name, needle) != NULL;
+}
+
+static bool name_is(const char *name, const char *expected)
+{
+	return name != NULL && expected != NULL && strcmp(name, expected) == 0;
 }
 
 static int enumerate_entities(int fd, struct media_entity_desc *entities,
@@ -162,13 +170,14 @@ static int link_route_enabled(int fd, const struct media_entity_desc *entities,
 	return 0;
 }
 
-static int find_video_node(const struct media_entity_desc *entity, char *path,
-	size_t path_size, char *error, unsigned error_size)
+static int find_entity_node(const struct media_entity_desc *entity,
+	const char *pattern, char *path, size_t path_size, char *error,
+	unsigned error_size)
 {
 	glob_t matches = { 0 };
 	dev_t expected = makedev(entity->dev.major, entity->dev.minor);
 
-	if (glob("/dev/video*", 0, NULL, &matches) != 0) {
+	if (glob(pattern, 0, NULL, &matches) != 0) {
 		set_error(error, error_size, "no video nodes exist for %s", entity->name);
 		return -1;
 	}
@@ -192,8 +201,8 @@ static int find_video_node(const struct media_entity_desc *entity, char *path,
 	return -1;
 }
 
-static int discover_graph(int *media_fd, char *video_path, size_t video_path_size,
-	char *error, unsigned error_size)
+static int discover_graph(int *media_fd, char *csi_path, size_t csi_path_size,
+	char *video_path, size_t video_path_size, char *error, unsigned error_size)
 {
 	glob_t matches = { 0 };
 
@@ -219,7 +228,8 @@ static int discover_graph(int *media_fd, char *video_path, size_t video_path_siz
 		for (unsigned index = 0U; index < count; index++) {
 			if (name_has(entities[index].name, "ov7251"))
 				sensor = (int)index;
-			if (name_has(entities[index].name, "Intel IPU4 CSI-2 1"))
+			/* The capture child also contains the CSI entity name. */
+			if (name_is(entities[index].name, "Intel IPU4 CSI-2 1"))
 				csi = (int)index;
 			if (name_has(entities[index].name, "CSI-2 1 capture 0"))
 				capture = (int)index;
@@ -233,8 +243,10 @@ static int discover_graph(int *media_fd, char *video_path, size_t video_path_siz
 				link_route_enabled(fd, entities, count, entities[csi].id,
 				entities[capture].id, &csi_capture, error, error_size) == 0 &&
 				sensor_csi && csi_capture &&
-				find_video_node(&entities[capture], video_path, video_path_size,
-					error, error_size) == 0) {
+				find_entity_node(&entities[csi], "/dev/v4l-subdev*", csi_path,
+					csi_path_size, error, error_size) == 0 &&
+				find_entity_node(&entities[capture], "/dev/video*", video_path,
+					video_path_size, error, error_size) == 0) {
 				*media_fd = fd;
 				globfree(&matches);
 				return 0;
@@ -246,6 +258,35 @@ static int discover_graph(int *media_fd, char *video_path, size_t video_path_siz
 	set_error(error, error_size,
 		"enabled OV7251 source-6 media route was not found");
 	return -1;
+}
+
+static int configure_csi_format(int fd, char *error, unsigned error_size)
+{
+	for (unsigned pad = 0U; pad <= 1U; pad++) {
+		struct v4l2_subdev_format format = { 0 };
+
+		format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+		format.pad = pad;
+		format.format.width = IR_CAPTURE_WIDTH;
+		format.format.height = IR_CAPTURE_HEIGHT;
+		format.format.code = MEDIA_BUS_FMT_Y10_1X10;
+		format.format.field = V4L2_FIELD_NONE;
+		if (ioctl_retry(fd, VIDIOC_SUBDEV_S_FMT, &format) < 0) {
+			set_error(error, error_size, "VIDIOC_SUBDEV_S_FMT pad %u: %s",
+				pad, strerror(errno));
+			return -1;
+		}
+		if (format.format.width != IR_CAPTURE_WIDTH ||
+			format.format.height != IR_CAPTURE_HEIGHT ||
+			format.format.code != MEDIA_BUS_FMT_Y10_1X10) {
+			set_error(error, error_size,
+				"CSI pad %u negotiated an unsupported Y10 layout (%ux%u code=0x%x)",
+				pad, format.format.width, format.format.height,
+				format.format.code);
+			return -1;
+		}
+	}
+	return 0;
 }
 
 static int negotiate_format(IrCapture *capture, char *error, unsigned error_size)
@@ -368,10 +409,24 @@ int ir_capture_open(IrCapture **capture, char *error, unsigned error_size)
 		return -1;
 	}
 	result->media_fd = -1;
+	result->csi_fd = -1;
 	result->video_fd = -1;
-	if (discover_graph(&result->media_fd, result->video_path,
-		sizeof(result->video_path), error, error_size) != 0)
-		goto fail;
+	{
+		char csi_path[64];
+
+		if (discover_graph(&result->media_fd, csi_path, sizeof(csi_path),
+			result->video_path, sizeof(result->video_path), error,
+			error_size) != 0)
+			goto fail;
+		result->csi_fd = open(csi_path, O_RDWR | O_CLOEXEC);
+		if (result->csi_fd < 0) {
+			set_error(error, error_size, "open %s: %s", csi_path,
+				strerror(errno));
+			goto fail;
+		}
+		if (configure_csi_format(result->csi_fd, error, error_size) != 0)
+			goto fail;
+	}
 	result->video_fd = open(result->video_path, O_RDWR | O_CLOEXEC | O_NONBLOCK);
 	if (result->video_fd < 0) {
 		set_error(error, error_size, "open %s: %s", result->video_path,
@@ -530,6 +585,11 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 		publish_stats(capture, stats);
 		return -1;
 	}
+	capture->stats.last_bytesused = plane.bytesused;
+	capture->stats.last_data_offset = plane.data_offset;
+	capture->stats.last_dequeued_sequence = buffer.sequence;
+	capture->stats.last_timestamp_seconds = (uint64_t)buffer.timestamp.tv_sec;
+	capture->stats.last_timestamp_usec = (uint64_t)buffer.timestamp.tv_usec;
 	can_requeue = buffer.index < capture->buffer_count && buffer.length == 1U;
 	if (buffer.index >= capture->buffer_count || buffer.length != 1U ||
 		(buffer.flags & V4L2_BUF_FLAG_ERROR) != 0U ||
@@ -612,6 +672,8 @@ void ir_capture_close(IrCapture *capture)
 	}
 	if (capture->video_fd >= 0)
 		(void)close(capture->video_fd);
+	if (capture->csi_fd >= 0)
+		(void)close(capture->csi_fd);
 	unmap_buffers(capture);
 	if (capture->media_fd >= 0)
 		(void)close(capture->media_fd);

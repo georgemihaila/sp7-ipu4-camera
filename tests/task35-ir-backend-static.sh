@@ -10,6 +10,8 @@ UNIT="$ROOT/systemd/user/sp7-camera-bridge.service"
 
 grep -Fq 'MEDIA_IOC_ENUM_ENTITIES' "$CROOT/ir-v4l2.c"
 grep -Fq 'MEDIA_IOC_ENUM_LINKS' "$CROOT/ir-v4l2.c"
+grep -Fq 'name_is(entities[index].name, "Intel IPU4 CSI-2 1")' "$CROOT/ir-v4l2.c"
+grep -Fq 'VIDIOC_SUBDEV_S_FMT' "$CROOT/ir-v4l2.c"
 grep -Fq 'V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE' "$CROOT/ir-v4l2.c"
 grep -Fq 'V4L2_BUF_FLAG_ERROR' "$CROOT/ir-v4l2.c"
 grep -Fq 'data_offset' "$CROOT/ir-v4l2.c"

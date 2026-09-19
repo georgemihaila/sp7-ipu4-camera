@@ -20,7 +20,12 @@ typedef struct {
 	unsigned stride;
 	unsigned sizeimage;
 	unsigned data_offset;
+	unsigned last_bytesused;
+	unsigned last_data_offset;
 	uint32_t last_sequence;
+	uint32_t last_dequeued_sequence;
+	uint64_t last_timestamp_seconds;
+	uint64_t last_timestamp_usec;
 	uint64_t frames;
 	uint64_t sequence_gaps;
 	uint64_t rejected_buffers;
