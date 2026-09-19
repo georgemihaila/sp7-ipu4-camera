@@ -42,9 +42,15 @@ printf '%s\n' 'property/control callback:'
 objdump -d -M intel \
     --start-address=0x1400089a0 --stop-address=0x140008bb8 "$binary"
 
+printf '%s\n' 'synchronization imports:'
+objdump -p "$binary" | rg -n -C 3 'KeWaitForSingleObject|KeSetEvent' || true
+
 printf '%s\n' 'stream callbacks:'
 objdump -d -M intel \
     --start-address=0x140008e00 --stop-address=0x140008f20 "$binary"
 
 printf '%s\n' 'candidate resource labels:'
 strings -a -t x "$binary" | rg -i 'Reset|Strobe|Torch|Flash|LedRear|LedFront|Power0|Power1|Standby|WriteProtect' || true
+
+printf '%s\n' 'mode-table comparison helper:'
+printf '%s\n' '  compare-ov7251-mode-tables.py BINARY /var/tmp/ov7251-surface-v6.19.8.c'
