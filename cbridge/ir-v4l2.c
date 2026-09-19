@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <glob.h>
+#include <inttypes.h>
 #include <linux/media.h>
 #include <linux/media-bus-format.h>
 #include <linux/videodev2.h>
@@ -18,6 +19,7 @@
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #ifdef SP7_CAMERA_IR_TEST
@@ -50,8 +52,64 @@ struct IrCapture {
 	bool have_sequence;
 	uint32_t last_sequence;
 	struct timeval last_timestamp;
+	uint64_t stream_attempt_id;
 	IrCaptureStats stats;
 };
+
+static uint64_t monotonic_timestamp_ns(void)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return 0U;
+	return (uint64_t)now.tv_sec * UINT64_C(1000000000) +
+		(uint64_t)now.tv_nsec;
+}
+
+static void log_stream_event(const IrCapture *capture, const char *event,
+	uint64_t timestamp_ns, const char *result)
+{
+	fprintf(stderr, "ir_diag event=%s attempt=%" PRIu64
+		" monotonic_ns=%" PRIu64 " result=%s\n", event,
+		capture->stats.stream_attempt_id, timestamp_ns, result);
+}
+
+static void prepare_rejection(IrCapture *capture, uint32_t reasons)
+{
+	capture->stats.last_rejection_reasons = reasons;
+	capture->stats.last_rejection_monotonic_ns = monotonic_timestamp_ns();
+	capture->stats.last_requeue_monotonic_ns = 0U;
+	capture->stats.last_requeue_result = IR_CAPTURE_REQUEUE_NOT_ATTEMPTED;
+}
+
+static void log_rejection(const IrCapture *capture)
+{
+	const IrCaptureStats *stats = &capture->stats;
+
+	fprintf(stderr, "ir_diag event=rejection attempt=%" PRIu64
+		" monotonic_ns=%" PRIu64 " reason_mask=0x%08" PRIx32
+		" index=%" PRIu32 " plane_count=%" PRIu32
+		" sequence=%" PRIu32 " flags=0x%08" PRIx32
+		" timestamp_flags=0x%08" PRIx32
+		" timestamp=%" PRIu64 ".%06" PRIu64
+		" bytesused=%" PRIu32 " data_offset=%" PRIu32
+		" capacity=%" PRIu64 " capacity_available=%u"
+		" requeue_monotonic_ns=%" PRIu64 " requeue_result=%u\n",
+		stats->stream_attempt_id, stats->last_rejection_monotonic_ns,
+		stats->last_rejection_reasons, stats->last_rejection_index,
+		stats->last_rejection_plane_count, stats->last_rejection_sequence,
+		stats->last_rejection_flags,
+		stats->last_rejection_timestamp_flags,
+		stats->last_rejection_timestamp_seconds,
+		stats->last_rejection_timestamp_usec,
+		stats->last_rejection_bytesused, stats->last_rejection_data_offset,
+		stats->last_rejection_capacity,
+		stats->last_rejection_capacity_available ? 1U : 0U,
+		stats->last_requeue_monotonic_ns, (unsigned)stats->last_requeue_result);
+}
+
+static uint32_t validate_timestamp(IrCapture *capture,
+	const struct timeval *timestamp, char *error, unsigned error_size);
 
 static void publish_stats(const IrCapture *capture, IrCaptureStats *stats)
 {
@@ -454,6 +512,14 @@ fail:
 	return -1;
 }
 
+void ir_capture_set_stream_attempt_id(IrCapture *capture, uint64_t attempt_id)
+{
+	if (capture == NULL)
+		return;
+	capture->stream_attempt_id = attempt_id;
+	capture->stats.stream_attempt_id = attempt_id;
+}
+
 #ifdef SP7_CAMERA_IR_TEST
 IrCapture *ir_test_capture_create(int video_fd, void *buffer,
 	size_t buffer_length, unsigned width, unsigned height, unsigned stride,
@@ -495,10 +561,14 @@ void ir_test_capture_destroy(IrCapture *capture)
 
 int ir_capture_start(IrCapture *capture, char *error, unsigned error_size)
 {
+	uint64_t start_timestamp_ns;
+
 	if (capture == NULL || capture->video_fd < 0) {
 		set_error(error, error_size, "capture is not open");
 		return -1;
 	}
+	start_timestamp_ns = monotonic_timestamp_ns();
+	capture->stats.stream_start_monotonic_ns = start_timestamp_ns;
 	for (unsigned index = 0U; index < capture->buffer_count; index++) {
 		struct v4l2_buffer buffer = { 0 };
 		struct v4l2_plane plane = { 0 };
@@ -511,6 +581,8 @@ int ir_capture_start(IrCapture *capture, char *error, unsigned error_size)
 		if (ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
 			set_error(error, error_size, "VIDIOC_QBUF %u: %s", index,
 				strerror(errno));
+			log_stream_event(capture, "stream_start", start_timestamp_ns,
+				"qbuf-failure");
 			return -1;
 		}
 	}
@@ -519,28 +591,32 @@ int ir_capture_start(IrCapture *capture, char *error, unsigned error_size)
 
 		if (ioctl_retry(capture->video_fd, VIDIOC_STREAMON, &type) < 0) {
 			set_error(error, error_size, "VIDIOC_STREAMON: %s", strerror(errno));
+			log_stream_event(capture, "stream_start", start_timestamp_ns,
+				"streamon-failure");
 			return -1;
 		}
 	}
 	capture->streaming = true;
+	log_stream_event(capture, "stream_start", start_timestamp_ns, "success");
 	return 0;
 }
 
-static int validate_timestamp(IrCapture *capture, const struct timeval *timestamp,
+static uint32_t validate_timestamp(IrCapture *capture,
+	const struct timeval *timestamp,
 	char *error, unsigned error_size)
 {
 	if (timestamp->tv_sec == 0 && timestamp->tv_usec == 0) {
 		set_error(error, error_size, "dequeued buffer has an empty timestamp");
-		return -1;
+		return IR_CAPTURE_REJECTION_TIMESTAMP_EMPTY;
 	}
 	if (capture->have_sequence &&
 		(timestamp->tv_sec < capture->last_timestamp.tv_sec ||
 		(timestamp->tv_sec == capture->last_timestamp.tv_sec &&
 			timestamp->tv_usec <= capture->last_timestamp.tv_usec))) {
 		set_error(error, error_size, "dequeued timestamps are not monotonic");
-		return -1;
+		return IR_CAPTURE_REJECTION_TIMESTAMP_REGRESSION;
 	}
-	return 0;
+	return IR_CAPTURE_REJECTION_NONE;
 }
 
 int ir_decode_raw10_to_yuyv(const uint8_t *buffer, size_t buffer_size,
@@ -656,6 +732,16 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 		const struct timeval dequeued_timestamp = buffer.timestamp;
 		const uint32_t dequeued_bytesused = plane.bytesused;
 		const uint32_t dequeued_data_offset = plane.data_offset;
+		const bool index_valid = dequeued_index < capture->buffer_count;
+		const bool plane_count_valid = dequeued_length == 1U;
+		const bool capacity_available = index_valid &&
+			capture->buffers[dequeued_index].address != NULL &&
+			capture->buffers[dequeued_index].length != 0U;
+		const uint64_t capacity = capacity_available ?
+			(uint64_t)capture->buffers[dequeued_index].length : 0U;
+		uint32_t metadata_reasons = IR_CAPTURE_REJECTION_NONE;
+		uint32_t plane_metadata_reasons = IR_CAPTURE_REJECTION_NONE;
+		uint32_t timestamp_reasons;
 
 		capture->stats.last_bytesused = dequeued_bytesused;
 		capture->stats.last_data_offset = dequeued_data_offset;
@@ -664,19 +750,51 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 			(uint64_t)dequeued_timestamp.tv_sec;
 		capture->stats.last_timestamp_usec =
 			(uint64_t)dequeued_timestamp.tv_usec;
-		can_requeue = dequeued_index < capture->buffer_count &&
-			dequeued_length == 1U;
-		if (dequeued_index >= capture->buffer_count || dequeued_length != 1U ||
-			(dequeued_flags & V4L2_BUF_FLAG_ERROR) != 0U ||
-			(dequeued_flags & V4L2_BUF_FLAG_TIMESTAMP_MASK) !=
-			V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) {
+		capture->stats.last_rejection_index = dequeued_index;
+		capture->stats.last_rejection_plane_count = dequeued_length;
+		capture->stats.last_rejection_sequence = dequeued_sequence;
+		capture->stats.last_rejection_flags = dequeued_flags;
+		capture->stats.last_rejection_timestamp_flags =
+			dequeued_flags & V4L2_BUF_FLAG_TIMESTAMP_MASK;
+		capture->stats.last_rejection_timestamp_seconds =
+			(uint64_t)dequeued_timestamp.tv_sec;
+		capture->stats.last_rejection_timestamp_usec =
+			(uint64_t)dequeued_timestamp.tv_usec;
+		capture->stats.last_rejection_bytesused = dequeued_bytesused;
+		capture->stats.last_rejection_data_offset = dequeued_data_offset;
+		capture->stats.last_rejection_capacity = capacity;
+		capture->stats.last_rejection_capacity_available = capacity_available;
+		can_requeue = index_valid && plane_count_valid;
+		if (!index_valid)
+			metadata_reasons |= IR_CAPTURE_REJECTION_INVALID_INDEX |
+				IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE;
+		if (!plane_count_valid)
+			metadata_reasons |= IR_CAPTURE_REJECTION_INVALID_PLANE_COUNT;
+		if ((dequeued_flags & V4L2_BUF_FLAG_ERROR) != 0U)
+			metadata_reasons |= IR_CAPTURE_REJECTION_ERROR_FLAG;
+		if ((dequeued_flags & V4L2_BUF_FLAG_TIMESTAMP_MASK) !=
+			V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC)
+			metadata_reasons |= IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS;
+		if (index_valid && plane_count_valid && !capacity_available)
+			metadata_reasons |= IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE;
+		if (index_valid && plane_count_valid && capacity_available &&
+			(dequeued_data_offset >= dequeued_bytesused ||
+			dequeued_bytesused > capacity))
+			plane_metadata_reasons |= IR_CAPTURE_REJECTION_INVALID_PLANE_METADATA;
+		timestamp_reasons = validate_timestamp(capture, &dequeued_timestamp,
+			error, error_size);
+		if (metadata_reasons != IR_CAPTURE_REJECTION_NONE) {
+			prepare_rejection(capture, metadata_reasons |
+				plane_metadata_reasons | timestamp_reasons);
 			set_error(error, error_size,
 				"dequeued source-6 buffer metadata/timestamp flags are invalid");
 			capture->stats.metadata_errors++;
 			capture->stats.last_error = IR_CAPTURE_ERROR_METADATA;
 			goto requeue_fail;
 		}
-		if (validate_timestamp(capture, &dequeued_timestamp, error, error_size) != 0) {
+		if (timestamp_reasons != IR_CAPTURE_REJECTION_NONE) {
+			prepare_rejection(capture, timestamp_reasons |
+				plane_metadata_reasons);
 			capture->stats.timestamp_errors++;
 			capture->stats.last_error = IR_CAPTURE_ERROR_TIMESTAMP;
 			goto requeue_fail;
@@ -688,6 +806,8 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 				set_error(error, error_size,
 					"source-6 sequence regressed/repeated: %u",
 					dequeued_sequence);
+				prepare_rejection(capture, IR_CAPTURE_REJECTION_SEQUENCE |
+					plane_metadata_reasons);
 				capture->stats.sequence_errors++;
 				capture->stats.last_error = IR_CAPTURE_ERROR_SEQUENCE;
 				goto requeue_fail;
@@ -695,10 +815,10 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 			if (delta > 1U)
 				capture->stats.sequence_gaps += (uint64_t)delta - 1U;
 		}
-		if (dequeued_data_offset >= dequeued_bytesused ||
-			dequeued_bytesused > capture->buffers[dequeued_index].length) {
+		if (plane_metadata_reasons != IR_CAPTURE_REJECTION_NONE) {
 			set_error(error, error_size,
 				"dequeued source-6 plane metadata is invalid");
+			prepare_rejection(capture, plane_metadata_reasons);
 			capture->stats.metadata_errors++;
 			capture->stats.last_error = IR_CAPTURE_ERROR_METADATA;
 			goto requeue_fail;
@@ -707,6 +827,7 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 			dequeued_bytesused, capture->format.width, capture->format.height,
 			capture->format.plane_fmt[0].bytesperline, dequeued_data_offset, yuyv,
 			yuyv_size, error, error_size) != 0) {
+			prepare_rejection(capture, IR_CAPTURE_REJECTION_DECODE);
 			capture->stats.decode_errors++;
 			capture->stats.last_error = IR_CAPTURE_ERROR_DECODE;
 			goto requeue_fail;
@@ -731,16 +852,28 @@ int ir_capture_next(IrCapture *capture, uint8_t *yuyv, size_t yuyv_size,
 
 requeue_fail:
 	capture->stats.rejected_buffers++;
-	if (can_requeue && ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
-		char previous_error[256];
+	if (can_requeue) {
+		if (ioctl_retry(capture->video_fd, VIDIOC_QBUF, &buffer) < 0) {
+			char previous_error[256];
 
-		(void)snprintf(previous_error, sizeof(previous_error), "%s",
-			error != NULL ? error : "invalid source-6 buffer");
-		set_error(error, error_size, "%s; VIDIOC_QBUF recovery: %s",
-			previous_error, strerror(errno));
-		capture->stats.requeue_errors++;
-		capture->stats.last_error = IR_CAPTURE_ERROR_REQUEUE;
+			(void)snprintf(previous_error, sizeof(previous_error), "%s",
+				error != NULL ? error : "invalid source-6 buffer");
+			set_error(error, error_size, "%s; VIDIOC_QBUF recovery: %s",
+				previous_error, strerror(errno));
+			capture->stats.last_rejection_reasons |=
+				IR_CAPTURE_REJECTION_REQUEUE;
+			capture->stats.last_requeue_monotonic_ns =
+				monotonic_timestamp_ns();
+			capture->stats.last_requeue_result = IR_CAPTURE_REQUEUE_FAILED;
+			capture->stats.requeue_errors++;
+			capture->stats.last_error = IR_CAPTURE_ERROR_REQUEUE;
+		} else {
+			capture->stats.last_requeue_monotonic_ns =
+				monotonic_timestamp_ns();
+			capture->stats.last_requeue_result = IR_CAPTURE_REQUEUE_SUCCEEDED;
+		}
 	}
+	log_rejection(capture);
 	publish_stats(capture, stats);
 	return -1;
 }
@@ -748,14 +881,20 @@ requeue_fail:
 int ir_capture_stop(IrCapture *capture, char *error, unsigned error_size)
 {
 	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	uint64_t stop_timestamp_ns;
 
 	if (capture == NULL || !capture->streaming)
 		return 0;
+	stop_timestamp_ns = monotonic_timestamp_ns();
+	capture->stats.stream_stop_monotonic_ns = stop_timestamp_ns;
 	if (ioctl_retry(capture->video_fd, VIDIOC_STREAMOFF, &type) < 0) {
 		set_error(error, error_size, "VIDIOC_STREAMOFF: %s", strerror(errno));
+		log_stream_event(capture, "stream_stop", stop_timestamp_ns,
+			"streamoff-failure");
 		return -1;
 	}
 	capture->streaming = false;
+	log_stream_event(capture, "stream_stop", stop_timestamp_ns, "success");
 	return 0;
 }
 
@@ -765,8 +904,15 @@ void ir_capture_close(IrCapture *capture)
 		return;
 	if (capture->streaming) {
 		enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+		uint64_t stop_timestamp_ns = monotonic_timestamp_ns();
 
-		(void)ioctl_retry(capture->video_fd, VIDIOC_STREAMOFF, &type);
+		capture->stats.stream_stop_monotonic_ns = stop_timestamp_ns;
+		if (ioctl_retry(capture->video_fd, VIDIOC_STREAMOFF, &type) < 0)
+			log_stream_event(capture, "stream_stop", stop_timestamp_ns,
+				"close-streamoff-failure");
+		else
+			log_stream_event(capture, "stream_stop", stop_timestamp_ns,
+				"close-streamoff");
 	}
 	if (capture->video_fd >= 0)
 		(void)close(capture->video_fd);

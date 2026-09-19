@@ -20,6 +20,7 @@
 #define CAPTURE_STARTUP_ERROR (-2)
 
 static volatile sig_atomic_t stop_requested;
+static uint64_t next_stream_attempt_id = 1U;
 
 typedef struct {
 	uint64_t timeouts;
@@ -51,6 +52,23 @@ static double monotonic_seconds(void)
 	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
 		return 0.0;
 	return (double)now.tv_sec + (double)now.tv_nsec / 1000000000.0;
+}
+
+static uint64_t monotonic_timestamp_ns(void)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return 0U;
+	return (uint64_t)now.tv_sec * UINT64_C(1000000000) +
+		(uint64_t)now.tv_nsec;
+}
+
+static void log_reopen_event(uint64_t after_attempt, uint64_t recovery)
+{
+	fprintf(stderr, "ir_diag event=reopen after_attempt=%" PRIu64
+		" recovery=%" PRIu64 " monotonic_ns=%" PRIu64 "\n",
+		after_attempt, recovery, monotonic_timestamp_ns());
 }
 
 static uint64_t frame_hash_and_range(const uint8_t *frame, size_t size,
@@ -160,11 +178,24 @@ static void print_progress(const char *label, double elapsed, uint64_t frames,
 }
 
 static int capture_one_frame(IrCapture **capture, uint8_t *frame,
-	IrCaptureStats *stats, char *error, unsigned error_size)
+	IrCaptureStats *stats, uint64_t *attempt_id, char *error,
+	unsigned error_size)
 {
 	if (*capture == NULL) {
-		if (ir_capture_open(capture, error, error_size) != 0)
+		uint64_t new_attempt = next_stream_attempt_id++;
+
+		if (attempt_id != NULL)
+			*attempt_id = new_attempt;
+		fprintf(stderr, "ir_diag event=stream_open attempt=%" PRIu64
+			" monotonic_ns=%" PRIu64 "\n", new_attempt,
+			monotonic_timestamp_ns());
+		if (ir_capture_open(capture, error, error_size) != 0) {
+			fprintf(stderr, "ir_diag event=stream_start attempt=%" PRIu64
+			" monotonic_ns=%" PRIu64 " result=open-failure\n",
+				new_attempt, monotonic_timestamp_ns());
 			return CAPTURE_STARTUP_ERROR;
+		}
+		ir_capture_set_stream_attempt_id(*capture, new_attempt);
 		if (ir_capture_start(*capture, error, error_size) != 0) {
 			ir_capture_close(*capture);
 			*capture = NULL;
@@ -186,7 +217,10 @@ static int close_capture(IrCapture **capture, IrCaptureStats *stats,
 	if (ir_capture_stop(*capture, error, error_size) != 0) {
 		if (totals != NULL)
 			totals->cleanup_failures++;
-		fprintf(stderr, "cleanup_error operation=STREAMOFF error=%s\n", error);
+		fprintf(stderr, "cleanup_error operation=STREAMOFF attempt=%" PRIu64
+			" monotonic_ns=%" PRIu64 " error=%s\n",
+			stats != NULL ? stats->stream_attempt_id : 0U,
+			monotonic_timestamp_ns(), error);
 		result = -1;
 	}
 	ir_capture_close(*capture);
@@ -206,12 +240,13 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 	uint64_t frames = 0U;
 	uint64_t changed = 0U;
 	uint64_t previous_hash = 0U;
+	uint64_t attempt_id = 0U;
 	bool have_previous = false;
 
 	while (!stop_requested && monotonic_seconds() - started <
 		(double)duration_seconds) {
-		int result = capture_one_frame(&capture, frame, &stats, error,
-			sizeof(error));
+		int result = capture_one_frame(&capture, frame, &stats, &attempt_id,
+			error, sizeof(error));
 
 		if (result > 0) {
 			uint8_t minimum;
@@ -240,25 +275,29 @@ static int run_persistent(unsigned duration_seconds, bool baseline,
 		} else if (result == CAPTURE_STARTUP_ERROR) {
 			totals->startup_errors++;
 			totals->recoveries++;
-			fprintf(stderr, "startup_error elapsed=%.3f recovery=%" PRIu64
-				" error=%s\n", monotonic_seconds() - started,
+			fprintf(stderr, "startup_error elapsed=%.3f attempt=%" PRIu64
+				" recovery=%" PRIu64 " error=%s\n",
+				monotonic_seconds() - started, attempt_id,
 				totals->recoveries, error);
 			if (close_capture(&capture, &stats, totals, error,
 				sizeof(error)) != 0 && !baseline)
 				break;
 			if (!baseline)
 				break;
+			log_reopen_event(attempt_id, totals->recoveries);
 			sleep(RECOVERY_DELAY_SECONDS);
 		} else {
 			totals->recoveries++;
-			fprintf(stderr, "capture_error elapsed=%.3f recovery=%" PRIu64
-				" kind=%s error=%s\n", monotonic_seconds() - started,
+			fprintf(stderr, "capture_error elapsed=%.3f attempt=%" PRIu64
+				" recovery=%" PRIu64 " kind=%s error=%s\n",
+				monotonic_seconds() - started, attempt_id,
 				totals->recoveries, capture_error_name(stats.last_error), error);
 			if (close_capture(&capture, &stats, totals, error,
 				sizeof(error)) != 0 && !baseline)
 				break;
 			if (!baseline)
 				break;
+			log_reopen_event(attempt_id, totals->recoveries);
 			sleep(RECOVERY_DELAY_SECONDS);
 		}
 		if (monotonic_seconds() >= next_report) {
@@ -318,6 +357,7 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 		(baseline || failed == 0U); cycle++) {
 		IrCapture *capture = NULL;
 		IrCaptureStats stats = { 0 };
+		uint64_t attempt_id = 0U;
 		char error[256];
 		unsigned frames = 0U;
 		bool cycle_ok = true;
@@ -336,8 +376,8 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 		uint64_t cycle_dqbuf_errors_before = totals->dqbuf_errors;
 
 		while (frames < frames_per_cycle && !stop_requested) {
-			int result = capture_one_frame(&capture, frame, &stats, error,
-				sizeof(error));
+			int result = capture_one_frame(&capture, frame, &stats, &attempt_id,
+				error, sizeof(error));
 
 			if (result > 0) {
 				frames++;
@@ -353,12 +393,14 @@ static int run_cycles(unsigned cycles, unsigned frames_per_cycle, bool baseline,
 				totals->startup_errors++;
 				totals->recoveries++;
 				cycle_ok = false;
-				fprintf(stderr, "cycle=%u startup_error=%s\n", cycle, error);
+				fprintf(stderr, "cycle=%u attempt=%" PRIu64
+					" startup_error=%s\n", cycle, attempt_id, error);
 				break;
 			}
 			totals->recoveries++;
 			cycle_ok = false;
-			fprintf(stderr, "cycle=%u capture_error kind=%s error=%s\n", cycle,
+			fprintf(stderr, "cycle=%u attempt=%" PRIu64
+				" capture_error kind=%s error=%s\n", cycle, attempt_id,
 				capture_error_name(stats.last_error), error);
 			break;
 		}

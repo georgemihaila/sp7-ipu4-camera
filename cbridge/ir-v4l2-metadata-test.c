@@ -142,6 +142,8 @@ static int test_rejection(uint8_t *raw, MockFrame frame, uint32_t reasons,
 		check(stats.last_rejection_plane_count ==
 			(frame.custom_buffer_metadata ? frame.plane_count : 1U),
 			"rejected plane-count snapshot is wrong") != 0 ||
+		check(stats.last_rejection_sequence == frame.sequence,
+			"rejected sequence snapshot is wrong") != 0 ||
 		check(stats.last_rejection_flags == frame.flags,
 			"rejected flags snapshot is wrong") != 0 ||
 		check(stats.last_rejection_timestamp_flags ==
@@ -154,6 +156,11 @@ static int test_rejection(uint8_t *raw, MockFrame frame, uint32_t reasons,
 			(uint64_t)frame.timestamp.tv_sec &&
 			stats.last_timestamp_usec == (uint64_t)frame.timestamp.tv_usec,
 			"rejected timestamp snapshot is wrong") != 0 ||
+		check(stats.last_rejection_timestamp_seconds ==
+			(uint64_t)frame.timestamp.tv_sec &&
+			stats.last_rejection_timestamp_usec ==
+			(uint64_t)frame.timestamp.tv_usec,
+			"dedicated rejected timestamp snapshot is wrong") != 0 ||
 		check(stats.last_rejection_capacity_available ==
 			(frame.index == 0U),
 			"rejected capacity availability is wrong") != 0 ||
@@ -308,6 +315,9 @@ static int test_timestamp_regression(uint8_t *raw)
 			"timestamp regression error was not reported") != 0 ||
 		check(stats.timestamp_errors == 1U && stats.rejected_buffers == 1U,
 			"timestamp error accounting is wrong") != 0 ||
+		check(stats.last_rejection_reasons ==
+			IR_CAPTURE_REJECTION_TIMESTAMP_REGRESSION,
+			"timestamp regression reason mask is wrong") != 0 ||
 		check(stats.sequence_gaps == 0U, "timestamp regression became a sequence gap") != 0) {
 		ir_test_capture_destroy(capture);
 		return EXIT_FAILURE;

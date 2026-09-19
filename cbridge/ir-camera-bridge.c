@@ -2,12 +2,14 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <linux/videodev2.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 
 #define IR_OUTPUT_DEVICE "/dev/video62"
@@ -15,11 +17,29 @@
 #define IR_RECOVERY_DELAY_SECONDS 1U
 
 static volatile sig_atomic_t stop_requested;
+static uint64_t next_stream_attempt_id = 1U;
 
 static void request_stop(int signal_number)
 {
 	(void)signal_number;
 	stop_requested = 1;
+}
+
+static uint64_t monotonic_timestamp_ns(void)
+{
+	struct timespec now;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+		return 0U;
+	return (uint64_t)now.tv_sec * UINT64_C(1000000000) +
+		(uint64_t)now.tv_nsec;
+}
+
+static void log_reopen_event(uint64_t after_attempt)
+{
+	fprintf(stderr, "ir_diag event=reopen after_attempt=%" PRIu64
+		" monotonic_ns=%" PRIu64 "\n", after_attempt,
+		monotonic_timestamp_ns());
 }
 
 static int set_output_format(int fd, char *error, unsigned error_size)
@@ -47,10 +67,19 @@ static int set_output_format(int fd, char *error, unsigned error_size)
 	return 0;
 }
 
-static int start_capture(IrCapture **capture, char *error, unsigned error_size)
+static int start_capture(IrCapture **capture, uint64_t attempt_id,
+	char *error, unsigned error_size)
 {
-	if (ir_capture_open(capture, error, error_size) != 0)
+	fprintf(stderr, "ir_diag event=stream_open attempt=%" PRIu64
+		" monotonic_ns=%" PRIu64 "\n", attempt_id,
+		monotonic_timestamp_ns());
+	if (ir_capture_open(capture, error, error_size) != 0) {
+		fprintf(stderr, "ir_diag event=stream_start attempt=%" PRIu64
+			" monotonic_ns=%" PRIu64 " result=open-failure\n", attempt_id,
+			monotonic_timestamp_ns());
 		return -1;
+	}
+	ir_capture_set_stream_attempt_id(*capture, attempt_id);
 	if (ir_capture_start(*capture, error, error_size) != 0) {
 		ir_capture_close(*capture);
 		*capture = NULL;
@@ -69,6 +98,7 @@ int main(void)
 	int output_fd;
 	int exit_code = EXIT_SUCCESS;
 	unsigned recoveries = 0U;
+	uint64_t attempt_id = 0U;
 
 	if (output_path == NULL || *output_path == '\0')
 		output_path = IR_OUTPUT_DEVICE;
@@ -83,15 +113,20 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 	while (!stop_requested) {
-		if (capture == NULL && start_capture(&capture, error, sizeof(error)) != 0) {
-			fprintf(stderr, "IR capture startup failed: %s\n", error);
-			if (recoveries >= IR_MAX_RECOVERIES) {
-				exit_code = EXIT_FAILURE;
-				break;
+		if (capture == NULL) {
+			attempt_id = next_stream_attempt_id++;
+			if (start_capture(&capture, attempt_id, error, sizeof(error)) != 0) {
+				fprintf(stderr, "IR capture startup failed attempt=%" PRIu64
+					": %s\n", attempt_id, error);
+				if (recoveries >= IR_MAX_RECOVERIES) {
+					exit_code = EXIT_FAILURE;
+					break;
+				}
+				recoveries++;
+				log_reopen_event(attempt_id);
+				sleep(IR_RECOVERY_DELAY_SECONDS);
+				continue;
 			}
-			recoveries++;
-			sleep(IR_RECOVERY_DELAY_SECONDS);
-			continue;
 		}
 		int result = ir_capture_next(capture, frame, sizeof(frame), 1000U,
 			&stats, error, sizeof(error));
@@ -99,7 +134,8 @@ int main(void)
 		if (result == 0)
 			continue;
 		if (result < 0) {
-			fprintf(stderr, "IR capture stopped: %s\n", error);
+			fprintf(stderr, "IR capture stopped attempt=%" PRIu64 ": %s\n",
+				attempt_id, error);
 			(void)ir_capture_stop(capture, error, sizeof(error));
 			ir_capture_close(capture);
 			capture = NULL;
@@ -108,6 +144,7 @@ int main(void)
 				break;
 			}
 			recoveries++;
+			log_reopen_event(attempt_id);
 			sleep(IR_RECOVERY_DELAY_SECONDS);
 			continue;
 		}
