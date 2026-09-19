@@ -1,0 +1,8 @@
+# SHA-256 of the complete preserved run artifacts.
+# Source directory: /var/tmp/ov7251-ir-source6-startup-20260919-200714/
+a45f830c7d9d497460d36f113451ad291b769431012597c4391fdb43f32cd25c  run.txt
+e1fe5546f4686b2c8c335b601e57e97642f209e36877e2cfb4d681ae489aabe4  qualify.log
+e33de2fd200b852f36aab9da9d6c4c6af022ce4e2977e8da3feb84ad1f766195  kernel.log
+768245a016251fd14e3558ca83ce7e972230f54c3a332d30ea679476afc22a9c  setup.log
+f30db2bb060426495faba1a9d4bc69bb14a07b76eb52e9b3780522dbf606fcff  graph-before.txt
+f811f690134315cd83374830af2f0bf5b6908506c630bf88565c954f607a83ae  graph-after.txt
