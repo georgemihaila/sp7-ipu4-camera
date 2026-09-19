@@ -1,0 +1,9 @@
+name:           intel_ipu4p_isys
+vermagic:       6.19.8-3.surface.fc43.x86_64 SMP preempt mod_unload
+sha256:         546d80d5c692e0b394b56f4771fbf244bb9427419f6126405fe766fc9b1eaf7b
+bb8_cphy_field: 13
+bb8_cphy_mask:  0xffffff81
+bb8_dphy_field: 32
+bb8_dphy_mask:  0xffffff81
+bb8_afe:        0x44104015
+bb8_readback:   before=(0x1001b,0x0,0x44104015) after=(0x1001b,0x41,0x44104015)

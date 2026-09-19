@@ -17,7 +17,7 @@ OUT_DIR=${1:-${OV7251_OUTPUT_DIR:-/var/tmp/ov7251-ir-capture-$(date +%Y%m%d-%H%M
 
 usage() {
 	cat <<'EOF'
-Usage: scripts/capture-ov7251-ir-frame.sh [OUTPUT_DIR]
+Usage: scripts/ir/capture-ov7251-ir-frame.sh [OUTPUT_DIR]
 
 The verified source-6 direct-tap module with BB8 initialization must already
 be loaded, and these links must already be enabled:
