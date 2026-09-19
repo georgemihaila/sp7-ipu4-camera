@@ -1,9 +1,10 @@
 # OV7251 IR standalone camera
 
-Status: source and userspace backend implemented; hardware and GNOME Snapshot
-qualification remains pending. This feature is deliberately standalone. The
-existing front/rear bridge controller does not enumerate, call, switch to, or
-restart the IR camera.
+Status: source and userspace backend implemented; continuous hardware
+qualification is currently **failed** and GNOME Snapshot qualification remains
+deferred. This feature is deliberately standalone. The existing front/rear
+bridge controller does not enumerate, call, switch to, or restart the IR
+camera.
 
 ## Source reproducibility
 
@@ -80,9 +81,29 @@ module-swapping wrapper is a service dependency.
 
 ## Qualification record
 
-The existing direct-tap evidence proves packet and buffer activity, but also
-records fatal receiver synchronization states `0x400` and `0x480`. Therefore the
-required gate is still not passed:
+The source-backed persistent qualifier was exercised on 2026-09-19 against
+`6.19.8-3.surface.fc43.x86_64`, using the bundled module SHA-256
+`546d80d5c692e0b394b56f4771fbf244bb9427419f6126405fe766fc9b1eaf7b`.
+The run was configured for 10 seconds and two short cycles while debugging the
+harness; the persistent failure prevented the cycle phase from running, so it
+was not a production gate attempt. Its artifacts are preserved at:
+
+```text
+/var/tmp/ov7251-ir-qualification-smoke-20260919-4/
+```
+
+The persistent run reached the decoder and produced 15 frames at 0.543 frames
+per second over 27.638 seconds. Fourteen consecutive decoded frames changed;
+the first valid frame reported `bytesused=399360`, `data_offset=4`,
+`stride=832`, and luma range `3..255`. It then rejected one buffer with an
+invalid `V4L2_BUF_FLAG_ERROR`/timestamp metadata combination, recovered twice,
+observed 539 sequence gaps, and hit a `VIDIOC_STREAMON` connection timeout.
+The kernel log contained 45 receiver-error status messages, 139 fatal-path
+messages, 32 CSI-2 startup errors, 32 `no frames from ov7251` retries, 119
+`error=8` firmware events, and repeated `0x400`, `0x480`, and `0x4000` states.
+
+This is useful evidence of changing decoded payload, but it is not stable
+continuous capture. The required gate is therefore still not passed:
 
 - 10 minutes of changing, correctly decoded frames: **NOT TESTED/PASS NOT
   CLAIMED**;
@@ -94,9 +115,18 @@ required gate is still not passed:
 - front/rear preservation: static controller and build tests pass; live RGB
   regression is still required after an authorized installation.
 
-The documented tap run showed receiver SOF/EOF and packet headers and produced
-one decodable buffer, but that is not clean continuous raster qualification.
-Do not suppress the fatal path or infer success from enumeration.
+The earlier documented tap run showed receiver SOF/EOF and packet headers and
+produced one decodable buffer, but that is not clean continuous raster
+qualification. Do not suppress the fatal path or infer success from
+enumeration. No receiver timing/PHY mutation was made in response to this run:
+the existing source-6 evidence still lacks a known-good Windows receiver trace
+or physical CSI lane measurement that would justify such a change.
+
+The diagnostic wrapper completed cleanup after the failed run: the temporary
+links were disabled, the source-backed module was unloaded, the distribution
+`intel_ipu4p_isys` module was restored, and the bridge was not active before or
+after the run. `/dev/video62` was not installed, no service was changed, and no
+reboot or suspend/resume was performed.
 
 ## Rollback
 
