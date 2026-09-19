@@ -27,7 +27,13 @@ static struct {
 	size_t next;
 	unsigned qbuf_calls;
 	bool fail_qbuf;
+	uint64_t monotonic_ns;
 } mock_stream;
+
+uint64_t sp7_camera_ir_test_monotonic_ns(void)
+{
+	return mock_stream.monotonic_ns;
+}
 
 int sp7_camera_ir_test_poll(struct pollfd *fds, nfds_t count, int timeout_ms)
 {
@@ -101,6 +107,12 @@ static void reset_mock(const MockFrame *frames, size_t count)
 	mock_stream.next = 0U;
 	mock_stream.qbuf_calls = 0U;
 	mock_stream.fail_qbuf = false;
+	mock_stream.monotonic_ns = UINT64_C(1000000000);
+}
+
+static void advance_mock_time(uint64_t nanoseconds)
+{
+	mock_stream.monotonic_ns += nanoseconds;
 }
 
 static IrCapture *new_capture(uint8_t *buffer, size_t buffer_length)
@@ -116,8 +128,15 @@ static int next_frame(IrCapture *capture, IrCaptureStats *stats, char *error)
 		error, 256U);
 }
 
+static int next_frame_with_output(IrCapture *capture, IrCaptureStats *stats,
+	char *error, uint8_t *output)
+{
+	return ir_capture_next(capture, output, IR_CAPTURE_OUTPUT_BYTES, 1000U,
+		stats, error, 256U);
+}
+
 static int test_rejection(uint8_t *raw, MockFrame frame, uint32_t reasons,
-	bool expect_requeue, bool fail_requeue)
+	bool expect_requeue, bool fail_requeue, bool discard_policy)
 {
 	const uint64_t attempt_id = 77U;
 	IrCaptureStats stats = { 0 };
@@ -130,6 +149,7 @@ static int test_rejection(uint8_t *raw, MockFrame frame, uint32_t reasons,
 	if (check(capture != NULL, "rejection capture construction failed") != 0)
 		return EXIT_FAILURE;
 	ir_capture_set_stream_attempt_id(capture, attempt_id);
+	ir_capture_set_discard_error_buffers(capture, discard_policy);
 	if (check(next_frame(capture, &stats, error) == -1,
 		"rejected frame did not preserve failure return") != 0 ||
 		check(stats.stream_attempt_id == attempt_id,
@@ -202,31 +222,31 @@ static int test_structured_rejections(uint8_t *raw)
 
 	frame.flags = valid_timestamp | V4L2_BUF_FLAG_ERROR;
 	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_ERROR_FLAG, true,
-		false) != 0)
+		false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.flags = 0U;
 	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS, true,
-		false) != 0)
+		false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.custom_buffer_metadata = true;
 	frame.flags = valid_timestamp;
 	frame.index = invalid_index;
 	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_INVALID_INDEX |
-		IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE, false, false) != 0)
+		IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE, false, false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.index = 0U;
 	frame.plane_count = 2U;
 	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_INVALID_PLANE_COUNT,
-		false, false) != 0)
+		false, false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.plane_count = 1U;
 	frame.data_offset = 13U;
 	if (test_rejection(raw, frame,
-		IR_CAPTURE_REJECTION_INVALID_PLANE_METADATA, true, false) != 0)
+		IR_CAPTURE_REJECTION_INVALID_PLANE_METADATA, true, false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.index = invalid_index;
@@ -236,7 +256,7 @@ static int test_structured_rejections(uint8_t *raw)
 		IR_CAPTURE_REJECTION_CAPACITY_UNAVAILABLE |
 		IR_CAPTURE_REJECTION_INVALID_PLANE_COUNT |
 		IR_CAPTURE_REJECTION_ERROR_FLAG |
-		IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS, false, false) != 0)
+		IR_CAPTURE_REJECTION_TIMESTAMP_FLAGS, false, false, false) != 0)
 		return EXIT_FAILURE;
 
 	frame.index = 0U;
@@ -244,7 +264,7 @@ static int test_structured_rejections(uint8_t *raw)
 	frame.flags = valid_timestamp | V4L2_BUF_FLAG_ERROR;
 	frame.data_offset = 4U;
 	if (test_rejection(raw, frame, IR_CAPTURE_REJECTION_ERROR_FLAG, true,
-		true) != 0)
+		true, true) != 0)
 		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
@@ -400,6 +420,196 @@ static int test_stream_restart(uint8_t *raw)
 	return EXIT_SUCCESS;
 }
 
+static int test_discard_continuation(uint8_t *raw)
+{
+	const MockFrame frames[] = {
+		{ 12U, { 60, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 13U, { 60, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U,
+			0U, 1U, false },
+	};
+	uint8_t output[IR_CAPTURE_OUTPUT_BYTES];
+	IrCaptureStats stats = { 0 };
+	IrCapture *capture;
+	char error[256] = { 0 };
+
+	reset_mock(frames, sizeof(frames) / sizeof(frames[0]));
+	capture = new_capture(raw, 13U);
+	if (check(capture != NULL, "discard continuation capture construction failed") != 0)
+		return EXIT_FAILURE;
+	ir_capture_set_discard_error_buffers(capture, true);
+	memset(output, 0xa5, sizeof(output));
+	if (check(next_frame_with_output(capture, &stats, error, output) ==
+			IR_CAPTURE_RESULT_DISCARDED,
+			"exact error buffer did not continue as discarded") != 0 ||
+		check(stats.discarded_buffers == 1U && stats.frames == 0U,
+			"discarded buffer was counted as a delivered frame") != 0 ||
+		check(mock_stream.qbuf_calls == 1U,
+			"discarded buffer was not requeued") != 0 ||
+		check(output[0] == 0xa5U && output[IR_CAPTURE_OUTPUT_BYTES - 1U] == 0xa5U,
+			"discarded payload reached output") != 0 ||
+		check(next_frame_with_output(capture, &stats, error, output) == 1,
+			"valid frame did not follow discarded buffer") != 0 ||
+		check(stats.frames == 1U && stats.consecutive_discards == 0U,
+			"valid frame did not reset discard state") != 0 ||
+		check(output[0] != 0xa5U && output[1] == 0x80U,
+			"valid payload was not decoded") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	ir_test_capture_destroy(capture);
+	return EXIT_SUCCESS;
+}
+
+static int test_combined_rejection_not_discarded(uint8_t *raw)
+{
+	const uint32_t valid_timestamp = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	MockFrame frame = { 12U, { 60, 1 }, valid_timestamp | V4L2_BUF_FLAG_ERROR,
+		13U, 13U, 0U, 1U, false };
+	IrCaptureStats stats = { 0 };
+	IrCapture *capture;
+	char error[256] = { 0 };
+
+	reset_mock(&frame, 1U);
+	capture = new_capture(raw, 13U);
+	if (check(capture != NULL, "combined rejection capture construction failed") != 0)
+		return EXIT_FAILURE;
+	ir_capture_set_discard_error_buffers(capture, true);
+	if (check(next_frame(capture, &stats, error) == -1,
+			"combined rejection was incorrectly discarded") != 0 ||
+		check(stats.last_rejection_reasons ==
+			(IR_CAPTURE_REJECTION_ERROR_FLAG |
+			 IR_CAPTURE_REJECTION_INVALID_PLANE_METADATA),
+			"combined rejection mask was not preserved") != 0 ||
+		check(stats.discarded_buffers == 0U &&
+			stats.last_requeue_result == IR_CAPTURE_REQUEUE_SUCCEEDED,
+			"combined rejection continuation accounting is wrong") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	ir_test_capture_destroy(capture);
+	return EXIT_SUCCESS;
+}
+
+static int test_discard_thresholds(uint8_t *raw)
+{
+	const MockFrame frames[] = {
+		{ 1U, { 70, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 2U, { 70, 2 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 3U, { 70, 3 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 4U, { 70, 4 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 5U, { 70, 5 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		{ 6U, { 70, 6 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+			V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+	};
+	IrCaptureStats stats = { 0 };
+	IrCapture *capture;
+	char error[256] = { 0 };
+
+	reset_mock(frames, sizeof(frames) / sizeof(frames[0]));
+	capture = new_capture(raw, 13U);
+	if (check(capture != NULL, "count threshold capture construction failed") != 0)
+		return EXIT_FAILURE;
+	ir_capture_set_discard_error_buffers(capture, true);
+	for (unsigned index = 0U; index < 5U; index++) {
+		if (check(next_frame(capture, &stats, error) ==
+			IR_CAPTURE_RESULT_DISCARDED,
+			"discard count threshold fired too early") != 0) {
+			ir_test_capture_destroy(capture);
+			return EXIT_FAILURE;
+		}
+	}
+	if (check(next_frame(capture, &stats, error) == -1,
+			"sixth consecutive discard did not enter recovery") != 0 ||
+		check(stats.discarded_buffers == 5U && stats.discard_limit_errors == 1U,
+			"discard count threshold accounting is wrong") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	ir_test_capture_destroy(capture);
+
+	{
+		const MockFrame one_frame[] = {
+			{ 9U, { 80, 1 }, V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC |
+				V4L2_BUF_FLAG_ERROR, 13U, 4U, 0U, 1U, false },
+		};
+		stats = (IrCaptureStats){ 0 };
+		memset(error, 0, sizeof(error));
+		reset_mock(one_frame, 1U);
+		capture = new_capture(raw, 13U);
+		if (check(capture != NULL, "time threshold capture construction failed") != 0)
+			return EXIT_FAILURE;
+		ir_capture_set_discard_error_buffers(capture, true);
+		if (check(next_frame(capture, &stats, error) ==
+				IR_CAPTURE_RESULT_DISCARDED,
+				"initial timed discard did not continue") != 0) {
+			ir_test_capture_destroy(capture);
+			return EXIT_FAILURE;
+		}
+		advance_mock_time(UINT64_C(2000000001));
+		if (check(next_frame(capture, &stats, error) == -1,
+				"two-second discard threshold did not enter recovery") != 0 ||
+			check(stats.discarded_buffers == 1U &&
+				stats.discard_limit_errors == 1U,
+				"two-second discard threshold accounting is wrong") != 0) {
+			ir_test_capture_destroy(capture);
+			return EXIT_FAILURE;
+		}
+		ir_test_capture_destroy(capture);
+	}
+	return EXIT_SUCCESS;
+}
+
+static int test_discard_reset_after_valid(uint8_t *raw)
+{
+	MockFrame frames[7];
+	IrCaptureStats stats = { 0 };
+	IrCapture *capture;
+	char error[256] = { 0 };
+
+	for (unsigned index = 0U; index < 7U; index++) {
+		frames[index] = (MockFrame){ index + 1U, { 90, index + 1 },
+			V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC, 13U, 4U, 0U, 1U, false };
+	}
+	frames[0].flags |= V4L2_BUF_FLAG_ERROR;
+	for (unsigned index = 2U; index < 7U; index++)
+		frames[index].flags |= V4L2_BUF_FLAG_ERROR;
+
+	reset_mock(frames, 7U);
+	capture = new_capture(raw, 13U);
+	if (check(capture != NULL, "discard reset capture construction failed") != 0)
+		return EXIT_FAILURE;
+	ir_capture_set_discard_error_buffers(capture, true);
+	if (check(next_frame(capture, &stats, error) == IR_CAPTURE_RESULT_DISCARDED,
+			"pre-reset discard did not continue") != 0 ||
+		check(next_frame(capture, &stats, error) == 1,
+			"reset frame was not delivered") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	for (unsigned index = 0U; index < 5U; index++) {
+		if (check(next_frame(capture, &stats, error) ==
+			IR_CAPTURE_RESULT_DISCARDED,
+			"valid frame did not reset discard threshold") != 0) {
+			ir_test_capture_destroy(capture);
+			return EXIT_FAILURE;
+		}
+	}
+	if (check(stats.frames == 1U && stats.discarded_buffers == 6U &&
+		stats.discard_limit_errors == 0U && stats.consecutive_discards == 5U,
+		"discard state was not reset by a valid frame") != 0) {
+		ir_test_capture_destroy(capture);
+		return EXIT_FAILURE;
+	}
+	ir_test_capture_destroy(capture);
+	return EXIT_SUCCESS;
+}
+
 int main(void)
 {
 	uint8_t raw[13] = { 0 };
@@ -407,7 +617,11 @@ int main(void)
 	raw[4] = 0x40U;
 	if (test_consecutive_and_skips(raw) != 0 ||
 		test_timestamp_regression(raw) != 0 || test_wraparound(raw) != 0 ||
-		test_stream_restart(raw) != 0 || test_structured_rejections(raw) != 0)
+		test_stream_restart(raw) != 0 || test_structured_rejections(raw) != 0 ||
+		test_discard_continuation(raw) != 0 ||
+		test_combined_rejection_not_discarded(raw) != 0 ||
+		test_discard_thresholds(raw) != 0 ||
+		test_discard_reset_after_valid(raw) != 0)
 		return EXIT_FAILURE;
 	puts("test-ir-metadata: PASS");
 	return EXIT_SUCCESS;
