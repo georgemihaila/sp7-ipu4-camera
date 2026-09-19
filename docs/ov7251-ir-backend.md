@@ -184,6 +184,83 @@ links were disabled, the source-backed module was unloaded, the distribution
 after the run. `/dev/video62` was not installed, no service was changed, and no
 reboot or suspend/resume was performed.
 
+### 2026-09-19 corrected-accounting short run
+
+After the metadata-preservation fix was committed, a 120-second persistent
+capture plus all 20 stop/start cycles was run in baseline mode with the BB8
+module and configuration unchanged. The complete artifacts are preserved at:
+
+```text
+/var/tmp/ov7251-ir-qualification-short-20260919-181411/
+```
+
+The run used commit `0d3825fa317dc9c94fa1999dfb11c1b79b989c93`, executable
+SHA-256
+`645e94e3bb7abfbc4e555b65293a73585369e1b7a636cc8bbb23eb37c454b2ec`, and the
+unchanged BB8 module SHA-256
+`546d80d5c692e0b394b56f4771fbf244bb9427419f6126405fe766fc9b1eaf7b`.
+
+Persistent capture requested 120 seconds and ran for 121.211 seconds
+(258.087 seconds total wall time). It decoded 745 frames, 744 changed, at
+6.146 FPS. The corrected totals were:
+
+- startup failures: 1;
+- metadata errors: 23;
+- timestamp, sequence, decode, requeue, poll, and DQBUF errors: 0;
+- genuine DQBUF sequence gaps: 1;
+- rejected buffers: 23;
+- recoveries: 24;
+- timeouts and cleanup failures: 0.
+
+All 20 cycles were attempted. Fourteen passed and six failed. Cycles 3, 4, 8,
+and 20 failed at startup with `VIDIOC_STREAMON: Connection timed out`; cycles
+15 and 18 failed on invalid source-6 metadata after 1 and 4 decoded frames,
+respectively. The cycle phase had zero sequence gaps, two rejected buffers,
+four startup failures, six recoveries, and zero cleanup failures. In
+particular, cycle 17 passed with five frames and zero gaps; the previous
+baseline's cycle 17 had failed only because the old accounting reported 94
+false gaps.
+
+Progress accounting reconciled: all 13 persistent progress snapshots were
+monotonic, and the final snapshot matched the `persistent_summary` for every
+field, including frames, error categories, recoveries, gaps, rejected buffers,
+and cleanup failures. The final progress line was not added again at close.
+The committed `test-ir-metadata` regression also passed with QBUF deliberately
+overwriting sequence, timestamp, flags, and plane metadata: preserved DQBUF
+values remained reportable, consecutive frames had zero gaps, a genuine skip
+counted correctly, timestamp regression remained detectable, wraparound was
+accepted, and reopening reset the sequence domain.
+
+Kernel evidence remains separate from userspace counters. This run emitted
+428 explicit `receiver error status ... (fatal)` lines, 4,705 source-6
+`error=8` lines, and 247 `no frames from ov7251` lines. It also contained 2,348
+receiver error snapshots; 2,213 had nonzero `fatal_receiver_errors`, including
+600 where the current `receiver_errors` field was zero. Those 600 are evidence
+that the fatal field can be retained in later snapshots, not 600 newly emitted
+fatal transitions. Existing kernel rate limiting remains in effect, so emitted
+counts are lower bounds.
+
+The decoded-frame evidence is committed under
+[`docs/ir-evidence/20260919-short/`](ir-evidence/20260919-short/). The two
+current window/sofa frames are recognizable and differ by only 1.0755 mean
+absolute pixel levels, with no pixel differing by more than 32 levels; their
+different hashes therefore do not establish motion or image integrity. The
+historical tablet frame is explicitly labeled as a different timeline; its
+large, recognizable content difference from the current room scene verifies
+gross scene-correlated payload changes across captures, but is not same-run
+motion evidence.
+
+The run returned `result=BASELINE` with `stability_pass=NO`, and the full
+600-second qualification was not repeated because the shorter gate failed.
+The corrected failure categories select receiver/transport and stream-start
+correlation as the next investigation: the dominant new failures are invalid
+source-6 metadata and `STREAMON` timeouts, while gap accounting is no longer
+the primary explanation. PHY settings, fatal handling, and desktop
+integration remain unchanged and deferred. After cleanup the distribution
+module was restored with SHA-256
+`10ec710e00d411cc29b5f192200bd22b28b4e13a0cd131ab93ad9ecbc433e3ce`, and the
+bridge remained inactive.
+
 ## Baseline mode
 
 The qualifier has two modes. The default mode is fail-fast: a persistent
