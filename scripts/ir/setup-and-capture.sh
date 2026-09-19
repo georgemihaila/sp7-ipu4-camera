@@ -23,9 +23,9 @@ OV7251 frame, and restores the software module/bridge state on exit. It:
 
   - stops the active user bridge service, if it was active;
   - replaces the distribution ISYS module with the bundled BB8 debug module;
-  - verifies the expected BB8 readback in the kernel log;
   - enables the OV7251 -> CSI-2 1 -> direct-capture links;
   - runs capture-ov7251-ir-frame.sh;
+  - verifies the expected BB8 readback emitted when receiver streaming starts;
   - disables those links, reloads the distribution module, and restarts the
     bridge if it was active.
 
@@ -71,6 +71,7 @@ bridge_was_active=0
 base_was_loaded=0
 base_removed=0
 candidate_loaded=0
+candidate_removed=0
 sensor_link_enabled=0
 capture_link_enabled=0
 
@@ -88,9 +89,23 @@ read_kernel_log() {
 	sudo -n journalctl -k -b -o short-monotonic --since "$setup_start" >"$SETUP_LOG" 2>/dev/null || :
 }
 
+unload_isys() {
+	local last_error=''
+	local attempt
+	for attempt in 1 2 3 4 5 6 7 8; do
+		if last_error=$(sudo -n modprobe -r intel_ipu4p_isys 2>&1); then
+			return 0
+		fi
+		sleep 1
+	done
+	printf '%s\n' "$last_error" >&2
+	return 1
+}
+
 cleanup() {
 	local original_rc=$?
 	local cleanup_rc=0
+	local software_restored=1
 	trap - EXIT
 	set +e
 
@@ -103,13 +118,29 @@ cleanup() {
 			'ov7251 2-0060' 0 'Intel IPU4 CSI-2 1' 0 off || cleanup_rc=1
 	fi
 	if [[ $candidate_loaded -eq 1 ]]; then
-		sudo -n modprobe -r intel_ipu4p_isys || cleanup_rc=1
+		if unload_isys; then
+			candidate_removed=1
+		else
+			cleanup_rc=1
+			software_restored=0
+			printf 'error: debug module remains loaded; refusing to restart the bridge on it\n' >&2
+		fi
 	fi
 	if [[ $base_was_loaded -eq 1 && $base_removed -eq 1 ]]; then
-		sudo -n modprobe intel_ipu4p_isys || cleanup_rc=1
+		if [[ $candidate_removed -eq 1 ]]; then
+			if ! sudo -n modprobe intel_ipu4p_isys; then
+				cleanup_rc=1
+				software_restored=0
+			fi
+		else
+			cleanup_rc=1
+			software_restored=0
+		fi
 	fi
-	if [[ $bridge_was_active -eq 1 ]]; then
+	if [[ $bridge_was_active -eq 1 && $software_restored -eq 1 ]]; then
 		systemctl --user start "$BRIDGE_SERVICE" || cleanup_rc=1
+	elif [[ $bridge_was_active -eq 1 && $software_restored -eq 0 ]]; then
+		printf 'error: bridge remains stopped because software restoration is incomplete\n' >&2
 	fi
 
 	if [[ $original_rc -eq 0 && $cleanup_rc -ne 0 ]]; then
@@ -124,7 +155,7 @@ if [[ $bridge_was_active -eq 1 ]]; then
 	systemctl --user stop "$BRIDGE_SERVICE" || die "could not stop $BRIDGE_SERVICE"
 fi
 if [[ $base_was_loaded -eq 1 ]]; then
-	sudo -n modprobe -r intel_ipu4p_isys || die "could not unload distribution intel_ipu4p_isys"
+	unload_isys || die "could not unload distribution intel_ipu4p_isys; inspect active camera users"
 	base_removed=1
 fi
 
@@ -133,12 +164,6 @@ sudo -n modprobe -a videobuf2-dma-contig videobuf2-v4l2 intel-ipu4p-isys-csslib 
 sudo -n insmod "$MODULE" debug_capture_links=1 || \
 	die "could not load the bundled source-6 debug module"
 candidate_loaded=1
-
-read_kernel_log
-grep -Fq 'source-6 BB8 init:' "$SETUP_LOG" || \
-	die "BB8 initialization was not reported; see $SETUP_LOG"
-grep -Fq 'after=(0x1001b,0x41,0x44104015)' "$SETUP_LOG" || \
-	die "BB8 readback does not match the verified candidate; see $SETUP_LOG"
 
 sudo -n "$LINK_HELPER" "$MEDIA" \
 	'ov7251 2-0060' 0 'Intel IPU4 CSI-2 1' 0 on || \
@@ -149,7 +174,20 @@ sudo -n "$LINK_HELPER" "$MEDIA" \
 	die "could not enable the CSI-to-direct-capture link"
 capture_link_enabled=1
 
+set +e
 OV7251_MEDIA=$MEDIA OV7251_DEVICE=$DEVICE \
 	"$CAPTURE" "$OUT_DIR"
+capture_rc=$?
+set -e
+
+read_kernel_log
+grep -Fq 'source-6 BB8 init:' "$SETUP_LOG" || \
+	die "BB8 initialization was not reported after receiver start; see $SETUP_LOG"
+grep -Fq 'after=(0x1001b,0x41,0x44104015)' "$SETUP_LOG" || \
+	die "BB8 readback does not match the verified candidate; see $SETUP_LOG"
+
+if [[ $capture_rc -ne 0 ]]; then
+	exit "$capture_rc"
+fi
 
 printf 'capture finished; restoring links, module, and bridge state\n'

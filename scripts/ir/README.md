@@ -41,7 +41,8 @@ scripts/ir/capture-ov7251-ir-frame.sh /var/tmp/ov7251-ir-test
 The bundled module has vermagic
 `6.19.8-3.surface.fc43.x86_64 SMP preempt mod_unload` and is not a generic
 kernel module. The wrapper verifies the BB8 log readback
-`after=(0x1001b,0x41,0x44104015)` before capture.
+`after=(0x1001b,0x41,0x44104015)` after the receiver starts. The bundled
+module emits this diagnostic during receiver setup, not at module insertion.
 
 Cleanup reloads the distribution software module and restarts the bridge if
 it was active. Earlier read-only verification showed that module reload and a
