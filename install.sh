@@ -230,8 +230,9 @@ Installation complete for kernel $KREL.
 EOF
 cat <<EOF
 The OV7251 IR camera driver, including the read-only illuminator control, was
-installed. The illuminator remains disabled by default; enabling it is a
-separate hardware experiment.
+installed. The installer also enables the OV7251 STROBE/frame-PWM output and
+bounded register diagnostics through /etc/modprobe.d/99-sp7-ov7251.conf.
+The settings take effect when the module is next loaded.
 EOF
 if [ "$INSTALL_MODE" = full ]; then
 	cat <<EOF

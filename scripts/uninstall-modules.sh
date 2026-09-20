@@ -6,6 +6,8 @@ set -eu
 KREL=${KREL:-$(uname -r)}
 MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
+MODPROBE_CONFIG=${MODPROBE_CONFIG:-/etc/modprobe.d/99-sp7-ov7251.conf}
+MODPROBE_MANIFEST="$MODDIR/.ipu4p-camera-ov7251-modprobe"
 ROOT=${MODULE_SOURCE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 if [ "${MODULE_SOURCE_MANIFEST_EXTRA+x}" = x ]; then
@@ -82,6 +84,25 @@ else
 		fi
 	done < "$MANIFEST"
 	mv -f "$tmp" "$MANIFEST"
+fi
+
+if [ -e "$MODPROBE_MANIFEST" ] || [ -L "$MODPROBE_MANIFEST" ]; then
+	[ -f "$MODPROBE_MANIFEST" ] || {
+		printf 'error: OV7251 modprobe manifest is not a regular file: %s\n' "$MODPROBE_MANIFEST" >&2; exit 2;
+	}
+	IFS=' ' read -r owned_path expected_hash extra < "$MODPROBE_MANIFEST"
+	[ "$owned_path" = "$MODPROBE_CONFIG" ] && [ -z "${extra:-}" ] && \
+		printf '%s\n' "$expected_hash" | grep -Eq '^[0-9a-f]{64}$' || {
+		printf 'error: malformed OV7251 modprobe manifest: %s\n' "$MODPROBE_MANIFEST" >&2; exit 2;
+	}
+	if [ ! -e "$MODPROBE_CONFIG" ] && [ ! -L "$MODPROBE_CONFIG" ]; then
+		rm -f "$MODPROBE_MANIFEST"
+	elif [ ! -L "$MODPROBE_CONFIG" ] && [ -f "$MODPROBE_CONFIG" ] && \
+		[ "$(file_hash "$MODPROBE_CONFIG")" = "$expected_hash" ]; then
+		rm -f "$MODPROBE_CONFIG" "$MODPROBE_MANIFEST"
+	else
+		printf 'left modified or non-regular OV7251 modprobe configuration in place: %s\n' "$MODPROBE_CONFIG" >&2
+	fi
 fi
 
 if [ "$removed" -gt 0 ]; then depmod -a "$KREL"; fi

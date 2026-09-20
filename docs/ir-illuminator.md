@@ -1,9 +1,10 @@
 # IR illuminator: OV7251 STROBE/frame-PWM control path
 
-This page documents the candidate OV7251 illuminator implementation and its
-hardware boundary. It is not part of the default installed OV7251 module: the
-candidate is built from `patches/ov7251-illuminator-experiment.patch` into a
-temporary, kernel-specific module. The option defaults off, no GPIO is guessed,
+This page documents the OV7251 illuminator implementation and its hardware
+boundary. The module is built from
+`patches/ov7251-illuminator-experiment.patch` into a kernel-specific module.
+The parameters retain safe compiled-in defaults; the installer enables them at
+module load time through `modprobe.d/99-sp7-ov7251.conf`. No GPIO is guessed,
 and no optical illumination result is claimed.
 
 ## What is being controlled
@@ -42,10 +43,18 @@ static bool strobe_diagnostics;
 module_param_named(strobe_diagnostics, strobe_diagnostics, bool, 0444);
 ```
 
-`experimental_strobe_output=0` is the safe default. It leaves the existing
-sensor mode tables and the normal `0x0100` stream sequence unchanged.
+`experimental_strobe_output=0` is the safe compiled-in default. It leaves the
+existing sensor mode tables and the normal `0x0100` stream sequence unchanged.
 `strobe_diagnostics=1` enables bounded register readback only; it does not
 enable the output.
+
+The source and prebuilt installers install this equivalent modprobe option:
+
+```text
+options ov7251 experimental_strobe_output=1 strobe_diagnostics=1
+```
+
+The options take effect on the next module load (normally after reboot).
 
 The reproducible builder accepts a source file whose SHA-256 is the pinned
 linux-surface OV7251 source and emits a temporary `.ko`:
@@ -179,8 +188,8 @@ off parameters, powered cleanup, duplicate-shutdown protection, PM/remove
 ordering, and failed-start recovery. They do not prove the STROBE pin toggles
 on a physical board, an LED emits IR, or the output improves a decoded frame.
 
-The prepared candidate has not been installed or loaded as the default module,
-and an enabled source-6 capture was not qualified. A future hardware test must
+The installed module is configured to load with both options enabled, but an
+enabled source-6 capture was not qualified. A future hardware test must
 keep the RGB bridge unchanged, hold exposure/gain fixed, capture a valid
 changing IR stream, and use an independent IR-sensitive detector. Do not
 replace this with a generic GPIO write or a brightness observation from an RGB

@@ -141,6 +141,7 @@ cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 cp -p "$MODULE_MANIFEST_EXTRA" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
 cp -p "$ROOT/modprobe.d/98-v4l2loopback.conf" "$STAGE/modprobe.d/"
+cp -p "$ROOT/modprobe.d/99-sp7-ov7251.conf" "$STAGE/modprobe.d/"
 cp -p "$ROOT/wireplumber/50-sp7-ipu4.conf" "$STAGE/wireplumber/"
 cp -p "$ROOT/systemd/user/sp7-camera-bridge.service" "$STAGE/systemd/user/"
 

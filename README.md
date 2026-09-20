@@ -40,7 +40,8 @@ of production readiness.
 
 The release workflow is configured to build the IPU4P stack and patched OV7251
 IR camera module for this exact kernel release. The OV7251 illuminator control
-is installed read-only and remains disabled by default.
+is installed read-only; installation enables its STROBE/frame-PWM output and
+bounded register diagnostics through a modprobe configuration fragment.
 These binaries are kernel-specific; install only the asset whose kernel
 release matches `uname -r`. Other kernels require a matching prepared kernel
 build tree and may need kernel-tree integration for the OV5693 sensor source.
@@ -339,10 +340,12 @@ opening the output gate, then clears the gate before PWM during cleanup. The
 unrelated register bits are preserved, and cleanup is tied to the sensor's
 power-off path so the output is not intentionally left enabled.
 
-The control path is an opt-in candidate and disabled by default; it is not
-installed or loaded as part of the normal stack, and no optical illumination
-result is claimed. The exact I2C byte sequences, read-modify-write ordering,
-cleanup, diagnostic reads, and build boundary are documented in
+The driver parameters retain safe compiled-in defaults, while the installer
+enables them at module load time through
+`/etc/modprobe.d/99-sp7-ov7251.conf`. This does not claim optical illumination
+or change the module's driver logic. The exact I2C byte sequences,
+read-modify-write ordering, cleanup, diagnostic reads, and build boundary are
+documented in
 [`docs/ir-illuminator.md`](docs/ir-illuminator.md). The original bounded
 experiment record remains in
 [`docs/ov7251-illuminator-experiment.md`](docs/ov7251-illuminator-experiment.md).

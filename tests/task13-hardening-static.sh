@@ -86,8 +86,9 @@ printf 'firmware bytes\n' > "$fwsrc"
 source_root="$tmpdir/source"
 intel_src="$source_root/linux-6.19.8/drivers/media/pci/intel"
 mkdir -p "$intel_src/ipu4/ipu4p-css/lib2600psys"
-mkdir -p "$source_root/modules"
+mkdir -p "$source_root/modules" "$source_root/modprobe.d"
 cp "$ROOT/modules/ipu4p-camera.modules" "$source_root/modules/"
+cp "$ROOT/modprobe.d/99-sp7-ov7251.conf" "$source_root/modprobe.d/"
 while IFS= read -r module; do
 	[ -n "$module" ] || continue
 	case $module in
@@ -101,13 +102,14 @@ $modules
 EOF
 moddir="$tmpdir/install-modules"
 firmware_target="$tmpdir/firmware/ipu4p_cpd.bin"
+modprobe_config="$tmpdir/modprobe.d/99-sp7-ov7251.conf"
 PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
-	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" MODPROBE_CONFIG="$modprobe_config" sh "$INSTALL"
 [ "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 6 ]
 [ "$(wc -l < "$moddir/.ipu4p-camera-modules" | tr -d '[:space:]')" -eq 6 ]
 PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$moddir" \
-	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" sh "$INSTALL"
-PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" sh "$UNINSTALL"
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$firmware_target" MODPROBE_CONFIG="$modprobe_config" sh "$INSTALL"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$moddir" MODPROBE_CONFIG="$modprobe_config" sh "$UNINSTALL"
 [ -z "$(find "$moddir" -maxdepth 1 -type f -name '*.ko' -print -quit)" ]
 [ -f "$firmware_target" ]
 [ ! -e "$moddir/.ipu4p-camera-modules" ]
@@ -128,11 +130,11 @@ native_path="$tmpdir/native/ipu-bridge.ko"
 mkdir -p "$(dirname "$native_path")"
 printf 'native bridge bytes\n' > "$native_path"
 PATH="$mockbin:$PATH" NATIVE_BRIDGE_PATH="$native_path" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$native_moddir" \
-	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/native-fw" sh "$INSTALL"
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/native-fw" MODPROBE_CONFIG="$modprobe_config" sh "$INSTALL"
 [ ! -e "$native_moddir/ipu-bridge.ko" ]
 [ "$(find "$native_moddir" -maxdepth 1 -type f -name '*.ko' | wc -l | tr -d '[:space:]')" -eq 5 ]
 ! grep -q '^ipu-bridge\.ko ' "$native_moddir/.ipu4p-camera-modules"
-PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$native_moddir" sh "$UNINSTALL"
+PATH="$mockbin:$PATH" KREL=task13-test MODDIR="$native_moddir" MODPROBE_CONFIG="$modprobe_config" sh "$UNINSTALL"
 [ -f "$native_path" ]
 [ ! -e "$native_moddir/.ipu4p-camera-modules" ]
 
@@ -141,7 +143,7 @@ conflict_dir="$tmpdir/install-conflict"
 mkdir -p "$conflict_dir"
 printf 'existing module\n' > "$conflict_dir/ipu-bridge.ko"
 if PATH="$mockbin:$PATH" MODULE_SOURCE_ROOT="$source_root" KREL=task13-test MODDIR="$conflict_dir" \
-	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/conflict-fw" sh "$INSTALL" > "$tmp" 2>&1; then
+	FIRMWARE="$fwsrc" FIRMWARE_TARGET="$tmpdir/conflict-fw" MODPROBE_CONFIG="$modprobe_config" sh "$INSTALL" > "$tmp" 2>&1; then
 	echo 'task13-hardening-static: installer replaced an untracked module' >&2
 	exit 1
 fi

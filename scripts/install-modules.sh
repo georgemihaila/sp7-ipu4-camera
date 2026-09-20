@@ -8,7 +8,10 @@ KREL=${KREL:-$(uname -r)}
 MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 FIRMWARE=${FIRMWARE:-}
 FIRMWARE_TARGET=${FIRMWARE_TARGET:-/lib/firmware/ipu4p_cpd.bin}
+MODPROBE_CONFIG=${MODPROBE_CONFIG:-/etc/modprobe.d/99-sp7-ov7251.conf}
+MODPROBE_SOURCE=${MODPROBE_SOURCE:-$ROOT/modprobe.d/99-sp7-ov7251.conf}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
+MODPROBE_MANIFEST="$MODDIR/.ipu4p-camera-ov7251-modprobe"
 SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 if [ "${MODULE_SOURCE_MANIFEST_EXTRA+x}" = x ]; then
 	EXTRA_SOURCE_MANIFEST=$MODULE_SOURCE_MANIFEST_EXTRA
@@ -24,6 +27,10 @@ fi
 
 [ -f "$SOURCE_MANIFEST" ] || {
 	printf 'error: source module manifest is missing: %s\n' "$SOURCE_MANIFEST" >&2
+	exit 2
+}
+[ -f "$MODPROBE_SOURCE" ] || {
+	printf 'error: OV7251 modprobe configuration is missing: %s\n' "$MODPROBE_SOURCE" >&2
 	exit 2
 }
 
@@ -156,6 +163,21 @@ if [ -e "$FIRMWARE_TARGET" ] || [ -L "$FIRMWARE_TARGET" ]; then
 	}
 fi
 
+MODPROBE_INSTALL=0
+if [ -e "$MODPROBE_CONFIG" ] || [ -L "$MODPROBE_CONFIG" ]; then
+	[ -f "$MODPROBE_CONFIG" ] && cmp -s "$MODPROBE_SOURCE" "$MODPROBE_CONFIG" || {
+		printf 'error: refusing to overwrite existing OV7251 modprobe configuration: %s\n' "$MODPROBE_CONFIG" >&2; exit 2;
+	}
+else
+	MODPROBE_INSTALL=1
+fi
+
+if [ -e "$MODPROBE_MANIFEST" ] || [ -L "$MODPROBE_MANIFEST" ]; then
+	[ -f "$MODPROBE_MANIFEST" ] || {
+		printf 'error: OV7251 modprobe manifest is not a regular file: %s\n' "$MODPROBE_MANIFEST" >&2; exit 2;
+	}
+fi
+
 mkdir -p "$MODDIR"
 STAGE=$(mktemp -d "$MODDIR/.ipu4p-camera-stage.XXXXXX")
 cleanup() {
@@ -199,7 +221,12 @@ EOF
 if [ ! -e "$FIRMWARE_TARGET" ]; then
 	install -D -m 0644 "$FIRMWARE" "$FIRMWARE_TARGET"
 fi
+if [ "$MODPROBE_INSTALL" -eq 1 ]; then
+	install -D -m 0644 "$MODPROBE_SOURCE" "$MODPROBE_CONFIG"
+	printf '%s %s\n' "$MODPROBE_CONFIG" "$(file_hash "$MODPROBE_CONFIG")" > "$MODPROBE_MANIFEST"
+fi
 rm -rf "$STAGE"
 STAGE=
 depmod -a "$KREL"
-printf 'installed camera modules in %s and firmware in %s\n' "$MODDIR" "$FIRMWARE_TARGET"
+printf 'installed camera modules in %s, firmware in %s, and OV7251 options in %s\n' \
+	"$MODDIR" "$FIRMWARE_TARGET" "$MODPROBE_CONFIG"

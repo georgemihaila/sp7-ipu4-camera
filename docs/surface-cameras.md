@@ -50,8 +50,9 @@ sudo ./install.sh --driver-only
 
 For a prebuilt release archive, `scripts/install-modules.sh` is the IPU4P,
 OV7251 IR-driver, and firmware installer; it does not install compiler or
-development packages. The installed OV7251 illuminator control remains
-disabled by default.
+development packages. It also installs
+`/etc/modprobe.d/99-sp7-ov7251.conf`, which enables the OV7251 STROBE/frame-PWM
+output and bounded register diagnostics when the module is loaded.
 For a bridge-only installation on an already prepared host, install the
 runtime dependencies and build the loopback module first:
 
