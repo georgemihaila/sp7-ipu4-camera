@@ -32,5 +32,8 @@ trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
 	-o "$tmpdir/sp7-camera-ir-route" "$SOURCE"
 "$tmpdir/sp7-camera-ir-route" --help >/dev/null
+cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
+	-o "$tmpdir/ir-route-mock-test" "$ROOT/tests/ir-route-mock-test.c"
+"$tmpdir/ir-route-mock-test" >/dev/null
 
 printf '%s\n' 'task40-ir-route-static: PASS'

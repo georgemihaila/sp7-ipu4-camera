@@ -292,6 +292,19 @@ static int setup_link(RouteGraph *graph, unsigned index, bool enabled)
 	return 0;
 }
 
+#ifdef IR_ROUTE_TEST
+static int (*setup_link_override)(RouteGraph *, unsigned, bool);
+#endif
+
+static int apply_link(RouteGraph *graph, unsigned index, bool enabled)
+{
+#ifdef IR_ROUTE_TEST
+	if (setup_link_override != NULL)
+		return setup_link_override(graph, index, enabled);
+#endif
+	return setup_link(graph, index, enabled);
+}
+
 static int write_state(const char *path, const RouteGraph *graph)
 {
 	char temporary[PATH_MAX];
@@ -444,8 +457,75 @@ static int restore_link(RouteGraph *graph, const RouteLink *saved,
 	graph->sink_ids[index] = graph->entities[sink].id;
 	graph->source_pads[index] = saved->source_pad;
 	graph->sink_pads[index] = saved->sink_pad;
-	graph->links[index] = *saved;
-	return setup_link(graph, index, saved->enabled);
+	return apply_link(graph, index, saved->enabled);
+}
+
+static bool same_route_link(const RouteLink *actual, const RouteLink *saved)
+{
+	return actual->source_pad == saved->source_pad &&
+		actual->sink_pad == saved->sink_pad &&
+		name_is(actual->source, saved->source) &&
+		name_is(actual->sink, saved->sink);
+}
+
+static int prepare_route(RouteGraph *graph, const char *state_path)
+{
+	if (write_state(state_path, graph) != 0)
+		return 2;
+	for (unsigned index = 0U; index < 2U; index++) {
+		if (graph->links[index].enabled)
+			continue;
+		if (apply_link(graph, index, true) != 0) {
+			int restore_result = 0;
+
+			for (unsigned reverse = index + 1U; reverse > 0U; reverse--)
+				if (apply_link(graph, reverse - 1U,
+					graph->links[reverse - 1U].enabled) != 0)
+					restore_result = 2;
+			if (restore_result == 0)
+				unlink(state_path);
+			return 2;
+		}
+	}
+	return 0;
+}
+
+static int restore_route(RouteGraph *graph, const RouteState *state,
+	const char *state_path)
+{
+	if (!name_is(graph->path, state->media))
+		return failf("saved media graph %s is not the discovered graph %s",
+			state->media, graph->path);
+	for (unsigned index = 0U; index < 2U; index++) {
+		const RouteLink *actual = &graph->links[index];
+		const RouteLink *saved = &state->links[index];
+
+		if (!same_route_link(actual, saved)) {
+			return failf("saved route link %u no longer matches the media graph",
+				index);
+		}
+		/* A link already at its saved state is safe progress from our restore. */
+		if (actual->enabled == saved->enabled)
+			continue;
+		/* prepare only enables links; a disabled link with saved=on changed
+		 * outside this lifecycle and must not be overwritten. */
+		if (!actual->enabled && saved->enabled)
+			return failf("saved route link %u was disabled outside this lifecycle",
+				index);
+	}
+	/* Restore in reverse pipeline order so the capture sink is released first. */
+	for (unsigned reverse = 2U; reverse > 0U; reverse--) {
+		unsigned index = reverse - 1U;
+
+		if (graph->links[index].enabled == state->links[index].enabled)
+			continue;
+		if (restore_link(graph, &state->links[index], index) != 0)
+			return 2;
+	}
+	if (unlink(state_path) != 0)
+		return failf("restored route but could not remove state %s: %s",
+			state_path, strerror(errno));
+	return 0;
 }
 
 static int parse_options(int argc, char **argv, const char **media,
@@ -493,27 +573,10 @@ int main(int argc, char **argv)
 		result = graph_discover(&graph, media);
 		if (result != 0)
 			return result;
-		if (write_state(state_path, &graph) != 0) {
-			close(graph.fd);
-			return 2;
-		}
-		for (unsigned index = 0U; index < 2U; index++) {
-			if (graph.links[index].enabled)
-				continue;
-			if (setup_link(&graph, index, true) != 0) {
-				int restore_result = 0;
-
-				for (unsigned reverse = index + 1U; reverse > 0U; reverse--)
-					if (setup_link(&graph, reverse - 1U,
-						graph.links[reverse - 1U].enabled) != 0)
-						restore_result = 2;
-				close(graph.fd);
-				if (restore_result == 0)
-					unlink(state_path);
-				return 2;
-			}
-		}
+		result = prepare_route(&graph, state_path);
 		close(graph.fd);
+		if (result != 0)
+			return result;
 		printf("ir-route prepared media=%s state=%s\n", graph.path, state_path);
 		return 0;
 	}
@@ -523,27 +586,10 @@ int main(int argc, char **argv)
 	result = graph_discover(&graph, media != NULL ? media : state.media);
 	if (result != 0)
 		return result;
-	for (unsigned index = 0U; index < 2U; index++) {
-		if (!graph.links[index].enabled) {
-			close(graph.fd);
-			return failf("prepared route link %s:%u -> %s:%u is no longer enabled",
-				graph.links[index].source, graph.links[index].source_pad,
-				graph.links[index].sink, graph.links[index].sink_pad);
-		}
-	}
-	/* Restore in reverse pipeline order so the capture sink is released first. */
-	for (unsigned reverse = 2U; reverse > 0U; reverse--) {
-		unsigned index = reverse - 1U;
-
-		if (restore_link(&graph, &state.links[index], index) != 0) {
-			close(graph.fd);
-			return 2;
-		}
-	}
+	result = restore_route(&graph, &state, state_path);
 	close(graph.fd);
-	if (unlink(state_path) != 0)
-		return failf("restored route but could not remove state %s: %s",
-			state_path, strerror(errno));
+	if (result != 0)
+		return result;
 	printf("ir-route restored state=%s\n", state_path);
 	return 0;
 }
