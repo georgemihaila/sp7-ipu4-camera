@@ -12,15 +12,21 @@
  #define OV7251_CHIP_ID_HIGH		0x300a
  #define OV7251_CHIP_ID_HIGH_BYTE	0x77
  #define OV7251_CHIP_ID_LOW		0x300b
-@@ -158,6 +163,7 @@
- 	struct mutex lock; /* lock to protect power state, ctrls and mode */
- 	bool power_on;
+@@ -156,8 +161,12 @@
+ 	u8 timing_format2;
  
+ 	struct mutex lock; /* lock to protect power state, ctrls and mode */
+-	bool power_on;
++	bool power_on; /* true while the sensor can accept register I/O */
+ 
++	/* Experimental-output lifecycle is separate from sensor power state. */
 +	bool strobe_cleanup_needed;
++	int strobe_cleanup_error;
++	bool strobe_recovery_required;
  	struct gpio_desc *enable_gpio;
  };
  
-@@ -166,6 +172,17 @@
+@@ -166,6 +175,17 @@
  	return container_of(sd, struct ov7251, sd);
  }
  
@@ -38,7 +44,7 @@
  static const struct ov7251_pll1_cfg ov7251_pll1_cfg_19_2_mhz_240_mhz = {
  	.pre_div = 0x03,
  	.mult = 0x4b,
-@@ -750,6 +767,11 @@
+@@ -750,6 +770,11 @@
  			__func__, ret, reg, val);
  		return ret;
  	}
@@ -50,7 +56,7 @@
  
  	return 0;
  }
-@@ -794,6 +816,11 @@
+@@ -794,6 +819,11 @@
  			__func__, ret, reg);
  		return ret;
  	}
@@ -62,7 +68,7 @@
  
  	ret = i2c_master_recv(ov7251->i2c_client, val, 1);
  	if (ret < 0) {
-@@ -801,6 +828,11 @@
+@@ -801,6 +831,11 @@
  			__func__, ret, reg);
  		return ret;
  	}
@@ -74,7 +80,7 @@
  
  	return 0;
  }
-@@ -977,6 +1009,141 @@
+@@ -977,6 +1012,180 @@
  	return 0;
  }
  
@@ -168,10 +174,32 @@
 +	}
 +}
 +
++static void ov7251_record_strobe_cleanup_error(struct ov7251 *ov7251,
++						const char *phase, int ret)
++{
++	if (!ret)
++		return;
++
++	if (!ov7251->strobe_cleanup_error)
++		ov7251->strobe_cleanup_error = ret;
++	ov7251->strobe_recovery_required = true;
++	dev_err(ov7251->dev,
++		"IRTRACE strobe cleanup fault phase=%s current=%d first=%d "
++		"pending=%d recovery-required=1\n",
++		phase, ret, ov7251->strobe_cleanup_error,
++		ov7251->strobe_cleanup_needed);
++}
++
 +static int ov7251_disable_experimental_strobe(struct ov7251 *ov7251)
 +{
 +	int first_ret = 0;
 +	int ret;
++
++	if (!ov7251->power_on) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe cleanup refused while sensor is unpowered\n");
++		return -EHOSTDOWN;
++	}
 +
 +	/* Remove the output gate before removing the frame-PWM permission. */
 +	ret = ov7251_update_strobe_bit(ov7251, OV7251_STROBE_OUTPUT_CONTROL,
@@ -197,6 +225,23 @@
 +{
 +	int ret;
 +
++	if (!ov7251->power_on) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe enable refused while sensor is unpowered\n");
++		return -EHOSTDOWN;
++	}
++
++	if (ov7251->strobe_cleanup_needed ||
++	    ov7251->strobe_recovery_required) {
++		dev_err(ov7251->dev,
++			"IRTRACE strobe enable refused pending=%d recovery-required=%d "
++			"first-cleanup-error=%d\n",
++			ov7251->strobe_cleanup_needed,
++			ov7251->strobe_recovery_required,
++			ov7251->strobe_cleanup_error);
++		return -EIO;
++	}
++
 +	/* Keep the flag set until both fields have been proven disabled again. */
 +	ov7251->strobe_cleanup_needed = true;
 +
@@ -216,32 +261,86 @@
  static int ov7251_set_power_on(struct device *dev)
  {
  	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
-@@ -1034,6 +1201,15 @@
+@@ -985,6 +1194,12 @@
+ 	int ret;
+ 	u32 wait_us;
+ 
++	if (ov7251->power_on) {
++		dev_info(ov7251->dev,
++			 "IRTRACE power-on skipped: sensor already powered\n");
++		return 0;
++	}
++
+ 	dev_info(ov7251->dev, "IRTRACE power-on begin xclk=%u\n",
+ 		 ov7251->xclk_freq);
+ 
+@@ -998,6 +1213,7 @@
+ 	if (ret < 0) {
+ 		dev_err(ov7251->dev, "clk prepare enable failed\n");
+ 		ov7251_regulators_disable(ov7251);
++		ov7251->power_on = false;
+ 		return ret;
+ 	}
+ 
+@@ -1021,9 +1237,11 @@
+ 		gpiod_set_value_cansleep(ov7251->enable_gpio, 0);
+ 		clk_disable_unprepare(ov7251->xclk);
+ 		ov7251_regulators_disable(ov7251);
++		ov7251->power_on = false;
+ 		return ret;
+ 	}
+ 
++	ov7251->power_on = true;
+ 	dev_info(ov7251->dev, "IRTRACE power-on global-init complete\n");
+ 
+ 	return ret;
+@@ -1034,14 +1252,43 @@
  	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
  	struct v4l2_subdev *sd = i2c_get_clientdata(client);
  	struct ov7251 *ov7251 = to_ov7251(sd);
-+	int ret = 0;
++	int cleanup_ret = 0;
++	bool cleanup_attempted = false;
++
++	/* A completed callback must not shut down resources a second time. */
++	if (!ov7251->power_on) {
++		dev_info(ov7251->dev,
++			"IRTRACE power-off skipped: sensor already unpowered\n");
++		return 0;
++	}
 +
 +	if (experimental_strobe_output && ov7251->strobe_cleanup_needed) {
-+		ret = ov7251_disable_experimental_strobe(ov7251);
-+		if (ret)
++		cleanup_attempted = true;
++		cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++		if (cleanup_ret) {
++			ov7251_record_strobe_cleanup_error(ov7251,
++							   "runtime-power-off", cleanup_ret);
 +			dev_err(ov7251->dev,
 +				"IRTRACE strobe shutdown not confirmed before power-off ret=%d\n",
-+				ret);
++				cleanup_ret);
++		}
 +	}
  
  	dev_info(ov7251->dev, "IRTRACE power-off begin\n");
++	/* No register access is valid after this point. */
++	ov7251->power_on = false;
  	clk_disable_unprepare(ov7251->xclk);
-@@ -1042,7 +1218,7 @@
- 	dev_info(ov7251->dev, "IRTRACE power-off complete gpio=%d\n",
- 		 gpiod_get_value_cansleep(ov7251->enable_gpio));
+ 	gpiod_set_value_cansleep(ov7251->enable_gpio, 0);
+ 	ov7251_regulators_disable(ov7251);
+-	dev_info(ov7251->dev, "IRTRACE power-off complete gpio=%d\n",
+-		 gpiod_get_value_cansleep(ov7251->enable_gpio));
++	dev_info(ov7251->dev,
++		 "IRTRACE power-off complete gpio=%d cleanup=%s first-error=%d "
++		 "optical-shutdown=not-independently-verified\n",
++		 gpiod_get_value_cansleep(ov7251->enable_gpio),
++		 cleanup_attempted ? (cleanup_ret ? "failed" : "registers-cleared")
++				  : "not-needed",
++		 ov7251->strobe_cleanup_error);
  
--	return 0;
-+	return ret;
++	/* The sensor power transition succeeded; cleanup faults remain recorded. */
+ 	return 0;
  }
  
- static int ov7251_set_hflip(struct ov7251 *ov7251, s32 value)
-@@ -1464,6 +1640,16 @@
+@@ -1464,6 +1711,16 @@
  			dev_err(ov7251->dev, "could not sync v4l2 controls\n");
  			goto err_power_down;
  		}
@@ -258,7 +357,7 @@
  		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
  				       OV7251_SC_MODE_SELECT_STREAMING);
  		dev_info(ov7251->dev, "IRTRACE stream mode-select write ret=%d\n",
-@@ -1479,6 +1665,13 @@
+@@ -1479,6 +1736,13 @@
  		ov7251_trace_pll_mipi(ov7251);
  		ov7251_trace_mipi_state(ov7251);
  	} else {
@@ -272,21 +371,24 @@
  		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
  				       OV7251_SC_MODE_SELECT_SW_STANDBY);
  		dev_info(ov7251->dev, "IRTRACE stream standby write ret=%d\n", ret);
-@@ -1487,6 +1680,13 @@
+@@ -1487,6 +1751,16 @@
  		dev_info(ov7251->dev,
  			 "IRTRACE stream standby read ret=%d value=0x%02x\n",
  			 read_ret, mode_select);
 +		if (cleanup_ret) {
++			ov7251_record_strobe_cleanup_error(ov7251, "normal-stop",
++							   cleanup_ret);
 +			dev_err(ov7251->dev,
-+				"IRTRACE strobe normal-stop shutdown not confirmed ret=%d\n",
-+				cleanup_ret);
++				"IRTRACE strobe normal-stop result=%d cleanup-result=%d "
++				"shutdown not confirmed\n",
++				ret, cleanup_ret);
 +			if (!ret)
 +				ret = cleanup_ret;
 +		}
  		pm_runtime_put(ov7251->dev);
  	}
  
-@@ -1494,6 +1694,15 @@
+@@ -1494,6 +1768,19 @@
  	return ret;
  
  err_power_down:
@@ -294,11 +396,47 @@
 +		int cleanup_ret;
 +
 +		cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
-+		if (cleanup_ret)
++		if (cleanup_ret) {
++			ov7251_record_strobe_cleanup_error(ov7251, "failed-start",
++							   cleanup_ret);
 +			dev_err(ov7251->dev,
-+				"IRTRACE strobe failed-start shutdown not confirmed ret=%d\n",
-+				cleanup_ret);
++				"IRTRACE strobe failed-start result=%d cleanup-result=%d "
++				"shutdown not confirmed\n",
++				ret, cleanup_ret);
++		}
 +	}
  	pm_runtime_put(ov7251->dev);
  	mutex_unlock(&ov7251->lock);
  	return ret;
+@@ -1892,14 +2179,26 @@
+ 	struct ov7251 *ov7251 = to_ov7251(sd);
+ 
+ 	v4l2_async_unregister_subdev(&ov7251->sd);
++	pm_runtime_barrier(ov7251->dev);
++	pm_runtime_disable(ov7251->dev);
++	if (!pm_runtime_status_suspended(ov7251->dev)) {
++		if (ov7251->power_on)
++			ov7251_set_power_off(ov7251->dev);
++		else
++			dev_info(ov7251->dev,
++				 "IRTRACE remove: power already off; no duplicate shutdown\n");
++	} else if (ov7251->power_on) {
++		/* Do not issue cleanup I2C while PM says the sensor is suspended. */
++		dev_err(ov7251->dev,
++			"IRTRACE remove: PM says suspended while power state is on; "
++			"skip register cleanup\n");
++		ov7251->power_on = false;
++	}
++	pm_runtime_set_suspended(ov7251->dev);
++
+ 	media_entity_cleanup(&ov7251->sd.entity);
+ 	v4l2_ctrl_handler_free(&ov7251->ctrls);
+ 	mutex_destroy(&ov7251->lock);
+-
+-	pm_runtime_disable(ov7251->dev);
+-	if (!pm_runtime_status_suspended(ov7251->dev))
+-		ov7251_set_power_off(ov7251->dev);
+-	pm_runtime_set_suspended(ov7251->dev);
+ }
+ 
+ static const struct dev_pm_ops ov7251_pm_ops = {

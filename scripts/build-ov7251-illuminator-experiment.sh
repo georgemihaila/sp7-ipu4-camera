@@ -38,6 +38,7 @@ printf '%s\n' 'obj-m += ov7251.o' > "$work_dir/drivers/media/i2c/Makefile"
 
 python3 "$repo_root/scripts/ir/check-ov7251-illuminator-experiment.py" \
 	"$work_dir/drivers/media/i2c/ov7251.c"
+python3 "$repo_root/scripts/ir/test-ov7251-illuminator-failure-path.py"
 
 make -C "$build_dir" M="$work_dir/drivers/media/i2c" \
 	EXTERNAL_BUILD=1 W=1 modules
