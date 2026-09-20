@@ -1,7 +1,7 @@
 # OV7251 illuminator: first bounded enabled comparison
 
 Date: 2026-09-20
-Result: register-control path exercised; enabled capture regressed before a valid frame; optical observation inconclusive.
+Result: a positive fixed-scene OV7251 response was demonstrated in the follow-up below; the later three-cycle repeatability attempt completed two cycles, did not reproduce a strong localized ROI response, and aborted on a third-cycle capture failure.
 
 ## Scope and provenance
 
@@ -102,3 +102,58 @@ uniformity, absolute output, and calibrated shutdown remain unresolved.
 The fresh comparison artifacts are outside the repository at:
 
 `/var/tmp/ov7251-image-comparison-20260920-1sVMjm/object-scene/`
+
+## Repeatability attempt
+
+A later repeatability run kept the reviewed two-bit candidate, source-6
+diagnostic receiver, 640x480 format, exposure 504, analogue gain 16, decoder,
+and fixed target framing unchanged. One decoded frame was collected for each
+state because the established capture helper is a one-buffer path; the
+eight-frame sensor strobe pattern and all `0x3b80..0x3b95` values were retained.
+
+Two complete `off -> on -> off` cycles produced valid frames in all six states.
+Each enabled capture logged:
+
+```text
+0x3b96: 0x40 -> 0xc0, readback 0xc0
+0x3005: 0x00 -> 0x08, readback 0x08
+cleanup: 0x3005=0x00, 0x3b96=0x40, first-error=0
+```
+
+The third cycle's initial off capture failed before a buffer completed. The
+bounded command ended with status 137 after buffer queueing, produced no
+decoded frame, and was not retried. The known receiver `fatal_receiver_errors=0x480`
+recurrence was preserved separately in the per-capture logs.
+
+For fixed ROIs (`target_phone=(210,40)-(430,460)`,
+`target_highlight=(275,300)-(360,420)`, and
+`background_wall=(470,150)-(620,430)`), the successful cycles showed only
+small changes. For example, target-phone mean values were:
+
+| Cycle | Off before | On | Off after |
+|---|---:|---:|---:|
+| 1 | 6.0537 | 6.0713 | 6.0911 |
+| 2 | 6.0214 | 6.0697 | 6.1089 |
+
+The corresponding background-wall means were `100.5982, 100.7001, 100.7038`
+and `100.1053, 100.6445, 100.6250`. The saved frames did not establish a
+recurring localized highlight or a clear on/off reversal in these two cycles.
+Therefore the requested three-cycle repeatability statement is not claimed.
+
+### Restoration limitation from the aborted run
+
+The sensor's off cleanup completed, but the failed third capture left a
+userspace `v4l2-ctl` in uninterruptible `v4l2_release` and the diagnostic ISYS
+module reported an active reference. Ordinary module removal could not complete
+and no force-unload, reboot, power-cycle, or reset write was used. At report
+time, `experimental_strobe_output` was absent and no emitter-enable state was
+active, but the original OV7251/ISYS module and bridge service were not fully
+restored: the diagnostic receiver remained loaded and the bridge service was
+kept stopped to avoid starting consumers on that temporary receiver. This is
+an explicit restoration blocker, not a successful restoration claim.
+
+Repeatability artifacts, including all valid frames, the failed capture log,
+ROI statistics, register diagnostics, and restoration log, are outside the
+repository at:
+
+`/var/tmp/ov7251-illuminator-repeat-m1z4Dt/`
