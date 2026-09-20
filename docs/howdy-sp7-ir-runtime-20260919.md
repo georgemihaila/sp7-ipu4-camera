@@ -41,6 +41,19 @@ deadline, containing the helper's three-second capture budget. Capture errors
 fall back as unavailable, and clean 12-frame exhaustion is a no-match. No
 result arriving after cleanup can authorize an attempt.
 
+Offline adapter coverage is provided by
+`tests/howdy-sp7-ir-adapter-test.py` and its static wrapper
+`tests/task38-howdy-adapter-static.sh`. It exercises the pinned `sp7_ir`
+recorder's fixed helper path, one-session/no-restart behavior, the 12-frame
+window, `SP7IRF01` luma-to-BGR conversion, unsupported-control failures, the
+three-second helper deadline constrained by the five-second attempt deadline,
+and busy/error propagation as unavailable/no-decision. The existing
+`tests/auth-capture-protocol-test.py` covers malformed, truncated, stale, and
+late frames; the C supervisor test covers the exclusive lock remaining held
+through timed-out worker cleanup. The Howdy `dark_threshold` remains a
+comparison-path dark-frame rejection policy and is statically pinned at `60`;
+offline tests do not claim dark-scene hardware qualification.
+
 ## Installed protection boundary
 
 The protected runtime currently contains:
