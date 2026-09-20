@@ -10,6 +10,9 @@ import time
 
 
 EXPECTED_HELPER_PATH = Path("/usr/local/libexec/sp7-camera-auth-capture")
+EXPECTED_ILLUMINATOR_PARAM = Path(
+    "/sys/module/ov7251/parameters/experimental_strobe_output"
+)
 MAGIC = b"SP7IRF01"
 HEADER = struct.Struct("<8sIIIIIQQ")
 WIDTH = 640
@@ -51,6 +54,18 @@ def resolve_helper(path=None):
     return path
 
 
+def require_illuminator():
+    """Require the patched OV7251 driver to enable illumination on stream-on."""
+    try:
+        state = EXPECTED_ILLUMINATOR_PARAM.read_text(encoding="ascii").strip().lower()
+    except OSError as error:
+        raise Sp7IrCaptureError(
+            "OV7251 illuminator control is unavailable"
+        ) from error
+    if state not in ("y", "1", "true"):
+        raise Sp7IrCaptureError("OV7251 illuminator is not enabled")
+
+
 def _remaining(deadline):
     return max(0.0, deadline - time.monotonic())
 
@@ -90,6 +105,7 @@ class DirectCaptureSession:
         if self.external_deadline is not None and started >= self.external_deadline:
             raise Sp7IrTimeout("face attempt deadline expired before direct capture")
         helper = resolve_helper()
+        require_illuminator()
         self.process = subprocess.Popen(
             [str(helper), "--frames", str(self.requested_frames)],
             stdin=subprocess.DEVNULL,

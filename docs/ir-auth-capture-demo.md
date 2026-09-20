@@ -28,6 +28,25 @@ and serializes sessions with the root-owned mode `0600` lock
 `/run/lock/sp7-camera-auth-capture.lock`. The standalone Python demo verifies
 that installed helper before invoking it.
 
+## Illuminator prerequisite
+
+Howdy does not write OV7251 registers from userspace. The patched OV7251
+driver enables and verifies its sensor STROBE/frame-PWM output during
+`STREAMON` when the load-time option `experimental_strobe_output=1` is
+active. Before any live enrollment or matching attempt, the protected
+recorder requires:
+
+```text
+/sys/module/ov7251/parameters/experimental_strobe_output = Y
+```
+
+If the parameter is absent or disabled, the attempt fails closed and the
+caller must use password fallback. The capture helper does not load, unload,
+or swap the sensor module, change the media graph, or write sensor registers.
+The patched module and its option must therefore be prepared before the
+attempt, and the driver's stream-stop/failure cleanup must complete before
+the camera is released.
+
 ## Deadline and ownership
 
 The parent supervisor starts one capture worker and owns the lock for the

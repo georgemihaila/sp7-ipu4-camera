@@ -87,6 +87,9 @@ def main():
         protocol.resolve_helper = lambda path=None: (
             protocol.EXPECTED_HELPER_PATH if path is None else path
         )
+        illuminator = directory / "experimental_strobe_output"
+        protocol.EXPECTED_ILLUMINATOR_PARAM = illuminator
+        illuminator.write_text("Y\n", encoding="ascii")
         write_helper(directory, "valid")
         session = protocol.DirectCaptureSession(2)
         first = session.read_luma()
@@ -94,6 +97,18 @@ def main():
         assert first is not None and second is not None
         assert len(first[1]) == protocol.WIDTH * protocol.HEIGHT
         session.release()
+
+        illuminator.write_text("N\n", encoding="ascii")
+        session = protocol.DirectCaptureSession(1)
+        try:
+            session.read_luma()
+        except protocol.Sp7IrCaptureError as error:
+            assert "illuminator" in str(error)
+        else:
+            raise AssertionError("disabled illuminator did not fail closed")
+        finally:
+            session.release()
+        illuminator.write_text("Y\n", encoding="ascii")
 
         expect_error(directory, "malformed", protocol.Sp7IrCaptureError)
         expect_error(directory, "truncated", protocol.Sp7IrCaptureError)
