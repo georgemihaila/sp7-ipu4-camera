@@ -1,4 +1,4 @@
-# Surface Pro 7 IPU4P Camera Driver
+# Surface Pro 7 IPU4P Camera Driver — Proof of Concept
 
 This project provides out-of-tree Linux driver modules and Surface Pro 7
 compatibility fixes for the Intel IPU4P image signal processor (PCI ID
@@ -19,6 +19,22 @@ does not expose a native camera to GNOME Snapshot; the app can report that no
 camera was found while bridge-backed applications continue to work. The
 opt-in native PipeWire path remains unqualified and is currently known to
 produce black frames, so enabling it is not yet a fix for that symptom.
+
+## Proof-of-concept status
+
+This repository is a hardware-specific proof of concept and engineering
+reference, not a production-ready Linux camera driver. It is not intended for
+production deployment, broad hardware support, or use as a finished upstream
+driver. The implementation is deliberately tied to one Surface Pro 7 and one
+kernel build, and important production work—such as broader lifecycle,
+power-management, error-recovery, portability, and application qualification—
+remains incomplete.
+
+The goal is to make the working experiments, register paths, media topology,
+and validation evidence available to kernel and media developers who can use
+them to design and implement a proper, maintainable driver. Treat every result
+below as scoped evidence for this hardware and configuration, not as a claim
+of production readiness.
 
 ## Support and project scope
 
