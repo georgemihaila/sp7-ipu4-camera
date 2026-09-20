@@ -51,6 +51,7 @@ grep -Fq '/usr/local/lib/howdy/howdy' "$ROOT/scripts/ir/howdy-sp7-ir-diagnostic.
 grep -Fq 'howdy-sp7-ir-runtime-20260919.md' "$PACKAGE"
 grep -Fq 'sp7-camera-howdy-preflight.service' "$PACKAGE"
 grep -Fq 'experimental_strobe_output' "$ROOT/scripts/ir/howdy-preflight.sh"
+grep -Fq 'readlink -f "$PYTHON"' "$ROOT/scripts/ir/howdy-preflight.sh"
 ! grep -Fq '/dev/video62' "$OFFLINE"
 ! grep -Fq 'sp7-camera-auth-capture' "$OFFLINE"
 ! grep -Fq '/dev/video62' "$SOURCE"

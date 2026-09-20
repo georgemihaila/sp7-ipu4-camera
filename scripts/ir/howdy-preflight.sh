@@ -18,7 +18,9 @@ fallback() {
 [ -r "$CONFIG" ] || fallback 'Howdy configuration unavailable'
 [ -r "$PAM" ] || fallback 'pam_howdy.so unavailable'
 [ "$(stat -c '%u:%a' "$HELPER")" = '0:755' ] || fallback 'helper ownership or mode is unsafe'
-[ "$(stat -c '%u:%a' "$PYTHON")" = '0:755' ] || fallback 'Python ownership or mode is unsafe'
+PYTHON_TARGET=$(readlink -f "$PYTHON" 2>/dev/null || :)
+[ -n "$PYTHON_TARGET" ] || fallback 'Python interpreter target is unavailable'
+[ "$(stat -c '%u:%a' "$PYTHON_TARGET")" = '0:755' ] || fallback 'Python ownership or mode is unsafe'
 [ "$(stat -c '%u:%a' "$PAM")" = '0:755' ] || fallback 'PAM module ownership or mode is unsafe'
 [ -r "$ILLUMINATOR_PARAM" ] || fallback 'OV7251 illuminator driver control unavailable'
 case "$(cat "$ILLUMINATOR_PARAM" 2>/dev/null || :)" in
