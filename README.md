@@ -4,7 +4,10 @@ This project provides out-of-tree Linux driver modules and Surface Pro 7
 compatibility fixes for the Intel IPU4P image signal processor (PCI ID
 `8086:8a19`). It carries an out-of-tree port based on
 [ruslanbay/ipu4-next](https://github.com/ruslanbay/ipu4-next), adapted for the
-Surface Pro 7 camera hardware.
+Surface Pro 7 camera hardware. It includes a [back camera](#back-camera), a
+[front camera](#front-camera), an [IR camera](#ir-camera), an [IR
+illuminator](#ir-illuminator), and [manual focus](#manual-focus), not
+autofocus.
 
 The code has been hardware-validated on one Surface Pro 7 running Fedora 43
 with the linux-surface kernel `6.19.8-3.surface.fc43.x86_64`. V4L2 raw capture
@@ -30,11 +33,12 @@ scripts. It is an overlay for a Linux kernel tree, not a complete kernel or a
 standalone camera application.
 
 The rear OV8865 sensor driver is an external requirement and is not included
-here. The IR OV7251 camera's I2C probe fails on the validated device. The CPD
-firmware `ipu4p_cpd.bin` is required at runtime but is not included in this
-repository or its release bundles. The source installer can obtain it from
-the official Microsoft Surface Pro 7 driver package. Applications and desktop
-camera services are supplied by the distribution.
+here. The IR OV7251 path is provided separately as an opt-in standalone
+producer, rather than being managed by the front/rear bridge. The CPD firmware
+`ipu4p_cpd.bin` is required at runtime but is not included in this repository
+or its release bundles. The source installer can obtain it from the official
+Microsoft Surface Pro 7 driver package. Applications and desktop camera
+services are supplied by the distribution.
 
 ## Install from a clone
 
@@ -259,6 +263,65 @@ qualify Snapshot, Chromium/WebRTC, Zoom, Discord, or another application.
 The native PipeWire phase is separately gated and currently unqualified. See
 [`docs/native-pipewire.md`](docs/native-pipewire.md) for the opt-in WirePlumber
 profile, activation/rollback, and the read-only `pipewiresrc` preview check.
+
+## Camera features
+
+### Back camera
+
+The back camera uses the OV8865 sensor. Its raw stream travels through the
+shared IPU4P CSI-2 and ISYS capture path; Fedora's libcamera Simple pipeline
+with SoftISP can turn that raw stream into processed frames. For applications
+that enumerate V4L2 devices, the C bridge publishes it as **Surface Camera
+(back)** on `/dev/video61`. The bridge starts the rear pipeline when a client
+opens that endpoint and publishes YUYV or MJPEG according to the requested
+format. The shared backend selects one RGB sensor at a time.
+
+See [`docs/surface-cameras.md`](docs/surface-cameras.md) for the bridge
+lifecycle and endpoint details.
+
+### Front camera
+
+The front camera uses the OV5693 sensor and follows the same IPU4P CSI-2,
+ISYS, and libcamera/SoftISP path as the back camera. The V4L2 bridge publishes
+it as **Surface Camera (front)** on `/dev/video60`, starts it on demand, and
+converts the selected stream to the format requested by the V4L2 application.
+
+### IR camera
+
+The IR camera uses the OV7251 monochrome sensor. Its standalone producer
+discovers the live media graph, configures the 640x480 packed `Y10` source-6
+route, validates each MMAP buffer, decodes the packed RAW10 samples to
+grayscale YUYV, and writes the result to **Surface Camera (IR)** on
+`/dev/video62`. This path is additive and opt-in: `sp7-camera-bridge.service`
+manages only the front and back cameras, so starting or stopping the IR
+producer does not change the RGB bridge configuration.
+
+See [`docs/ov7251-ir-backend.md`](docs/ov7251-ir-backend.md) for the capture
+backend and its qualification boundaries.
+
+### IR illuminator
+
+The OV7251 illuminator is controlled through the sensor's STROBE/frame-PWM
+registers rather than through a generic USB-camera LED control. The sensor
+driver read-modify-writes and verifies the frame-PWM enable bit
+(`0x3b96[7]`) and the STROBE output gate (`0x3005[3]`): it enables PWM before
+opening the output gate, then clears the gate before PWM during cleanup. The
+unrelated register bits are preserved, and cleanup is tied to the sensor's
+power-off path so the output is not intentionally left enabled.
+
+The control path is opt-in and disabled by default; the implementation and
+bounded comparison procedure are documented in
+[`docs/ov7251-illuminator-experiment.md`](docs/ov7251-illuminator-experiment.md).
+
+### Manual focus
+
+Manual focus applies to the rear OV8865 camera's DW9719 voice-coil lens
+actuator. The IPU4P bridge follows the firmware-described `lens-focus`
+relationship, instantiates the actuator on I2C, and exposes the standard V4L2
+`focus_absolute` control. Setting that control moves the lens to a chosen
+absolute position; there is no continuous autofocus or automatic focus
+algorithm in this project. Applications or a user-space focus tool must
+choose and set the position.
 
 ## Named Surface Cameras
 
