@@ -74,7 +74,7 @@ stream_end = source.index("static int ov7251_get_frame_interval", stream_start)
 stream = source[stream_start:stream_end]
 
 ctrl_pos = stream.index("__v4l2_ctrl_handler_setup")
-enable_pos = stream.index("ov7251_enable_experimental_strobe")
+enable_pos = stream.index("ov7251_ir_illuminator_on")
 stream_on_pos = stream.index("OV7251_SC_MODE_SELECT_STREAMING")
 require(ctrl_pos < enable_pos < stream_on_pos, "enable is not after controls and before 0x0100=1")
 require(
@@ -84,7 +84,7 @@ require(
 
 stop_pos = stream.index("} else {")
 stop = stream[stop_pos:]
-disable_pos = stop.index("ov7251_disable_experimental_strobe")
+disable_pos = stop.index("ov7251_ir_illuminator_off")
 standby_pos = stop.index("OV7251_SC_MODE_SELECT_SW_STANDBY")
 pm_put_pos = stop.index("pm_runtime_put")
 require(
@@ -99,7 +99,7 @@ require(
 error_pos = stream.index("err_power_down:")
 error = stream[error_pos:]
 require(
-    error.index("ov7251_disable_experimental_strobe")
+    error.index("ov7251_ir_illuminator_off")
     < error.index("pm_runtime_put"),
     "failed-start cleanup is not before runtime-PM release",
 )
@@ -116,7 +116,7 @@ power_start = source.index("static int ov7251_set_power_off")
 power_end = source.index("static int ov7251_set_hflip", power_start)
 power = source[power_start:power_end]
 require(
-    power.index("ov7251_disable_experimental_strobe")
+    power.index("ov7251_ir_illuminator_off")
     < power.index("clk_disable_unprepare"),
     "runtime power-off does not retry cleanup before clock/regulator shutdown",
 )
@@ -167,6 +167,11 @@ require(
     "strobe enable refused pending" in source
     and "strobe_recovery_required" in source,
     "unresolved cleanup does not block experimental reactivation",
+)
+require(
+    "static int ov7251_ir_illuminator_on" in source
+    and "static int ov7251_ir_illuminator_off" in source,
+    "explicit IR illuminator on/off driver methods are missing",
 )
 
 require(

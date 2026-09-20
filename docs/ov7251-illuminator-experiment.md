@@ -64,6 +64,13 @@ span, line timing, CSI and PLL configuration are not changed. The candidate
 does not write `0x3027`, `0x3009`, or any other member of the diagnostic
 range.
 
+The driver exposes the lifecycle internally as two methods:
+`ov7251_ir_illuminator_on()` enables the frame-PWM permission and then the
+STROBE output gate; `ov7251_ir_illuminator_off()` clears the gate and then the
+frame-PWM permission. They are intentionally driver-internal at this stage;
+the read-only module option controls whether the stream lifecycle invokes
+them.
+
 The exact sensor lifecycle is:
 
 ```
@@ -109,8 +116,8 @@ runtime PM, and performs at most one powered shutdown before destroying driver
 state. If PM already reports suspended, removal skips register cleanup rather
 than issuing I2C to an unpowered sensor.
 
-With the option disabled (the static default), the enable/disable helpers are
-not called and the normal register sequence is unchanged. The separate
+With the option disabled (the static default), the on/off methods are not
+called and the normal register sequence is unchanged. The separate
 read-only `strobe_diagnostics=1` parameter enables bounded reads only; it
 does not enable the output. The existing single-byte I2C helpers now reject
 short positive transfers as `-EIO`, while successful transfers are unchanged.

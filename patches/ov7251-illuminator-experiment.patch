@@ -190,7 +190,7 @@
 +		ov7251->strobe_cleanup_needed);
 +}
 +
-+static int ov7251_disable_experimental_strobe(struct ov7251 *ov7251)
++static int ov7251_ir_illuminator_off(struct ov7251 *ov7251)
 +{
 +	int first_ret = 0;
 +	int ret;
@@ -221,7 +221,7 @@
 +	return first_ret;
 +}
 +
-+static int ov7251_enable_experimental_strobe(struct ov7251 *ov7251)
++static int ov7251_ir_illuminator_on(struct ov7251 *ov7251)
 +{
 +	int ret;
 +
@@ -310,7 +310,7 @@
 +
 +	if (experimental_strobe_output && ov7251->strobe_cleanup_needed) {
 +		cleanup_attempted = true;
-+		cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++		cleanup_ret = ov7251_ir_illuminator_off(ov7251);
 +		if (cleanup_ret) {
 +			ov7251_record_strobe_cleanup_error(ov7251,
 +							   "runtime-power-off", cleanup_ret);
@@ -346,7 +346,7 @@
  		}
 +		ov7251_trace_strobe_state(ov7251, "before-experiment");
 +		if (experimental_strobe_output) {
-+			ret = ov7251_enable_experimental_strobe(ov7251);
++			ret = ov7251_ir_illuminator_on(ov7251);
 +			if (ret) {
 +				dev_err(ov7251->dev,
 +					"experimental STROBE enable failed ret=%d\n", ret);
@@ -366,7 +366,7 @@
 +		ov7251_trace_strobe_state(ov7251, "before-stop");
 +		if (experimental_strobe_output &&
 +		    ov7251->strobe_cleanup_needed)
-+			cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++			cleanup_ret = ov7251_ir_illuminator_off(ov7251);
 +		ov7251_trace_strobe_state(ov7251, "after-disable");
  		ret = ov7251_write_reg(ov7251, OV7251_SC_MODE_SELECT,
  				       OV7251_SC_MODE_SELECT_SW_STANDBY);
@@ -395,7 +395,7 @@
 +	if (experimental_strobe_output && ov7251->strobe_cleanup_needed) {
 +		int cleanup_ret;
 +
-+		cleanup_ret = ov7251_disable_experimental_strobe(ov7251);
++		cleanup_ret = ov7251_ir_illuminator_off(ov7251);
 +		if (cleanup_ret) {
 +			ov7251_record_strobe_cleanup_error(ov7251, "failed-start",
 +							   cleanup_ret);
