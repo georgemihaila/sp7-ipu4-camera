@@ -279,12 +279,20 @@ format. The shared backend selects one RGB sensor at a time.
 See [`docs/surface-cameras.md`](docs/surface-cameras.md) for the bridge
 lifecycle and endpoint details.
 
+For the sensor-to-CSI-2-to-BE-SOC route, lane and format contract, raw Bayer
+capture, and the bridge's control/data path, see
+[`docs/back-camera.md`](docs/back-camera.md).
+
 ### Front camera
 
 The front camera uses the OV5693 sensor and follows the same IPU4P CSI-2,
 ISYS, and libcamera/SoftISP path as the back camera. The V4L2 bridge publishes
 it as **Surface Camera (front)** on `/dev/video60`, starts it on demand, and
 converts the selected stream to the format requested by the V4L2 application.
+
+For OV5693 register controls, the Surface Pro 7 source-7/two-lane receiver
+programming, raw capture commands, and the front bridge path, see
+[`docs/front-camera.md`](docs/front-camera.md).
 
 ### IR camera
 
@@ -299,6 +307,10 @@ producer does not change the RGB bridge configuration.
 See [`docs/ov7251-ir-backend.md`](docs/ov7251-ir-backend.md) for the capture
 backend and its qualification boundaries.
 
+For the complete source-6 route, MMAP buffer contract, CSI-2 packet headers,
+RAW10 unpacking, validation rules, and YUYV publication, see
+[`docs/ir-camera.md`](docs/ir-camera.md).
+
 ### IR illuminator
 
 The OV7251 illuminator is controlled through the sensor's STROBE/frame-PWM
@@ -309,8 +321,12 @@ opening the output gate, then clears the gate before PWM during cleanup. The
 unrelated register bits are preserved, and cleanup is tied to the sensor's
 power-off path so the output is not intentionally left enabled.
 
-The control path is opt-in and disabled by default; the implementation and
-bounded comparison procedure are documented in
+The control path is an opt-in candidate and disabled by default; it is not
+installed or loaded as part of the normal stack, and no optical illumination
+result is claimed. The exact I2C byte sequences, read-modify-write ordering,
+cleanup, diagnostic reads, and build boundary are documented in
+[`docs/ir-illuminator.md`](docs/ir-illuminator.md). The original bounded
+experiment record remains in
 [`docs/ov7251-illuminator-experiment.md`](docs/ov7251-illuminator-experiment.md).
 
 ### Manual focus
@@ -322,6 +338,10 @@ relationship, instantiates the actuator on I2C, and exposes the standard V4L2
 absolute position; there is no continuous autofocus or automatic focus
 algorithm in this project. Applications or a user-space focus tool must
 choose and set the position.
+
+For the firmware-to-fwnode-to-I2C-client relationship, V4L2 control callback,
+DW9719 register bytes, power sequencing, and binding checks, see
+[`docs/manual-focus.md`](docs/manual-focus.md).
 
 ## Named Surface Cameras
 
