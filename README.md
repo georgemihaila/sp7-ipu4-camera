@@ -384,4 +384,4 @@ kernel / Intel, with changes from ruslanbay/ipu4-next and this repo). Scripts
 in the repo root are GPL-2.0 as well.
 
 - https://github.com/ruslanbay/ipu4-next — the port this builds on
-- https://github.com/linux-surface/linux-surface — SP7 kernel; camera discussion in issue #1353
+- https://github.com/linux-surface/linux-surface — SP7 kernel; [camera discussion #1353](https://github.com/linux-surface/linux-surface/discussions/1353)
