@@ -95,7 +95,10 @@ if [ "$MODE" = static ] || [ "$MODE" = all ]; then
 			"$ROOT"/tests/task34-consumer-events-static.sh \
 			"$ROOT"/tests/task35-ir-backend-static.sh \
 			"$ROOT"/tests/task36-auth-capture-static.sh \
-			"$ROOT"/tests/task38-howdy-adapter-static.sh; do
+			"$ROOT"/tests/task37-ov7251-installer-defaults.sh \
+			"$ROOT"/tests/task38-howdy-adapter-static.sh \
+			"$ROOT"/tests/task39-ipu4p-lifecycle-diagnosis-static.sh \
+			"$ROOT"/tests/task40-ir-route-static.sh; do
 		if ! run "static-$(basename "$test" .sh)" sh "$test"; then :; fi
 	done
 fi

@@ -64,6 +64,7 @@ if [ -d "$ROOT/systemd" ] && [ -n "$(find "$ROOT/systemd" -type f -print 2>/dev/
 	if [ -n "$(find "$ROOT/systemd" -type f \
 		! -path "$ROOT/systemd/user/sp7-camera-bridge.service" \
 		! -path "$ROOT/systemd/system/sp7-camera-howdy-preflight.service" \
+		! -path "$ROOT/systemd/system/sp7-camera-howdy-route.service" \
 		-print 2>/dev/null)" ]; then
 		echo 'task11-static: removed systemd bring-up files remain' >&2
 		exit 1

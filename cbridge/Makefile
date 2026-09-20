@@ -29,10 +29,11 @@ AUTH_SUPERVISOR_TEST := auth-capture-supervisor-test
 IR_QUALIFY_PROGRAM := ir-hardware-qualification
 IR_QUALIFY_SOURCES := ir-hardware-qualification.c ir-v4l2.c
 IR_QUALIFY_OBJECTS := $(IR_QUALIFY_SOURCES:.c=.o)
+IR_ROUTE_PROGRAM := sp7-camera-ir-route
 
 .PHONY: all clean sanitize test-controller test-ir test-ir-metadata test-auth-supervisor qualify-ir
 
-all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM) $(AUTH_PROGRAM)
+all: $(PROGRAM) $(CONTROLLER_PROGRAM) $(IR_PROGRAM) $(AUTH_PROGRAM) $(IR_ROUTE_PROGRAM)
 
 $(PROGRAM): $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
@@ -45,6 +46,9 @@ $(IR_PROGRAM): $(IR_OBJECTS)
 
 $(AUTH_PROGRAM): $(AUTH_OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(AUTH_OBJECTS)
+
+$(IR_ROUTE_PROGRAM): ir-route.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 %.o: %.c media-backend.h controller.h ir-v4l2.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c -o $@ $<
@@ -94,6 +98,7 @@ clean:
 		$(CONTROLLER_OBJECTS) $(CONTROLLER_TEST_OBJECTS) \
 		$(IR_PROGRAM) $(IR_TEST_PROGRAM) $(IR_QUALIFY_PROGRAM) \
 		$(AUTH_PROGRAM) $(AUTH_OBJECTS) \
+		$(IR_ROUTE_PROGRAM) \
 		$(IR_METADATA_TEST_PROGRAM) $(IR_OBJECTS) $(IR_TEST_OBJECTS) \
 		$(IR_METADATA_TEST_OBJECTS) $(IR_QUALIFY_OBJECTS) \
 		$(AUTH_SUPERVISOR_TEST) \

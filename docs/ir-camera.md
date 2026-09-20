@@ -52,6 +52,16 @@ sub-device minor. It enumerates every `/dev/media*`, finds entities by name,
 checks both link directions and `MEDIA_LNK_FL_ENABLED`, then matches the
 entity's major/minor to `/dev/v4l-subdev*` and `/dev/video*`.
 
+Route preparation is deliberately separate from authentication. The
+`cbridge/sp7-camera-ir-route` tool discovers the same entities and links by
+name, snapshots only the two target links in a root-owned state file, enables
+them without unloading modules or stopping RGB, and restores them in reverse
+pipeline order. It never selects `/dev/video62`; the protected helper only
+opens the route after its own graph and format checks succeed. The optional
+`systemd/system/sp7-camera-howdy-route.service` installs disabled and stopped,
+and must remain that way until the receiver, strobe, and no-PAM Howdy gates in
+the qualification report pass.
+
 For a diagnostic-only prepared route, the repository helper shows the same
 names:
 

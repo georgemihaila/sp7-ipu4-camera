@@ -1,0 +1,22 @@
+[Unit]
+Description=Surface Pro 7 OV7251 source-6 route for protected Howdy capture
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service
+Before=display-manager.service sp7-camera-howdy-preflight.service
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/sp7-camera-ir-route prepare
+ExecStop=/usr/local/libexec/sp7-camera-ir-route restore
+RemainAfterExit=yes
+TimeoutStartSec=15s
+TimeoutStopSec=15s
+
+# This unit never stops RGB, swaps modules, or runs from the authentication
+# helper. It is intentionally installed disabled until the separate hardware
+# and no-PAM Howdy gates pass.
+
+[Install]
+WantedBy=multi-user.target

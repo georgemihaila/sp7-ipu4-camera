@@ -13,6 +13,7 @@ MODULE_MANIFEST_EXTRA=${MODULE_SOURCE_MANIFEST_EXTRA:-$ROOT/modules/ir-camera.mo
 C_BRIDGE_BINARY=${C_BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 C_IR_BINARY=${C_IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
 C_AUTH_BINARY=${C_AUTH_BINARY:-$ROOT/cbridge/sp7-camera-auth-capture}
+C_ROUTE_BINARY=${C_ROUTE_BINARY:-$ROOT/cbridge/sp7-camera-ir-route}
 
 case $VERSION in
 	''|*[!A-Za-z0-9._+-]*)
@@ -50,6 +51,10 @@ fi
 }
 [ -x "$C_AUTH_BINARY" ] || {
 	printf 'error: authentication capture helper is missing or not executable: %s\n' "$C_AUTH_BINARY" >&2
+	exit 2
+}
+[ -x "$C_ROUTE_BINARY" ] || {
+	printf 'error: route lifecycle tool is missing or not executable: %s\n' "$C_ROUTE_BINARY" >&2
 	exit 2
 }
 
@@ -127,15 +132,19 @@ cp -p "$ROOT/scripts/ir/selinux-howdy-diagnostics.sh" "$STAGE/scripts/ir/"
 cp -p "$ROOT/scripts/ir/prepare-auth-env.sh" "$STAGE/scripts/ir/"
 cp -p "$ROOT/scripts/ir/requirements-py314.txt" "$STAGE/scripts/ir/"
 cp -p "$ROOT/scripts/ir/validate-auth-demo-offline.py" "$STAGE/scripts/ir/"
+cp -p "$ROOT/scripts/ir/install-route-lifecycle.sh" "$STAGE/scripts/ir/"
 cp -p "$ROOT/docs/ir-auth-capture-demo.md" "$STAGE/docs/"
 cp -p "$ROOT/docs/ir-auth-pipeline-validation-20260919.md" "$STAGE/docs/"
 cp -p "$ROOT/docs/howdy-sp7-ir-runtime-20260919.md" "$STAGE/docs/"
+cp -p "$ROOT/docs/ov7251-howdy-qualification-20260920.md" "$STAGE/docs/"
 mkdir -p "$STAGE/systemd/system"
 cp -p "$ROOT/systemd/system/sp7-camera-howdy-preflight.service" "$STAGE/systemd/system/"
+cp -p "$ROOT/systemd/system/sp7-camera-howdy-route.service" "$STAGE/systemd/system/"
 mkdir -p "$STAGE/cbridge"
 cp -p "$C_BRIDGE_BINARY" "$STAGE/cbridge/sp7-camera-bridge"
 cp -p "$C_IR_BINARY" "$STAGE/cbridge/sp7-camera-ir"
 cp -p "$C_AUTH_BINARY" "$STAGE/cbridge/sp7-camera-auth-capture"
+cp -p "$C_ROUTE_BINARY" "$STAGE/cbridge/sp7-camera-ir-route"
 mkdir -p "$STAGE/modules"
 cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
 cp -p "$MODULE_MANIFEST_EXTRA" "$STAGE/modules/"
@@ -183,6 +192,10 @@ akmod-v4l2loopback and v4l2loopback packages.
 
    The protected standalone authentication capture helper is installed at
    /usr/local/libexec/sp7-camera-auth-capture. It is not connected to PAM.
+   The separate graph-discovered route lifecycle can be installed, disabled,
+   and stopped with scripts/ir/install-route-lifecycle.sh. It never runs from
+   the authentication helper and must remain disabled until the qualification
+   report's hardware gates pass.
    The no-PAM enrollment/matching demo is scripts/ir/howdy-direct-demo.py.
    To prepare its isolated, pinned recognition dependencies without installing
    Howdy or PAM, run scripts/ir/prepare-auth-env.sh.
