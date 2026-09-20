@@ -503,7 +503,7 @@ int main(int argc, char **argv)
 			if (setup_link(&graph, index, true) != 0) {
 				int restore_result = 0;
 
-				for (unsigned reverse = index; reverse > 0U; reverse--)
+				for (unsigned reverse = index + 1U; reverse > 0U; reverse--)
 					if (setup_link(&graph, reverse - 1U,
 						graph.links[reverse - 1U].enabled) != 0)
 						restore_result = 2;
@@ -523,6 +523,14 @@ int main(int argc, char **argv)
 	result = graph_discover(&graph, media != NULL ? media : state.media);
 	if (result != 0)
 		return result;
+	for (unsigned index = 0U; index < 2U; index++) {
+		if (!graph.links[index].enabled) {
+			close(graph.fd);
+			return failf("prepared route link %s:%u -> %s:%u is no longer enabled",
+				graph.links[index].source, graph.links[index].source_pad,
+				graph.links[index].sink, graph.links[index].sink_pad);
+		}
+	}
 	/* Restore in reverse pipeline order so the capture sink is released first. */
 	for (unsigned reverse = 2U; reverse > 0U; reverse--) {
 		unsigned index = reverse - 1U;
