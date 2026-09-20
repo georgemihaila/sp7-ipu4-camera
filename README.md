@@ -323,6 +323,8 @@ grayscale YUYV, and writes the result to **Surface Camera (IR)** on
 manages only the front and back cameras, so starting or stopping the IR
 producer does not change the RGB bridge configuration.
 
+![OV7251 IR capture](docs/ir-evidence/vt3vjvqhwgqh1.png)
+
 See [`docs/ov7251-ir-backend.md`](docs/ov7251-ir-backend.md) for the capture
 backend and its qualification boundaries.
 
@@ -384,4 +386,4 @@ kernel / Intel, with changes from ruslanbay/ipu4-next and this repo). Scripts
 in the repo root are GPL-2.0 as well.
 
 - https://github.com/ruslanbay/ipu4-next — the port this builds on
-- https://github.com/linux-surface/linux-surface — SP7 kernel; camera discussion in issue #1353
+- https://github.com/linux-surface/linux-surface — SP7 kernel; [camera discussion #1353](https://github.com/linux-surface/linux-surface/discussions/1353)
