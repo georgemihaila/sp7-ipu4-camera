@@ -68,6 +68,7 @@ and run the installer from the checkout:
 git clone https://github.com/georgemihaila/sp7-ipu4-camera.git
 cd sp7-ipu4-camera
 sudo ./install.sh
+# REBOOT!
 ```
 
 The script installs the Fedora build tools and, if needed, configures the
