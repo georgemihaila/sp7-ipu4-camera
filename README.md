@@ -22,15 +22,17 @@ produce black frames, so enabling it is not yet a fix for that symptom.
 
 ## Support and project scope
 
-The release workflow is configured to build modules for this exact kernel release.
+The release workflow is configured to build the IPU4P stack and patched OV7251
+IR camera module for this exact kernel release. The OV7251 illuminator control
+is installed read-only and remains disabled by default.
 These binaries are kernel-specific; install only the asset whose kernel
 release matches `uname -r`. Other kernels require a matching prepared kernel
 build tree and may need kernel-tree integration for the OV5693 sensor source.
 
 This repository contains the IPU4P parent, ISYS and PSYS drivers, CSS libraries,
-bridge support, Surface Pro 7 compatibility fixes, and build/install/test
-scripts. It is an overlay for a Linux kernel tree, not a complete kernel or a
-standalone camera application.
+the OV7251 IR sensor/illuminator module build, bridge support, Surface Pro 7
+compatibility fixes, and build/install/test scripts. It is an overlay for a
+Linux kernel tree, not a complete kernel or a standalone camera application.
 
 The rear OV8865 sensor driver is an external requirement and is not included
 here. The IR OV7251 path is provided separately as an opt-in standalone
@@ -351,7 +353,7 @@ see
 rear camera bridge. The driver install flow enables it automatically.
 
 The source installer supports `sudo ./install.sh --driver-only` when only the
-IPU4P driver and firmware are wanted. The default `--full` mode also installs
+IPU4P/OV7251 drivers and firmware are wanted. The default `--full` mode also installs
 and configures the named-camera bridge. A prebuilt release archive uses
 `scripts/install-modules.sh` directly and does not install compiler or
 development packages.

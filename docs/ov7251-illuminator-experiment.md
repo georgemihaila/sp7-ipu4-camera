@@ -1,7 +1,8 @@
 # OV7251 illuminator experiment preparation
 
-Date: 2026-09-20. This is a source/build preparation only. The candidate was
-not installed, loaded, used for capture, or used for hardware writes.
+Date: 2026-09-20. The standalone builder is source/build preparation only. The
+normal source installer invokes it and manages the resulting `ov7251.ko`; the
+installer does not load the module, enable the illuminator, or perform capture.
 
 ## Provenance
 

@@ -33,7 +33,9 @@ module both hash to:
 ```
 
 This is a reproducible source build, not a binary-only fix. The module remains
-kernel-specific and is not installed or loaded by this change.
+kernel-specific. The normal source installer now builds and installs the
+patched OV7251 sensor module alongside the IPU4P modules; it does not load the
+module, enable the illuminator, or start the IR producer automatically.
 
 ## Capture backend
 

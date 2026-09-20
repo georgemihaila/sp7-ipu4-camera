@@ -9,6 +9,7 @@ VERSION=${PACKAGE_VERSION:-snapshot}
 SOURCE_COMMIT=${SOURCE_COMMIT:-unknown}
 OUTPUT_DIR=${OUTPUT_DIR:-$ROOT/dist}
 MODULE_MANIFEST=${MODULE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
+MODULE_MANIFEST_EXTRA=${MODULE_SOURCE_MANIFEST_EXTRA:-$ROOT/modules/ir-camera.modules}
 C_BRIDGE_BINARY=${C_BRIDGE_BINARY:-$ROOT/cbridge/sp7-camera-bridge}
 C_IR_BINARY=${C_IR_BINARY:-$ROOT/cbridge/sp7-camera-ir}
 C_AUTH_BINARY=${C_AUTH_BINARY:-$ROOT/cbridge/sp7-camera-auth-capture}
@@ -33,6 +34,10 @@ if ! command -v modinfo >/dev/null 2>&1; then
 fi
 [ -f "$MODULE_MANIFEST" ] || {
 	printf 'error: module manifest is missing: %s\n' "$MODULE_MANIFEST" >&2
+	exit 2
+}
+[ -f "$MODULE_MANIFEST_EXTRA" ] || {
+	printf 'error: extra module manifest is missing: %s\n' "$MODULE_MANIFEST_EXTRA" >&2
 	exit 2
 }
 [ -x "$C_BRIDGE_BINARY" ] || {
@@ -66,7 +71,9 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-while IFS='|' read -r relative_path module_name extra; do
+copy_manifest_modules() {
+	manifest=$1
+	while IFS='|' read -r relative_path module_name extra; do
 	[ -n "$relative_path" ] || continue
 	case $relative_path in \#*) continue ;; esac
 	[ -n "$module_name" ] && [ -z "${extra:-}" ] || {
@@ -90,7 +97,10 @@ while IFS='|' read -r relative_path module_name extra; do
 	}
 	mkdir -p "$STAGE/$(dirname -- "$relative_path")"
 	cp -p "$source" "$STAGE/$relative_path"
-done < "$MODULE_MANIFEST"
+	done < "$manifest"
+}
+copy_manifest_modules "$MODULE_MANIFEST"
+copy_manifest_modules "$MODULE_MANIFEST_EXTRA"
 
 mkdir -p "$STAGE/scripts"
 cp -p "$ROOT/scripts/install-modules.sh" "$STAGE/scripts/"
@@ -128,6 +138,7 @@ cp -p "$C_IR_BINARY" "$STAGE/cbridge/sp7-camera-ir"
 cp -p "$C_AUTH_BINARY" "$STAGE/cbridge/sp7-camera-auth-capture"
 mkdir -p "$STAGE/modules"
 cp -p "$MODULE_MANIFEST" "$STAGE/modules/"
+cp -p "$MODULE_MANIFEST_EXTRA" "$STAGE/modules/"
 mkdir -p "$STAGE/modprobe.d" "$STAGE/wireplumber" "$STAGE/systemd/user"
 cp -p "$ROOT/modprobe.d/98-v4l2loopback.conf" "$STAGE/modprobe.d/"
 cp -p "$ROOT/wireplumber/50-sp7-ipu4.conf" "$STAGE/wireplumber/"

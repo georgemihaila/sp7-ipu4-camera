@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the Surface Pro 7 IPU4P modules from this source checkout.
+# Install the Surface Pro 7 IPU4P and OV7251 IR camera modules from this source checkout.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -15,9 +15,10 @@ usage() {
 	cat <<'EOF'
 usage: sudo ./install.sh [--full|--driver-only]
 
-The default --full mode builds and installs the IPU4P driver and configures
+The default --full mode builds and installs the IPU4P and OV7251 IR camera
+drivers, then configures
 the named Surface Camera bridge when a desktop session is available.
---driver-only installs only the IPU4P modules and firmware. It does not
+--driver-only installs only the IPU4P/OV7251 modules and firmware. It does not
 install bridge packages, write bridge configuration, or enable user services.
 For a prebuilt release archive, use scripts/install-modules.sh directly; it
 does not install compiler or development packages.
@@ -61,16 +62,21 @@ if [ "${FIRMWARE+x}" = x ] && [ ! -s "$FIRMWARE" ]; then
 	fail "FIRMWARE does not name a non-empty file: ${FIRMWARE:-<empty>}"
 fi
 
+OV7251_SOURCE_URL=${OV7251_SOURCE_URL:-https://raw.githubusercontent.com/linux-surface/kernel/57d61aff0b53b089227f5a794363fec829114fc5/drivers/media/i2c/ov7251.c}
+OV7251_SOURCE_SHA256=3588a52e0a3a4dfe23dd3425db95388d93af17c6f8eebe5b004ee8d1eea5aee9
+
 DRIVER_PACKAGES='ca-certificates curl dnf-plugins-core kmod util-linux'
 BUILD_PACKAGES='elfutils-libelf-devel gcc git make openssl-devel perl python3 bc dwarves flex bison'
 BRIDGE_PACKAGES='libcamera-gstreamer gstreamer1-plugins-good akmod-v4l2loopback v4l2loopback v4l-utils'
 BRIDGE_BUILD_PACKAGES='gcc make pkgconf-pkg-config gstreamer1-devel glib2-devel'
 
 WORKDIR=$(mktemp -d)
+OV7251_SOURCE_PATH=
 cleanup() {
 	status=$?
 	trap - EXIT
 	rm -rf -- "$WORKDIR"
+	[ -z "${OV7251_SOURCE_PATH:-}" ] || rm -f -- "$OV7251_SOURCE_PATH"
 	exit "$status"
 }
 trap cleanup EXIT
@@ -112,6 +118,21 @@ fi
 KDIR_RELEASE=$(kernel_tree_release "$KDIR")
 [ -f "$KDIR/Makefile" ] && [ -f "$KDIR/.config" ] && [ "$KDIR_RELEASE" = "$KREL" ] || \
 	fail "no prepared kernel build tree for $KREL; expected /lib/modules/$KREL/build or /usr/src/kernels/$KREL"
+
+# The distribution kernel-devel package does not carry the OV7251 source file.
+# Fetch the exact linux-surface revision used by the illuminator patch, or
+# accept a caller-supplied copy after verifying the same content hash.
+OV7251_SOURCE_PATH=$(mktemp /var/tmp/ov7251-installer-source.XXXXXX)
+chmod 0644 "$OV7251_SOURCE_PATH"
+if [ -n "${OV7251_SOURCE:-}" ]; then
+	[ -f "$OV7251_SOURCE" ] || fail "OV7251_SOURCE does not name a file: $OV7251_SOURCE"
+	install -m 0644 "$OV7251_SOURCE" "$OV7251_SOURCE_PATH"
+else
+	printf '%s\n' 'Downloading the pinned OV7251 sensor source...'
+	curl -fsSL --retry 3 "$OV7251_SOURCE_URL" -o "$OV7251_SOURCE_PATH"
+fi
+[ "$(sha256sum "$OV7251_SOURCE_PATH" | awk '{print $1}')" = "$OV7251_SOURCE_SHA256" ] || \
+	fail "OV7251 source hash does not match the pinned linux-surface source"
 
 # Firmware is not shipped in this repository. Prefer a caller-supplied copy,
 # then the standard installed location, and otherwise extract it from the
@@ -159,6 +180,18 @@ else
 	KDIR="$KDIR" KREL="$KREL" "$ROOT/scripts/build-modules.sh" "-j$JOBS"
 fi
 
+printf '%s\n' 'Building the OV7251 IR camera and illuminator-control module...'
+OV7251_OUTPUT="$ROOT/linux-6.19.8/drivers/media/i2c/ov7251.ko"
+if [ "$BUILD_UID" != 0 ]; then
+	runuser -u "$BUILD_USER" -- mkdir -p "$(dirname -- "$OV7251_OUTPUT")"
+	runuser -u "$BUILD_USER" -- env PATH="$PATH" KDIR="$KDIR" KREL="$KREL" \
+		"$ROOT/scripts/build-ov7251-illuminator-experiment.sh" \
+		"$OV7251_SOURCE_PATH" "$KREL" "$OV7251_OUTPUT"
+else
+	KDIR="$KDIR" KREL="$KREL" "$ROOT/scripts/build-ov7251-illuminator-experiment.sh" \
+		"$OV7251_SOURCE_PATH" "$KREL" "$OV7251_OUTPUT"
+fi
+
 if [ "$INSTALL_MODE" = full ]; then
 	printf '%s\n' 'Building the C camera bridge...'
 	if [ "$BUILD_UID" != 0 ]; then
@@ -170,7 +203,9 @@ if [ "$INSTALL_MODE" = full ]; then
 fi
 
 printf '%s\n' 'Installing verified modules and firmware...'
-FIRMWARE="$FIRMWARE_PATH" KREL="$KREL" "$ROOT/scripts/install-modules.sh"
+FIRMWARE="$FIRMWARE_PATH" KREL="$KREL" \
+	MODULE_SOURCE_MANIFEST_EXTRA="$ROOT/modules/ir-camera.modules" \
+	"$ROOT/scripts/install-modules.sh"
 
 if [ "$INSTALL_MODE" = full ]; then
 	command -v gst-inspect-1.0 >/dev/null 2>&1 || fail 'gst-inspect-1.0 is required to validate GStreamer runtime elements'
@@ -192,6 +227,11 @@ fi
 cat <<EOF
 
 Installation complete for kernel $KREL.
+EOF
+cat <<EOF
+The OV7251 IR camera driver, including the read-only illuminator control, was
+installed. The illuminator remains disabled by default; enabling it is a
+separate hardware experiment.
 EOF
 if [ "$INSTALL_MODE" = full ]; then
 	cat <<EOF

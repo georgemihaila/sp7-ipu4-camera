@@ -10,22 +10,43 @@ FIRMWARE=${FIRMWARE:-}
 FIRMWARE_TARGET=${FIRMWARE_TARGET:-/lib/firmware/ipu4p_cpd.bin}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
 SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
+if [ "${MODULE_SOURCE_MANIFEST_EXTRA+x}" = x ]; then
+	EXTRA_SOURCE_MANIFEST=$MODULE_SOURCE_MANIFEST_EXTRA
+	[ -f "$EXTRA_SOURCE_MANIFEST" ] || {
+		printf 'error: extra source module manifest is missing: %s\n' "$EXTRA_SOURCE_MANIFEST" >&2
+		exit 2
+	}
+elif [ -f "$ROOT/modules/ir-camera.modules" ]; then
+	EXTRA_SOURCE_MANIFEST=$ROOT/modules/ir-camera.modules
+else
+	EXTRA_SOURCE_MANIFEST=
+fi
 
 [ -f "$SOURCE_MANIFEST" ] || {
 	printf 'error: source module manifest is missing: %s\n' "$SOURCE_MANIFEST" >&2
 	exit 2
 }
 
-module_entries() {
+validate_source_manifest() {
+	manifest=$1
 	awk -F'|' '
 		NF == 0 || $0 ~ /^[[:space:]]*#/ { next }
 		NF != 2 || $1 == "" || $2 == "" { exit 2 }
-		{ print }
-	' "$SOURCE_MANIFEST" || {
-		printf 'error: malformed source module manifest: %s\n' "$SOURCE_MANIFEST" >&2
-		exit 2
+	' "$manifest" || {
+		printf 'error: malformed source module manifest: %s\n' "$manifest" >&2
+		return 2
 	}
 }
+
+validate_source_manifest "$SOURCE_MANIFEST"
+[ -z "$EXTRA_SOURCE_MANIFEST" ] || validate_source_manifest "$EXTRA_SOURCE_MANIFEST"
+
+module_entries() {
+	awk -F'|' '!NF || $0 ~ /^[[:space:]]*#/ { next } { print }' "$SOURCE_MANIFEST"
+	[ -z "$EXTRA_SOURCE_MANIFEST" ] || \
+		awk -F'|' '!NF || $0 ~ /^[[:space:]]*#/ { next } { print }' "$EXTRA_SOURCE_MANIFEST"
+}
+
 module_entries >/dev/null
 MODULES=$(module_entries | awk -F'|' '{ print $2 }')
 
@@ -44,9 +65,10 @@ fi
 [ -f "$FIRMWARE" ] || { printf 'error: firmware not found: %s\n' "$FIRMWARE" >&2; exit 2; }
 
 source_for() {
-	awk -F'|' -v module="$1" -v root="$ROOT" \
-		'$2 == module { print root "/" $1; found++ }
-		END { if (found != 1) exit 1 }' "$SOURCE_MANIFEST"
+	matches=$(module_entries | awk -F'|' -v module="$1" '$2 == module { print $1 }')
+	count=$(printf '%s\n' "$matches" | awk 'NF { count++ } END { print count + 0 }')
+	[ "$count" -eq 1 ] || return 1
+	printf '%s/%s\n' "$ROOT" "$(printf '%s\n' "$matches" | sed -n '1p')"
 }
 
 file_hash() { sha256sum "$1" | awk '{print $1}'; }
@@ -180,4 +202,4 @@ fi
 rm -rf "$STAGE"
 STAGE=
 depmod -a "$KREL"
-printf 'installed IPU4P modules in %s and firmware in %s\n' "$MODDIR" "$FIRMWARE_TARGET"
+printf 'installed camera modules in %s and firmware in %s\n' "$MODDIR" "$FIRMWARE_TARGET"

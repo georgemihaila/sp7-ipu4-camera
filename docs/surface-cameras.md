@@ -48,8 +48,10 @@ desktop configuration, use:
 sudo ./install.sh --driver-only
 ```
 
-For a prebuilt release archive, `scripts/install-modules.sh` is the module and
-firmware installer; it does not install compiler or development packages.
+For a prebuilt release archive, `scripts/install-modules.sh` is the IPU4P,
+OV7251 IR-driver, and firmware installer; it does not install compiler or
+development packages. The installed OV7251 illuminator control remains
+disabled by default.
 For a bridge-only installation on an already prepared host, install the
 runtime dependencies and build the loopback module first:
 

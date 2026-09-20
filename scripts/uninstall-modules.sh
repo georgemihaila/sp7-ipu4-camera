@@ -8,6 +8,17 @@ MODDIR=${MODDIR:-/lib/modules/$KREL/updates/extra}
 MANIFEST="$MODDIR/.ipu4p-camera-modules"
 ROOT=${MODULE_SOURCE_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
+if [ "${MODULE_SOURCE_MANIFEST_EXTRA+x}" = x ]; then
+	EXTRA_SOURCE_MANIFEST=$MODULE_SOURCE_MANIFEST_EXTRA
+	[ -f "$EXTRA_SOURCE_MANIFEST" ] || {
+		printf 'error: extra source module manifest is missing: %s\n' "$EXTRA_SOURCE_MANIFEST" >&2
+		exit 2
+	}
+elif [ -f "$ROOT/modules/ir-camera.modules" ]; then
+	EXTRA_SOURCE_MANIFEST=$ROOT/modules/ir-camera.modules
+else
+	EXTRA_SOURCE_MANIFEST=
+fi
 
 [ -e "$MANIFEST" ] || {
 	printf 'no IPU4P module manifest in %s; no modules removed\n' "$MODDIR"
@@ -16,10 +27,15 @@ SOURCE_MANIFEST=${MODULE_SOURCE_MANIFEST:-$ROOT/modules/ipu4p-camera.modules}
 [ -f "$MANIFEST" ] || { printf 'error: module manifest is not a regular file: %s\n' "$MANIFEST" >&2; exit 2; }
 
 file_hash() { sha256sum "$1" | awk '{print $1}'; }
+manifest_has_module() {
+	manifest=$1
+	[ -f "$manifest" ] || return 1
+	awk -F'|' -v module="$2" '$2 == module { found++ } END { exit found == 1 ? 0 : 1 }' "$manifest"
+}
 known_module() {
 	[ "$1" = dw9719.ko ] && return 0
-	[ -f "$SOURCE_MANIFEST" ] || return 1
-	awk -F'|' -v module="$1" '$2 == module { found++ } END { exit found == 1 ? 0 : 1 }' "$SOURCE_MANIFEST"
+	manifest_has_module "$SOURCE_MANIFEST" "$1" && return 0
+	[ -z "$EXTRA_SOURCE_MANIFEST" ] || manifest_has_module "$EXTRA_SOURCE_MANIFEST" "$1"
 }
 
 # Reject malformed or unexpected manifest entries instead of allowing the
@@ -69,5 +85,5 @@ else
 fi
 
 if [ "$removed" -gt 0 ]; then depmod -a "$KREL"; fi
-printf 'removed %s tracked IPU4P module(s) from %s; retained %s modified module(s); firmware was left in place\n' \
+printf 'removed %s tracked camera module(s) from %s; retained %s modified module(s); firmware was left in place\n' \
 	"$removed" "$MODDIR" "$retained"
