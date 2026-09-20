@@ -2,7 +2,7 @@
 
 Date: 2026-09-20
 Starting evidence: commit `a52a135`
-Status: awaiting explicit normal-reboot authorization
+Status: recovered after the explicitly authorized normal reboot
 
 ## Current blocked state
 
@@ -82,3 +82,30 @@ next static/runtime diagnosis should focus on the lock or completion owner
 around `verify_stream_start`, stream-start retry cancellation, and
 `v4l2_release`/`__fput` teardown after an illumination-disabled off capture.
 
+## Post-reboot verification
+
+The normal reboot completed without escalation. The running kernel is
+`6.19.8-3.surface.fc43.x86_64`. The distribution OV7251 and ISYS modules are
+loaded; their hashes remain the recorded values above. The diagnostic receiver
+is not loaded, `debug_capture_links=N`, and both experimental OV7251 parameters
+are absent. No candidate or BB8 diagnostic module was loaded after reboot.
+
+The bridge is enabled/active; PipeWire is active; WirePlumber is
+enabled/active. A short three-frame probe contained only the documented startup
+filler, so it was not treated as camera success. The established RGB path was
+then warmed with bounded 120-frame captures, serially and without touching the
+IR route:
+
+| Endpoint | Bytes | Non-flat frames | First non-flat frame | SHA-256 |
+|---|---:|---:|---:|---|
+| Front `/dev/video60` | 221184000 | 88 / 120 | 31 | `453955552d3ce1b9227cec2bf6f0d105d048ec7d2349d2112d4dcbedc81513a6` |
+| Rear `/dev/video61` | 221184000 | 63 / 120 | 56 | `7bbd2a7735ef567a45871e5b78697a69e0af70870e878a0711325452cd579be3` |
+
+The final frames had changing scene content: front Y mean 46.705 with range
+16..69, and rear Y mean 49.132 with range 47..57. These captures verify the
+normal RGB bridge after reboot. They do not qualify the IR route or the
+illuminator.
+
+Post-reboot artifacts are outside tracked source at:
+
+`/var/tmp/ov7251-post-reboot-rgb-warm-p9DQlP/`
