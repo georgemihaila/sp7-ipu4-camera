@@ -705,7 +705,8 @@ static int verify_stream_start(struct ipu_isys_pipeline *ip,
 		dev_warn_ratelimited(dev,
 			 "no frames from %s after start; bouncing sensor (retry %u)\n",
 			 ip->external->entity->name, retry + 1);
-		rval = v4l2_subdev_call(esd, video, s_stream, 0);
+		rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, 0,
+						 "verify_stream_start:retry_off");
 		if (rval) {
 			dev_err(dev,
 				"sensor bounce s_stream(0) failed for %s: %d\n",
@@ -730,7 +731,8 @@ static int verify_stream_start(struct ipu_isys_pipeline *ip,
 				last_receiver_errors);
 		}
 		msleep(20);
-		rval = v4l2_subdev_call(esd, video, s_stream, 1);
+		rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, 1,
+						 "verify_stream_start:retry_on");
 		if (rval) {
 			dev_err(dev,
 				"sensor bounce s_stream(1) failed for %s: %d\n",

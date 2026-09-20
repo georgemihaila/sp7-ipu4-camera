@@ -22,8 +22,11 @@ done
 grep -Fq 'v4l2_i2c_new_subdev_board(&isys->v4l2_dev' "$ISYS"
 grep -Fq 'v4l2_device_unregister(&isys->v4l2_dev);' "$ISYS"
 grep -Fq 'esd = media_entity_to_v4l2_subdev(ip->external->entity);' "$QUEUE"
-grep -Fq 'v4l2_subdev_call(esd, video, s_stream, 0)' "$QUEUE"
-grep -Fq 'v4l2_subdev_call(esd, video, s_stream, 1)' "$QUEUE"
+# The receiver diagnostic wrapper preserves the original dispatch in
+# ipu-isys-video.c while giving the retry sites stable evidence labels.
+grep -Fq 'ipu_isys_lifecycle_s_stream(dev, ip, esd, 0' "$QUEUE"
+grep -Fq 'ipu_isys_lifecycle_s_stream(dev, ip, esd, 1' "$QUEUE"
+grep -Fq 'rval = v4l2_subdev_call(sd, video, s_stream, enable);' "$VIDEO"
 
 # A single-queue STREAMON callback runs under the video queue mutex.  The
 # driver transfers that ownership before waiting/retrying; release therefore

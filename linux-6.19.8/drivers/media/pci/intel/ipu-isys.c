@@ -35,6 +35,9 @@
 
 #define ISYS_PM_QOS_VALUE	300
 
+static void isys_lifecycle_log_subdevs(struct ipu_isys *isys,
+					       const char *phase);
+
 int ipu_isys_force_power_cycle(struct ipu_isys *isys)
 {
 	struct ipu_device *isp;
@@ -255,6 +258,12 @@ isys_complete_ext_device_registration(struct ipu_isys *isys,
 	return 0;
 
 skip_unregister_subdev:
+	if (ipu_isys_lifecycle_trace)
+		dev_info(&isys->adev->dev,
+			 "IPU4P_LIFECYCLE subdev phase=unregister_failed name=%s "
+			 "sd=%px entity=%px ops=%px owner=%px dev=%px\n",
+			 sd->name, sd, &sd->entity, READ_ONCE(sd->ops),
+			 sd->owner, sd->dev);
 	v4l2_device_unregister_subdev(sd);
 	return rval;
 }
@@ -320,6 +329,12 @@ static int isys_register_ext_subdev(struct ipu_isys *isys,
 		rval = -EINVAL;
 		goto skip_put_adapter;
 	}
+	if (ipu_isys_lifecycle_trace)
+		dev_info(&isys->adev->dev,
+			 "IPU4P_LIFECYCLE subdev phase=registered name=%s "
+			 "sd=%px entity=%px ops=%px owner=%px dev=%px\n",
+			 sd->name, sd, &sd->entity, READ_ONCE(sd->ops),
+			 sd->owner, sd->dev);
 
 	if (!sd_info->csi2)
 		return 0;
@@ -713,6 +728,7 @@ out_isys_unregister_subdevices:
 	isys_unregister_subdevices(isys);
 
 out_v4l2_device_unregister:
+	isys_lifecycle_log_subdevs(isys, "before_v4l2_device_unregister");
 	v4l2_device_unregister(&isys->v4l2_dev);
 
 out_media_device_unregister:
@@ -725,6 +741,7 @@ out_media_device_unregister:
 static void isys_unregister_devices(struct ipu_isys *isys)
 {
 	isys_unregister_subdevices(isys);
+	isys_lifecycle_log_subdevs(isys, "before_v4l2_device_unregister");
 	v4l2_device_unregister(&isys->v4l2_dev);
 	media_device_unregister(&isys->media_dev);
 	media_device_cleanup(&isys->media_dev);
@@ -1193,6 +1210,22 @@ static int resp_type_to_index(int type)
 	return i - 1;
 }
 
+static void isys_lifecycle_log_subdevs(struct ipu_isys *isys,
+					       const char *phase)
+{
+	struct v4l2_subdev *sd;
+
+	if (!ipu_isys_lifecycle_trace)
+		return;
+
+	list_for_each_entry(sd, &isys->v4l2_dev.subdevs, list)
+		dev_info(&isys->adev->dev,
+			 "IPU4P_LIFECYCLE subdev phase=%s name=%s sd=%px "
+			 "entity=%px ops=%px owner=%px dev=%px\n",
+			 phase, sd->name, sd, &sd->entity, READ_ONCE(sd->ops),
+			 sd->owner, sd->dev);
+}
+
 int isys_isr_one(struct ipu_bus_device *adev)
 {
 	struct ipu_isys *isys = ipu_bus_get_drvdata(adev);
@@ -1272,6 +1305,12 @@ int isys_isr_one(struct ipu_bus_device *adev)
 		break;
 	case IPU_FW_ISYS_RESP_TYPE_STREAM_CLOSE_ACK:
 		complete(&pipe->stream_close_completion);
+		if (ipu_isys_lifecycle_trace)
+			dev_info(&adev->dev,
+				 "IPU4P_LIFECYCLE fw_ack=STREAM_CLOSE_ACK handle=%u "
+				 "pipe=%px error=%d completion_done=%d\n",
+				 resp->stream_handle, pipe, pipe->error,
+				 completion_done(&pipe->stream_close_completion));
 		break;
 	case IPU_FW_ISYS_RESP_TYPE_STREAM_START_ACK:
 		complete(&pipe->stream_start_completion);
@@ -1282,9 +1321,21 @@ int isys_isr_one(struct ipu_bus_device *adev)
 		break;
 	case IPU_FW_ISYS_RESP_TYPE_STREAM_STOP_ACK:
 		complete(&pipe->stream_stop_completion);
+		if (ipu_isys_lifecycle_trace)
+			dev_info(&adev->dev,
+				 "IPU4P_LIFECYCLE fw_ack=STREAM_STOP_ACK handle=%u "
+				 "pipe=%px error=%d completion_done=%d\n",
+				 resp->stream_handle, pipe, pipe->error,
+				 completion_done(&pipe->stream_stop_completion));
 		break;
 	case IPU_FW_ISYS_RESP_TYPE_STREAM_FLUSH_ACK:
 		complete(&pipe->stream_stop_completion);
+		if (ipu_isys_lifecycle_trace)
+			dev_info(&adev->dev,
+				 "IPU4P_LIFECYCLE fw_ack=STREAM_FLUSH_ACK handle=%u "
+				 "pipe=%px error=%d completion_done=%d\n",
+				 resp->stream_handle, pipe, pipe->error,
+				 completion_done(&pipe->stream_stop_completion));
 		break;
 	case IPU_FW_ISYS_RESP_TYPE_PIN_DATA_READY:
 		/*

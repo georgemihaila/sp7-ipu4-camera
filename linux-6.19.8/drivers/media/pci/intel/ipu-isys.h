@@ -22,6 +22,21 @@
 #include "ipu-fw-isys.h"
 #include "ipu-platform-isys.h"
 
+/* Diagnostic-only lifecycle tracing; disabled unless explicitly enabled. */
+extern bool ipu_isys_lifecycle_trace;
+
+struct ipu_isys_pipeline;
+struct ipu_isys_video;
+
+void ipu_isys_lifecycle_log_locks(struct device *dev,
+					 struct ipu_isys_video *av,
+					 const char *site);
+int ipu_isys_lifecycle_s_stream(struct device *dev,
+					struct ipu_isys_pipeline *ip,
+					struct v4l2_subdev *sd,
+					unsigned int enable,
+					const char *site);
+
 #define IPU_ISYS_2600_MEM_LINE_ALIGN	64
 
 /* for TPG */

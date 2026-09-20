@@ -4,6 +4,7 @@
 #include <linux/delay.h>
 #include <linux/firmware.h>
 #include <linux/init_task.h>
+#include <linux/lockdep.h>
 #include <linux/kthread.h>
 #include <linux/pm_runtime.h>
 #include <linux/module.h>
@@ -44,6 +45,11 @@ module_param(debug_capture_links, bool, 0444);
 MODULE_PARM_DESC(debug_capture_links,
 		 "Also link the debug capture nodes (per-CSI-2 MIPI packet dumps, CSI2 BE/ISA) into the media graph; their output is not a clean raster (default 0)");
 
+bool ipu_isys_lifecycle_trace;
+module_param_named(lifecycle_trace, ipu_isys_lifecycle_trace, bool, 0644);
+MODULE_PARM_DESC(lifecycle_trace,
+		 "Log receiver subdevice lifetime, sensor s_stream calls, firmware stop/close acknowledgements, and lock state (default 0)");
+
 static void ipu_isys_log_csi2_state(struct device *dev,
 				    struct ipu_isys_pipeline *ip,
 				    const char *tag)
@@ -66,6 +72,73 @@ static void ipu_isys_log_csi2_state(struct device *dev,
 		csi2->in_frame[2], csi2->in_frame[3], csi2->wait_for_sync[0],
 		csi2->wait_for_sync[1], csi2->wait_for_sync[2],
 		csi2->wait_for_sync[3]);
+}
+
+static int ipu_isys_lifecycle_lockdep_held(struct mutex *lock)
+{
+#ifdef CONFIG_LOCKDEP
+	return lockdep_is_held(lock);
+#else
+	return -1;
+#endif
+}
+
+void ipu_isys_lifecycle_log_locks(struct device *dev,
+					 struct ipu_isys_video *av,
+					 const char *site)
+{
+	struct media_device *mdev = av->vdev.entity.graph_obj.mdev;
+	struct ipu_isys *isys = av->isys;
+
+	if (!ipu_isys_lifecycle_trace)
+		return;
+
+	dev_info(dev,
+		 "IPU4P_LIFECYCLE lock_state site=%s pid=%d comm=%s "
+		 "video=%d/%d stream=%d/%d isys=%d/%d graph=%d/%d\n",
+		 site, current->pid, current->comm,
+		 mutex_is_locked(&av->mutex),
+		 ipu_isys_lifecycle_lockdep_held(&av->mutex),
+		 mutex_is_locked(&isys->stream_mutex),
+		 ipu_isys_lifecycle_lockdep_held(&isys->stream_mutex),
+		 mutex_is_locked(&isys->mutex),
+		 ipu_isys_lifecycle_lockdep_held(&isys->mutex),
+		 mdev ? mutex_is_locked(&mdev->graph_mutex) : 0,
+		 mdev ? ipu_isys_lifecycle_lockdep_held(&mdev->graph_mutex) : -1);
+}
+
+int ipu_isys_lifecycle_s_stream(struct device *dev,
+					struct ipu_isys_pipeline *ip,
+					struct v4l2_subdev *sd,
+					unsigned int enable,
+					const char *site)
+{
+	struct ipu_isys_video *av = container_of(ip, struct ipu_isys_video, ip);
+	const struct v4l2_subdev_ops *ops;
+	int rval;
+
+	if (ipu_isys_lifecycle_trace) {
+		ops = READ_ONCE(sd->ops);
+		ipu_isys_lifecycle_log_locks(dev, av, site);
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE sensor_s_stream phase=before site=%s "
+			 "state=%u sd=%px entity=%px ops=%px owner=%px dev=%px\n",
+			 site, enable, sd, &sd->entity, ops, sd->owner, sd->dev);
+	}
+
+	/* Keep the original v4l2_subdev_call semantics; this is observation only. */
+	rval = v4l2_subdev_call(sd, video, s_stream, enable);
+
+	if (ipu_isys_lifecycle_trace) {
+		ops = READ_ONCE(sd->ops);
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE sensor_s_stream phase=after site=%s "
+			 "state=%u rval=%d sd=%px entity=%px ops=%px owner=%px dev=%px\n",
+			 site, enable, rval, sd, &sd->entity, ops, sd->owner, sd->dev);
+		ipu_isys_lifecycle_log_locks(dev, av, site);
+	}
+
+	return rval;
 }
 
 const struct ipu_isys_pixelformat ipu_isys_pfmts[] = {
@@ -379,7 +452,11 @@ static int video_release(struct file *file)
 	struct ipu_isys_video *av = video_drvdata(file);
 	int ret = 0;
 
+	ipu_isys_lifecycle_log_locks(&av->isys->adev->dev, av,
+					     "video_release:before_vb2");
 	vb2_fop_release(file);
+	ipu_isys_lifecycle_log_locks(&av->isys->adev->dev, av,
+					     "video_release:after_vb2");
 
 	mutex_lock(&av->isys->mutex);
 
@@ -1922,6 +1999,7 @@ stop_streaming_firmware(struct ipu_isys_video *av)
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
 	struct device *dev = &av->isys->adev->dev;
 	int rval, tout;
+	unsigned long started = jiffies;
 	enum ipu_fw_isys_send_type send_type =
 		IPU_FW_ISYS_SEND_TYPE_STREAM_FLUSH;
 
@@ -1930,9 +2008,22 @@ stop_streaming_firmware(struct ipu_isys_video *av)
 	/* Use STOP command if running in CSI capture mode */
 	if (use_stream_stop)
 		send_type = IPU_FW_ISYS_SEND_TYPE_STREAM_STOP;
+	if (ipu_isys_lifecycle_trace) {
+		ipu_isys_lifecycle_log_locks(dev, av, "stop_firmware:before_send");
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=before_send cmd=%u handle=%d "
+			 "completion_done=%d error=%d\n",
+			 send_type, ip->stream_handle,
+			 completion_done(&ip->stream_stop_completion), ip->error);
+	}
 
 	rval = ipu_fw_isys_simple_cmd(av->isys, ip->stream_handle,
 				      send_type);
+	if (ipu_isys_lifecycle_trace)
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=after_send cmd=%u handle=%d "
+			 "rval=%d\n",
+			 send_type, ip->stream_handle, rval);
 
 	if (rval < 0) {
 		dev_err(dev, "can't stop stream (%d)\n", rval);
@@ -1942,6 +2033,13 @@ stop_streaming_firmware(struct ipu_isys_video *av)
 
 	tout = wait_for_completion_timeout(&ip->stream_stop_completion,
 					   IPU_LIB_CALL_TIMEOUT_JIFFIES);
+	if (ipu_isys_lifecycle_trace)
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=after_wait cmd=%u handle=%d "
+			 "wait=%d elapsed_ms=%u completed=%d error=%d\n",
+			 send_type, ip->stream_handle, tout,
+			 jiffies_to_msecs(jiffies - started),
+			 completion_done(&ip->stream_stop_completion), ip->error);
 	if (!tout) {
 		dev_err(dev,
 			"stream stop time out (source=%u handle=%d vc=%u stream_id=%u send_type=%u)\n",
@@ -1976,12 +2074,26 @@ static int close_streaming_firmware(struct ipu_isys_video *av)
 	    to_ipu_isys_pipeline(media_entity_pipeline(&av->vdev.entity));
 	struct device *dev = &av->isys->adev->dev;
 	int rval, tout;
+	unsigned long started = jiffies;
 	bool close_failed = false;
 
 	reinit_completion(&ip->stream_close_completion);
+	if (ipu_isys_lifecycle_trace) {
+		ipu_isys_lifecycle_log_locks(dev, av, "close_firmware:before_send");
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=before_send cmd=%u handle=%d "
+			 "completion_done=%d error=%d\n",
+			 IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE, ip->stream_handle,
+			 completion_done(&ip->stream_close_completion), ip->error);
+	}
 
 	rval = ipu_fw_isys_simple_cmd(av->isys, ip->stream_handle,
 				      IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE);
+	if (ipu_isys_lifecycle_trace)
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=after_send cmd=%u handle=%d "
+			 "rval=%d\n",
+			 IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE, ip->stream_handle, rval);
 	if (rval < 0) {
 		dev_err(dev, "can't close stream (%d)\n", rval);
 		close_failed = true;
@@ -1990,6 +2102,13 @@ static int close_streaming_firmware(struct ipu_isys_video *av)
 
 	tout = wait_for_completion_timeout(&ip->stream_close_completion,
 					   IPU_LIB_CALL_TIMEOUT_JIFFIES);
+	if (ipu_isys_lifecycle_trace)
+		dev_info(dev,
+			 "IPU4P_LIFECYCLE fw_cmd phase=after_wait cmd=%u handle=%d "
+			 "wait=%d elapsed_ms=%u completed=%d error=%d\n",
+			 IPU_FW_ISYS_SEND_TYPE_STREAM_CLOSE, ip->stream_handle, tout,
+			 jiffies_to_msecs(jiffies - started),
+			 completion_done(&ip->stream_close_completion), ip->error);
 	if (!tout) {
 		close_failed = true;
 		dev_err(dev,
@@ -2162,14 +2281,16 @@ static int perform_skew_cal(struct ipu_isys_pipeline *ip)
 	}
 	ipu_isys_csi2_set_skew_cal(ip->csi2, true);
 
-	rval = v4l2_subdev_call(ext_sd, video, s_stream, true);
+	rval = ipu_isys_lifecycle_s_stream(&ip->isys->adev->dev, ip,
+						 ext_sd, true, "perform_skew_cal:on");
 	if (rval)
 		goto turn_off_skew_cal;
 
 	/* TODO: do we have a better way available than waiting for a while ? */
 	msleep(50);
 
-	rval = v4l2_subdev_call(ext_sd, video, s_stream, false);
+	rval = ipu_isys_lifecycle_s_stream(&ip->isys->adev->dev, ip,
+						 ext_sd, false, "perform_skew_cal:off");
 
 turn_off_skew_cal:
 	ipu_isys_csi2_set_skew_cal(ip->csi2, false);
@@ -2198,10 +2319,12 @@ static int stop_external_sensor(struct device *dev,
 #if defined(CONFIG_VIDEO_INTEL_IPU4) || defined(CONFIG_VIDEO_INTEL_IPU4P)
 			ipu_isys_csi2_wait_last_eof(ip->csi2);
 #endif
-			rval = v4l2_subdev_call(esd, video, s_stream, 0);
+			rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, 0,
+							 "stop_external_sensor:csi2");
 		}
 	} else {
-		rval = v4l2_subdev_call(esd, video, s_stream, 0);
+		rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, 0,
+						 "stop_external_sensor:non_csi2");
 	}
 	if (rval && rval != -ENOIOCTLCMD)
 		mark_stream_reset_needed(container_of(ip, struct ipu_isys_video,
@@ -2371,13 +2494,15 @@ int ipu_isys_video_set_streaming(struct ipu_isys_video *av,
 				ip->external->entity->name,
 				ip->csi2->remote_streams, ip->csi2->stream_count);
 			external_sensor_start_attempted = true;
-			rval = v4l2_subdev_call(esd, video, s_stream, state);
+			rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, state,
+							 "ipu_isys_video_set_streaming:start");
 		} else if (!ip->csi2) {
 			dev_dbg(dev,
 				"stream on ext: calling s_stream(1) for non-csi2 path %s\n",
 				ip->external->entity->name);
 			external_sensor_start_attempted = true;
-			rval = v4l2_subdev_call(esd, video, s_stream, state);
+			rval = ipu_isys_lifecycle_s_stream(dev, ip, esd, state,
+							 "ipu_isys_video_set_streaming:start_non_csi2");
 		} else {
 			dev_warn(dev,
 				"stream on ext: SKIP s_stream(1) for %s due to remote_streams(%u) != stream_count(%u), source=%u vc=%u stream_id=%u\n",
